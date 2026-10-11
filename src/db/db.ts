@@ -1,3 +1,4 @@
+import type { PanelLayout } from '../layout/panelLayout'
 import Dexie, { type Table } from 'dexie'
 import type { AdapterKind, ModelInfo, ModelPrice, ProviderCapabilities } from '../ai/types'
 import type { ParamValue } from '../render/types'
@@ -54,6 +55,8 @@ export interface Settings {
   transcriptionModel: string
   /** M5: after a successful AI render, ask a vision model whether the result matches the request. */
   visualCheck: boolean
+  /** Desktop panel sizes on this device; null until the person resizes a panel. */
+  panelLayout: PanelLayout | null
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -72,6 +75,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lowQualityPreview: false,
   transcriptionModel: 'whisper-1',
   visualCheck: false,
+  panelLayout: null,
 }
 
 export type VersionSource = 'ai' | 'manual' | 'slider' | 'autofix' | 'restore' | 'gallery' | 'import'

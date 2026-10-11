@@ -4,6 +4,8 @@ import { saveBackupFile } from '../../history/projectFile'
 import { useProjectStore } from '../../history/projectStore'
 import { makeProject } from '../../test/fixtures'
 import { SETTINGS_SECTIONS } from '../sections'
+import { DEFAULT_LAYOUT } from '../../layout/panelLayout'
+import { usePrefs } from '../prefsStore'
 import { useSettingsStore } from '../settingsStore'
 import { AppearanceSection } from './AppearanceSection'
 import { LibrariesSection } from './LibrariesSection'
@@ -110,4 +112,14 @@ it('offers the visual check after the auto-fix attempts, off by default', async 
   const fields = screen.getAllByRole('textbox').map((el) => el.id)
   expect(fields.at(-1)).toBe('autofix')
   expect(screen.getByLabelText('Auto-fix attempts').compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
+
+it('resets the desktop panel layout', async () => {
+  const update = vi.spyOn(usePrefs.getState(), 'update').mockResolvedValue()
+  usePrefs.setState({ update })
+  render(<AppearanceSection />)
+  expect(screen.getByText('Panel sizes are saved on this device. Double-click a divider to reset just that one.')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Reset layout' }))
+  expect(update).toHaveBeenCalledWith({ panelLayout: DEFAULT_LAYOUT })
+  usePrefs.setState(usePrefs.getInitialState(), true)
 })

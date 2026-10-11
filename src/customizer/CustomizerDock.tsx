@@ -16,7 +16,8 @@ const SAVE = 'save'
 const setParams = (params: Params) => useAppStore.getState().setParams(params)
 const ask = (text: string) => usePromptRequest.getState().ask(text)
 
-export function CustomizerDock() {
+/** `height`: a fixed height in px from the desktop divider; otherwise as tall as its content, up to 45 % of the column. */
+export function CustomizerDock({ height = null }: { height?: number | null } = {}) {
   const code = useAppStore((s) => s.code)
   const params = useAppStore((s) => s.params)
   const projectId = useProjectStore((s) => s.project?.id ?? null)
@@ -86,7 +87,11 @@ export function CustomizerDock() {
   const unannotated = parsed.some((p) => p.control.kind === 'number' && !p.annotated)
 
   return (
-    <section aria-label="Parameters" className="flex max-h-[45%] shrink-0 flex-col gap-2 overflow-auto border-t border-line bg-panel px-4 pt-3 pb-4">
+    <section
+      aria-label="Parameters"
+      className={`flex shrink-0 flex-col gap-2 overflow-auto bg-panel px-4 pt-3 pb-4 ${height === null ? 'max-h-[45%] border-t border-line' : ''}`}
+      style={height === null ? undefined : { height }}
+    >
       <div className="pc-row">
         <div className="pc-tabs" role="tablist" aria-label="Parameter groups">
           {groups.map((g) => (

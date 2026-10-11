@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { DEFAULT_SETTINGS } from '../db/db'
 import { readPrefs, writePrefs, type Prefs } from '../db/prefs'
+import { DEFAULT_LAYOUT } from '../layout/panelLayout'
 
 export interface PrefsState extends Prefs {
   loaded: boolean
@@ -13,6 +14,7 @@ export const usePrefs = create<PrefsState>()((set) => ({
   variantCount: DEFAULT_SETTINGS.variantCount,
   lowQualityPreview: DEFAULT_SETTINGS.lowQualityPreview,
   transcriptionModel: DEFAULT_SETTINGS.transcriptionModel,
+  panelLayout: DEFAULT_LAYOUT,
   loaded: false,
   load: async () => set({ ...(await readPrefs()), loaded: true }),
   update: async (patch) => {

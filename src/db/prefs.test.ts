@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto'
 import { DEFAULT_SETTINGS, ChatScadDb, type Settings } from './db'
+import { DEFAULT_LAYOUT } from '../layout/panelLayout'
 import { prefsFrom, readPrefs, writePrefs } from './prefs'
 
 let database: ChatScadDb
@@ -8,10 +9,10 @@ beforeEach(() => {
 })
 afterEach(() => database.delete())
 
-const DEFAULTS = { variantCount: 1, lowQualityPreview: false, transcriptionModel: 'whisper-1' }
+const DEFAULTS = { variantCount: 1, lowQualityPreview: false, transcriptionModel: 'whisper-1', panelLayout: DEFAULT_LAYOUT }
 
 it('defaults to one reply per prompt, full renders only, and whisper-1', async () => {
-  expect(DEFAULT_SETTINGS).toMatchObject(DEFAULTS)
+  expect(DEFAULT_SETTINGS).toMatchObject({ ...DEFAULTS, panelLayout: null })
   expect(await readPrefs(database)).toEqual(DEFAULTS)
 })
 
@@ -37,4 +38,11 @@ it('ignores values outside the allowed set', () => {
     DEFAULTS,
   )
   expect(prefsFrom({ transcriptionModel: ' gpt-4o-transcribe ' }).transcriptionModel).toBe('gpt-4o-transcribe')
+})
+
+it('stores the desktop panel layout and reads back a broken one as the defaults', async () => {
+  const layout = { chatWidth: 420, codeWidth: 500, dockHeight: 240, consoleHeight: 200 }
+  await writePrefs({ panelLayout: layout }, database)
+  expect((await readPrefs(database)).panelLayout).toEqual(layout)
+  expect(prefsFrom({ panelLayout: { chatWidth: 'x' } } as unknown as Partial<Settings>).panelLayout).toEqual(DEFAULT_LAYOUT)
 })

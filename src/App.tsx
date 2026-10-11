@@ -11,6 +11,7 @@ import { GalleryView } from './gallery/GalleryView'
 import { HistoryView } from './history/HistoryView'
 import { useRenderedVersionLabel } from './history/renderedVersion'
 import { PhoneLayout } from './layout/PhoneLayout'
+import { WorkbenchColumns } from './layout/WorkbenchColumns'
 import { useIsPhone } from './layout/useIsPhone'
 import { createRenderWorker, type WorkerFactory } from './render/createRenderWorker'
 import { onLoadProgress } from './render/loadProgress'
@@ -31,7 +32,7 @@ import { VariantProgressPill } from './variants/VariantProgressPill'
 import { Viewer } from './viewer/Viewer'
 import { CodePane } from './workbench/CodePane'
 import { HistoryControls } from './workbench/HistoryControls'
-import { ViewTabs, viewPanelId } from './workbench/ViewTabs'
+import { ViewTabs } from './workbench/ViewTabs'
 import { ProjectMenu } from './workbench/ProjectMenu'
 import { RenderedFromCaption } from './workbench/RenderedFromCaption'
 import { useUndoShortcuts } from './workbench/useUndoShortcuts'
@@ -173,23 +174,9 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
 
       {/* Stays mounted while settings or history is open, so the editor's undo history and the camera survive. */}
       <div data-testid="workbench" hidden={view !== 'workbench'} className="flex min-h-0 flex-1 flex-col">
-        <main
-          role="tabpanel"
-          id={viewPanelId('workbench')}
-          aria-labelledby="view-tab-workbench"
-          className="grid min-h-0 flex-1 grid-rows-[repeat(3,minmax(0,1fr))] md:grid-cols-[360px_minmax(0,1fr)_440px] md:grid-rows-1"
-        >
-          <ChatPanel />
-
-          <section aria-label="3D view" className="flex min-h-0 min-w-0 flex-col md:border-l md:border-line">
-            <div className="min-h-0 flex-1">
-              <Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} empty={status === 'empty'} refine />
-            </div>
-            <CustomizerDock />
-          </section>
-
-          <CodePane />
-        </main>
+        <WorkbenchColumns
+          viewer={<Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} empty={status === 'empty'} refine />}
+        />
       </div>
 
       <ComposerBridge />

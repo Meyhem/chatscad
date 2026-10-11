@@ -11,7 +11,14 @@ import { engineLabel, loadEngineVersion } from '../render/engineVersion'
 import { useAppStore } from '../state/store'
 import { problemItems, ProblemsPanel } from './ProblemsPanel'
 
-export function CodePane({ actions }: { actions?: React.ReactNode }) {
+interface Props {
+  actions?: React.ReactNode
+  /** Desktop: the console's height in px, and the divider above it that resizes it. */
+  consoleHeight?: number
+  consoleDivider?: React.ReactNode
+}
+
+export function CodePane({ actions, consoleHeight, consoleDivider }: Props) {
   const loadProgress = useAppStore((s) => s.loadProgress)
   const insert = useAppStore((s) => s.insert)
   const code = useAppStore((s) => s.code)
@@ -42,7 +49,7 @@ export function CodePane({ actions }: { actions?: React.ReactNode }) {
   const caption = versionCaption(head, head !== null && !matchesHead(code, params, head))
 
   return (
-    <section aria-label="Code" className="flex min-h-0 min-w-0 flex-col border-t border-line bg-panel md:border-t-0 md:border-l">
+    <section aria-label="Code" className="flex min-h-0 min-w-0 flex-col border-t border-line bg-panel md:border-t-0">
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
         <div className="pc-tabs" role="tablist">
           <button type="button" role="tab" aria-selected={tab === 'code'} className="pc-tab" onClick={() => setTab('code')}>
@@ -75,7 +82,8 @@ export function CodePane({ actions }: { actions?: React.ReactNode }) {
           />
         )}
       </div>
-      <div className="h-44 shrink-0 border-t border-line">
+      {consoleDivider}
+      <div className={`shrink-0 ${consoleHeight === undefined ? 'h-44 border-t border-line' : ''}`} style={consoleHeight === undefined ? undefined : { height: consoleHeight }}>
         <ConsolePanel status={status} logs={logs} error={error} renderMs={renderMs} onGoToLine={goToLine} engineLabel={engineLabel(engine)} loadProgress={loadProgress} />
       </div>
     </section>
