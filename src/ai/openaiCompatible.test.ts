@@ -126,6 +126,35 @@ describe('streamChat', () => {
     ])
   })
 
+  it('maps effort to OpenRouter reasoning and to reasoning_effort elsewhere', async () => {
+    const { effortBody } = await import('./openaiCompatible')
+    expect(effortBody(undefined, true)).toEqual({})
+    expect(effortBody('high', true)).toEqual({ reasoning: { effort: 'high' } })
+    expect(effortBody('off', true)).toEqual({ reasoning: { enabled: false } })
+    expect(effortBody('low', false)).toEqual({ reasoning_effort: 'low' })
+    expect(effortBody('off', false)).toEqual({ reasoning_effort: 'none' })
+  })
+
+  it('sends the effort in the request body', async () => {
+    const { fetch, calls } = fakeFetch(sse('[DONE]'), sse('[DONE]'))
+    await collect(provider(fetch).streamChat({ ...REQ, reasoningEffort: 'medium' }))
+    expect(calls[0].body).toMatchObject({ reasoning_effort: 'medium' })
+    const or = createOpenAiCompatibleProvider({ baseUrl: 'https://openrouter.ai/api/v1', apiKey: 'k', fetch })
+    await collect(or.streamChat({ ...REQ, reasoningEffort: 'medium' }))
+    expect(calls[1].body).toMatchObject({ reasoning: { effort: 'medium' } })
+  })
+
+  it('drops a rejected effort, retries once and says so', async () => {
+    const { fetch, calls } = fakeFetch(
+      json(400, { error: { message: 'Unrecognized request argument supplied: reasoning_effort' } }),
+      sse(delta('Done.'), '[DONE]'),
+    )
+    const events = await collect(provider(fetch).streamChat({ ...REQ, reasoningEffort: 'high' }))
+    expect(calls).toHaveLength(2)
+    expect(calls[1].body).not.toHaveProperty('reasoning_effort')
+    expect(events[0]).toEqual({ type: 'notice', text: 'This model ignored the reasoning setting.' })
+  })
+
   it('sends temperature only when the request sets it', async () => {
     const { fetch, calls } = fakeFetch(sse('[DONE]'))
     await collect(provider(fetch).streamChat({ ...REQ, temperature: 0.7, maxTokens: 512 }))
@@ -242,6 +271,22 @@ describe('streamChat', () => {
 })
 
 describe('listModels', () => {
+  it('marks OpenRouter models that accept reasoning', async () => {
+    const { fetch } = fakeFetch(
+      json(200, {
+        data: [
+          { id: 'r1', supported_parameters: ['reasoning', 'max_tokens'] },
+          { id: 'plain', supported_parameters: ['max_tokens'] },
+          { id: 'unknown' },
+        ],
+      }),
+    )
+    const models = await provider(fetch).listModels()
+    expect(models.find((m) => m.id === 'r1')?.reasoning).toEqual({ efforts: true, canDisable: true, adaptive: false })
+    expect(models.find((m) => m.id === 'plain')?.reasoning).toEqual({ efforts: false, canDisable: false, adaptive: false })
+    expect(models.find((m) => m.id === 'unknown')).not.toHaveProperty('reasoning')
+  })
+
   it('lists model ids sorted, with OpenRouter prices converted to USD per million tokens', async () => {
     const { fetch, calls } = fakeFetch(
       json(200, {
@@ -288,6 +333,11 @@ describe('listModels', () => {
 })
 
 describe('relaxRequest', () => {
+  it('drops the reasoning fields when the server names them', () => {
+    expect(relaxRequest({ model: 'x', reasoning_effort: 'low' }, 'unknown field reasoning_effort')).toEqual({ model: 'x' })
+    expect(relaxRequest({ model: 'x', reasoning: { effort: 'low' } }, '"reasoning" is not allowed')).toEqual({ model: 'x' })
+  })
+
   it('returns null when the error names nothing it can drop', () => {
     expect(relaxRequest({ model: 'm', max_tokens: 5 }, 'model not found')).toBeNull()
   })

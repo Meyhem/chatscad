@@ -241,3 +241,38 @@ it('sends the model limit as max_tokens and asks for summarized thinking on adap
   expect(body).toMatchObject({ max_tokens: 128000, thinking: { type: 'adaptive', display: 'summarized' } })
   expect(body).not.toHaveProperty('output_config')
 })
+
+const ADAPTIVE = [{ id: 'claude-test', maxOutputTokens: 128000, reasoning: { efforts: true, canDisable: true, adaptive: true } }]
+const withModels = (fetch: FetchLike) =>
+  createAnthropicProvider({ baseUrl: 'https://api.anthropic.com', apiKey: 'sk-ant-test', fetch, maxRetries: 0, models: ADAPTIVE })
+const bodyOf = (call: { init: RequestInit }) => JSON.parse(String(call.init.body))
+
+it('maps low/medium/high to adaptive summarized thinking with output_config.effort', async () => {
+  const { fetch, calls } = fakeFetch(sse(RECORDED_SSE))
+  await collect(withModels(fetch).streamChat({ ...REQ, reasoningEffort: 'high' }))
+  expect(bodyOf(calls[0])).toMatchObject({ thinking: { type: 'adaptive', display: 'summarized' }, output_config: { effort: 'high' } })
+})
+
+it('maps off to disabled thinking', async () => {
+  const { fetch, calls } = fakeFetch(sse(RECORDED_SSE))
+  await collect(withModels(fetch).streamChat({ ...REQ, reasoningEffort: 'off' }))
+  expect(bodyOf(calls[0]).thinking).toEqual({ type: 'disabled' })
+  expect(bodyOf(calls[0])).not.toHaveProperty('output_config')
+})
+
+it('retries at Low with a notice when the model refuses to turn thinking off', async () => {
+  const { fetch, calls } = fakeFetch(
+    apiError(400, 'invalid_request_error', 'thinking.type: "disabled" is not supported for this model'),
+    sse(RECORDED_SSE),
+  )
+  const events = await collect(withModels(fetch).streamChat({ ...REQ, reasoningEffort: 'off' }))
+  expect(events[0]).toEqual({ type: 'notice', text: "This model can't turn reasoning off, so it used Low." })
+  expect(bodyOf(calls[1])).toMatchObject({ output_config: { effort: 'low' } })
+  expect(calls).toHaveLength(2)
+})
+
+it('does not retry other 400s for off', async () => {
+  const { fetch, calls } = fakeFetch(apiError(400, 'invalid_request_error', 'messages: empty'))
+  await expect(collect(withModels(fetch).streamChat({ ...REQ, reasoningEffort: 'off' }))).rejects.toMatchObject({ kind: 'bad-request' })
+  expect(calls).toHaveLength(1)
+})

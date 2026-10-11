@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { ProviderError, type ChatEvent, type ChatRequest, type LlmMessage, type LlmProvider, type ModelInfo, type StopReason, type Usage } from './types'
+import { ProviderError, type ChatEvent, type ChatRequest, type LlmMessage, type LlmProvider, type ModelInfo, type ReasoningEffort, type StopReason, type Usage } from './types'
 import type { FetchLike } from './url'
 
 export interface AnthropicOptions {
@@ -18,6 +18,15 @@ export const ANTHROPIC_FALLBACK_MAX_TOKENS = 64000
 export function anthropicStopReason(r: string | null | undefined): StopReason {
   if (r === 'max_tokens') return 'length'
   return r === 'end_turn' || r === null || r === undefined ? 'end' : 'other'
+}
+
+export const EFFORT_OFF_UNSUPPORTED = "This model can't turn reasoning off, so it used Low."
+
+function thinkingParams(effort: ReasoningEffort | undefined, info: ModelInfo | undefined): Record<string, unknown> {
+  if (effort === 'off') return { thinking: { type: 'disabled' } }
+  if (effort) return { thinking: { type: 'adaptive', display: 'summarized' }, output_config: { effort } }
+  // Current models return empty thinking text unless asked for a summary.
+  return info?.reasoning?.adaptive ? { thinking: { type: 'adaptive', display: 'summarized' } } : {}
 }
 
 /** True when the untyped capabilities tree has `supported: true` at `path`. */
@@ -96,6 +105,40 @@ export function createAnthropicProvider(opts: AnthropicOptions): LlmProvider {
     return client
   }
 
+  async function* streamOnce(req: ChatRequest, signal?: AbortSignal): AsyncGenerator<ChatEvent> {
+    const usage: Usage = { inputTokens: 0, outputTokens: 0 }
+    let stopReason: StopReason = 'end'
+    try {
+      // No `temperature`: current Claude models reject sampling parameters.
+      const info = opts.models?.find((m) => m.id === req.model)
+      const params: Record<string, unknown> = {
+        model: req.model,
+        max_tokens: req.maxTokens ?? info?.maxOutputTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS,
+        system: req.system,
+        messages: req.messages.map(toAnthropicMessage),
+        ...thinkingParams(req.reasoningEffort, info),
+      }
+      const stream = getClient().messages.stream(params as unknown as Anthropic.MessageStreamParams, { signal })
+      for await (const event of stream) {
+        if (event.type === 'message_start') {
+          usage.inputTokens = event.message.usage.input_tokens
+          usage.outputTokens = event.message.usage.output_tokens
+        } else if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          yield { type: 'text', delta: event.delta.text }
+        } else if (event.type === 'content_block_delta' && event.delta.type === 'thinking_delta') {
+          yield { type: 'reasoning', delta: event.delta.thinking }
+        } else if (event.type === 'message_delta') {
+          usage.outputTokens = event.usage.output_tokens
+          stopReason = anthropicStopReason(event.delta.stop_reason)
+          if (typeof event.usage.input_tokens === 'number') usage.inputTokens = event.usage.input_tokens
+        }
+      }
+    } catch (err) {
+      throw toProviderError(err, signal)
+    }
+    yield { type: 'usage', usage, stopReason }
+  }
+
   return {
     async listModels(signal) {
       const models: ModelInfo[] = []
@@ -108,38 +151,17 @@ export function createAnthropicProvider(opts: AnthropicOptions): LlmProvider {
     },
 
     async *streamChat(req: ChatRequest, signal?: AbortSignal): AsyncGenerator<ChatEvent> {
-      const usage: Usage = { inputTokens: 0, outputTokens: 0 }
-      let stopReason: StopReason = 'end'
       try {
-        // No `temperature`: current Claude models reject sampling parameters.
-        const info = opts.models?.find((m) => m.id === req.model)
-        const params: Record<string, unknown> = {
-          model: req.model,
-          max_tokens: req.maxTokens ?? info?.maxOutputTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS,
-          system: req.system,
-          messages: req.messages.map(toAnthropicMessage),
-          // Current models return empty thinking text unless asked for a summary.
-          ...(info?.reasoning?.adaptive ? { thinking: { type: 'adaptive', display: 'summarized' } } : {}),
-        }
-        const stream = getClient().messages.stream(params as unknown as Anthropic.MessageStreamParams, { signal })
-        for await (const event of stream) {
-          if (event.type === 'message_start') {
-            usage.inputTokens = event.message.usage.input_tokens
-            usage.outputTokens = event.message.usage.output_tokens
-          } else if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-            yield { type: 'text', delta: event.delta.text }
-          } else if (event.type === 'content_block_delta' && event.delta.type === 'thinking_delta') {
-            yield { type: 'reasoning', delta: event.delta.thinking }
-          } else if (event.type === 'message_delta') {
-            usage.outputTokens = event.usage.output_tokens
-            stopReason = anthropicStopReason(event.delta.stop_reason)
-            if (typeof event.usage.input_tokens === 'number') usage.inputTokens = event.usage.input_tokens
-          }
-        }
+        yield* streamOnce(req, signal)
       } catch (err) {
-        throw toProviderError(err, signal)
+        // Some models (Opus 5.5, Sonnet 5.5) cannot turn thinking off; the 400 comes before any event.
+        if (req.reasoningEffort === 'off' && err instanceof ProviderError && err.kind === 'bad-request' && /thinking/i.test(err.message)) {
+          yield { type: 'notice', text: EFFORT_OFF_UNSUPPORTED }
+          yield* streamOnce({ ...req, reasoningEffort: 'low' }, signal)
+          return
+        }
+        throw err
       }
-      yield { type: 'usage', usage, stopReason }
     },
   }
 }

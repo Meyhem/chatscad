@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createProvider } from '../ai/createProvider'
 import { describeProviderError } from '../ai/errors'
-import { isLocalBaseUrl } from '../ai/url'
+import { isLocalBaseUrl, isOpenRouter } from '../ai/url'
 import type { ProviderProfile } from '../db/db'
 import { useProvidersStore } from './providersStore'
 
@@ -14,7 +14,7 @@ export type ModelListState =
 /** OpenRouter and servers on this computer list their models without an API key. */
 export function listsWithoutKey(baseUrl: string): boolean {
   try {
-    return new URL(baseUrl).hostname === 'openrouter.ai' || isLocalBaseUrl(baseUrl)
+    return isOpenRouter(baseUrl) || isLocalBaseUrl(baseUrl)
   } catch {
     return false
   }

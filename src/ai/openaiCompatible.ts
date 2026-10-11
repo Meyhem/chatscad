@@ -9,10 +9,11 @@ import {
   type ModelInfo,
   type ModelPrice,
   type ProviderErrorKind,
+  type ReasoningEffort,
   type StopReason,
   type Usage,
 } from './types'
-import { joinUrl, type FetchLike } from './url'
+import { isOpenRouter, joinUrl, type FetchLike } from './url'
 
 export interface OpenAiCompatibleOptions {
   baseUrl: string
@@ -48,6 +49,7 @@ interface OpenAiModel {
   id?: unknown
   name?: unknown
   pricing?: { prompt?: unknown; completion?: unknown }
+  supported_parameters?: unknown // OpenRouter
   architecture?: { input_modalities?: unknown }
 }
 
@@ -70,11 +72,25 @@ function messageFrom(body: string): string {
   return body.trim().slice(0, 300)
 }
 
+export const EFFORT_IGNORED = 'This model ignored the reasoning setting.'
+
+/** Request fields for an effort: OpenRouter's `reasoning` object, else OpenAI's `reasoning_effort`. Default sends nothing. */
+export function effortBody(effort: ReasoningEffort | undefined, openRouter: boolean): Body {
+  if (!effort) return {}
+  if (openRouter) return { reasoning: effort === 'off' ? { enabled: false } : { effort } }
+  return { reasoning_effort: effort === 'off' ? 'none' : effort }
+}
+
 /** One retry-able fix per call: the parameter the error names is dropped or renamed. */
 export function relaxRequest(body: Body, errorText: string): Body | null {
   const next: Body = { ...body }
   if ('stream_options' in next && /stream_options/.test(errorText)) {
     delete next.stream_options
+    return next
+  }
+  if (('reasoning' in next || 'reasoning_effort' in next) && /reasoning/.test(errorText)) {
+    delete next.reasoning
+    delete next.reasoning_effort
     return next
   }
   if ('max_tokens' in next && /max_completion_tokens/.test(errorText)) {
@@ -166,10 +182,11 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): L
     return { error: new ProviderError(kindForStatus(res.status), messageFrom(text) || `HTTP ${res.status}`, res.status), text }
   }
 
-  async function postChat(url: string, body: Body, signal?: AbortSignal): Promise<Response> {
+  /** Posts, relaxing rejected parameters; returns the body that was finally accepted. */
+  async function postChat(url: string, body: Body, signal?: AbortSignal): Promise<{ res: Response; sent: Body }> {
     for (let attempt = 0; ; attempt++) {
       const res = await send(url, { method: 'POST', headers: headers(true), body: JSON.stringify(body) }, signal)
-      if (res.ok) return res
+      if (res.ok) return { res, sent: body }
       const { error, text } = await failure(res)
       const relaxed = res.status === 400 && attempt < 3 ? relaxRequest(body, text) : null
       if (!relaxed) throw error
@@ -195,12 +212,16 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): L
         const price = toPrice(m.pricing)
         const modalities = m.architecture?.input_modalities
         const capabilities = Array.isArray(modalities) ? { vision: modalities.includes('image'), audio: modalities.includes('audio') } : null
+        const params = m.supported_parameters
+        const effort = Array.isArray(params) && params.includes('reasoning')
+        const reasoning = Array.isArray(params) ? { efforts: effort, canDisable: effort, adaptive: false } : null
         return [
           {
             id: m.id,
             ...(typeof m.name === 'string' && m.name !== m.id ? { name: m.name } : {}),
             ...(price ? { price } : {}),
             ...(capabilities ? { capabilities } : {}),
+            ...(reasoning ? { reasoning } : {}),
           },
         ]
       })
@@ -214,9 +235,11 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): L
         messages: [{ role: 'system', content: req.system }, ...req.messages.map(toOpenAiMessage)],
         ...(req.maxTokens !== undefined ? { max_tokens: req.maxTokens } : {}),
         ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
+        ...effortBody(req.reasoningEffort, isOpenRouter(opts.baseUrl)),
         ...(streaming ? { stream: true, stream_options: { include_usage: true } } : {}),
       }
-      const res = await postChat(url, body, signal)
+      const { res, sent } = await postChat(url, body, signal)
+      if (req.reasoningEffort && !('reasoning' in sent) && !('reasoning_effort' in sent)) yield { type: 'notice', text: EFFORT_IGNORED }
       let usage: Usage = { inputTokens: 0, outputTokens: 0 }
 
       if (!streaming) {

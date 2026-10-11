@@ -40,3 +40,11 @@ export function isHttpUrl(url: string): boolean {
     return false
   }
 }
+
+export function isOpenRouter(baseUrl: string): boolean {
+  try {
+    return new URL(baseUrl).hostname === 'openrouter.ai'
+  } catch {
+    return false
+  }
+}

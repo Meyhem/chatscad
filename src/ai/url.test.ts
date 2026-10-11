@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { hostOf, isHttpUrl, isLocalBaseUrl, joinUrl, portOf } from './url'
+import { hostOf, isHttpUrl, isLocalBaseUrl, isOpenRouter, joinUrl, portOf } from './url'
 
 it('joins a base URL and a path with exactly one slash', () => {
   expect(joinUrl('https://api.openai.com/v1', 'models')).toBe('https://api.openai.com/v1/models')
@@ -29,4 +29,10 @@ it('accepts only absolute http and https addresses as base URLs', () => {
   expect(isHttpUrl('https://api.openai.com/v1')).toBe(true)
   expect(isHttpUrl(' http://localhost:11434/v1 ')).toBe(true)
   for (const bad of ['', 'api.openai.com/v1', '/v1', 'ftp://llm.test', 'javascript:alert(1)']) expect(isHttpUrl(bad)).toBe(false)
+})
+
+it('recognises OpenRouter by host', () => {
+  expect(isOpenRouter('https://openrouter.ai/api/v1')).toBe(true)
+  expect(isOpenRouter('https://api.openai.com/v1')).toBe(false)
+  expect(isOpenRouter('not a url')).toBe(false)
 })
