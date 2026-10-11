@@ -37,4 +37,12 @@ export {
   Upload as IconImport,
   Wrench as IconAutofix,
   X as IconX,
+  Box as IconPart,
+  Eraser as IconErase,
+  ImagePlus as IconAttach,
+  Pen as IconPen,
+  Ruler as IconSize,
+  Slash as IconLine,
+  Sparkles as IconAskAi,
+  Trash2 as IconClear,
 } from 'lucide-react'
