@@ -232,9 +232,10 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
       const project = get().project
       if (!project) return
       const updated: Project = { ...project, enabledLibraries: libraries, updatedAt: Date.now() }
-      await putProject(updated)
+      // State first: the Libraries switch is controlled, and would flip back while the write is pending.
       set({ project: updated })
       useAppStore.getState().setLibraries(libraries)
+      await putProject(updated)
     },
 
     async refreshRecent() {

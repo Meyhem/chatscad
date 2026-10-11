@@ -168,3 +168,12 @@ it('matches the head on code plus effective overrides', async () => {
   expect(matchesHead(`${CODE}\n`, { w: 20 }, head)).toBe(false)
   expect(matchesHead(CODE, {}, null)).toBe(false)
 })
+
+it('shows new libraries at once, before the database write finishes, so a controlled switch does not flip back', async () => {
+  await store().newProject({ code: 'cube(1);', origin: 'blank' })
+  const pending = store().setEnabledLibraries(['MCAD'])
+  expect(store().project?.enabledLibraries).toEqual(['MCAD'])
+  expect(useAppStore.getState().libraries).toEqual(['MCAD'])
+  await pending
+  expect((await getProject(store().project!.id))?.enabledLibraries).toEqual(['MCAD'])
+})
