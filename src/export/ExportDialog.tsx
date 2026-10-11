@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import { ImageTab } from './tabs/ImageTab'
+import { TimelapseTab } from './tabs/TimelapseTab'
 import { TurntableTab } from './tabs/TurntableTab'
 import { IconX } from '../ui/icons'
 import { Modal } from '../ui/Modal'
@@ -12,6 +13,7 @@ export const TABS: Array<{ id: ExportTab; label: string; Panel: ComponentType }>
   { id: 'model', label: 'Model file', Panel: ModelFileTab },
   { id: 'image', label: 'Image', Panel: ImageTab },
   { id: 'turntable', label: 'Turntable', Panel: TurntableTab },
+  { id: 'timelapse', label: 'Timelapse', Panel: TimelapseTab },
   { id: 'link', label: 'Link', Panel: LinkTab },
 ]
 
