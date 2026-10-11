@@ -15,12 +15,12 @@ beforeEach(async () => {
   useProvidersStore.setState({ ...useProvidersStore.getInitialState(), loaded: true }, true)
 })
 
-it('is a full page with a Back to project button, not a dialog', async () => {
+it('is the Settings tab panel, with no header or back button of its own', () => {
   render(<SettingsPage />)
+  expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'view-panel-settings')
   expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
   expect(screen.queryByRole('dialog')).toBeNull()
-  await userEvent.click(screen.getByRole('button', { name: 'Back to project' }))
-  expect(useAppStore.getState().view).toBe('workbench')
+  expect(screen.queryByRole('button', { name: 'Back to project' })).toBeNull()
 })
 
 it('shows AI providers as the current section and switches to the other sections', async () => {

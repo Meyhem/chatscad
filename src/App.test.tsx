@@ -101,13 +101,18 @@ it('lays out chat, 3D view and code as the three workbench columns', () => {
   expect(regions).toEqual(['Chat', '3D view', 'Parameters', 'Code', 'Console'])
 })
 
-it('opens the settings page from the header and comes back to the same workbench', async () => {
+it('switches between the Project, History and Settings tabs, keeping the workbench mounted', async () => {
   render(<App createWorker={scriptedWorker(() => okResult())} />)
-  await userEvent.click(screen.getByRole('button', { name: 'Settings' }))
+  expect(screen.getByRole('tab', { name: 'Project' })).toHaveAttribute('aria-selected', 'true')
+  await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
   expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.getByTestId('workbench')).not.toBeVisible()
   expect(screen.queryByRole('dialog')).toBeNull()
-  await userEvent.click(screen.getByRole('button', { name: 'Back to project' }))
+  expect(screen.queryByRole('button', { name: 'Back to project' })).toBeNull()
+  expect(screen.getByText('Applies to every project')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Export STL' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('tab', { name: 'Project' }))
   expect(screen.getByTestId('workbench')).toBeVisible()
   expect(screen.queryByTestId('settings')).toBeNull()
 })
@@ -118,6 +123,7 @@ it('shows the first-run callout once providers have loaded, and Add a provider o
   expect(screen.getByRole('button', { name: 'No model' })).toBeDisabled()
   await userEvent.click(screen.getByRole('button', { name: 'Add a provider' }))
   expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true')
 })
 
 function fakeLlm(reply: string) {
@@ -197,7 +203,9 @@ describe('M3', () => {
     render(<App createWorker={scriptedWorker(() => okResult())} />)
     act(() => useAppStore.getState().setView('history'))
     expect(screen.getByTestId('history-view')).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: '3D view' })).toBeNull()
+    expect(screen.getByTestId('workbench')).not.toBeVisible()
+    expect(screen.getByRole('tab', { name: 'History' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull()
     act(() => useAppStore.getState().setView('gallery'))
     expect(screen.getByTestId('gallery-view')).toBeInTheDocument()
     act(() => useAppStore.getState().setView('workbench'))

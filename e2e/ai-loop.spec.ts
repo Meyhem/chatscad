@@ -52,7 +52,7 @@ async function addFakeProfile(page: Page) {
   await page.getByRole('button', { name: 'Test connection' }).click()
   await expect(page.getByText('Connection works')).toBeVisible()
   await expect(page.getByRole('button', { name: /Fake LLM/ })).toContainText('OK')
-  await page.getByRole('button', { name: 'Back to project' }).click()
+  await page.getByRole('tab', { name: 'Project' }).click()
   await expect(page.getByText('Connect an AI model to start')).toHaveCount(0)
 }
 

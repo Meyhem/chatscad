@@ -30,6 +30,7 @@ import { VariantProgressPill } from './variants/VariantProgressPill'
 import { Viewer } from './viewer/Viewer'
 import { CodePane } from './workbench/CodePane'
 import { HistoryControls } from './workbench/HistoryControls'
+import { ViewTabs, viewPanelId } from './workbench/ViewTabs'
 import { ProjectMenu } from './workbench/ProjectMenu'
 import { RenderedFromCaption } from './workbench/RenderedFromCaption'
 import { useUndoShortcuts } from './workbench/useUndoShortcuts'
@@ -107,44 +108,51 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
 
   return (
     <div className="pc-root flex h-full flex-col bg-bg text-ink">
+      <header className="flex h-(--header-height) shrink-0 items-center gap-3 border-b border-line bg-panel pl-4 pr-3">
+        <h1 className="text-[15px] font-bold tracking-tight">PromptCAD</h1>
+        <span aria-hidden="true" className="h-5 w-px bg-line" />
+        <ProjectMenu />
+        <ViewTabs />
+        <span aria-hidden="true" className="h-5 w-px bg-line" />
+        {view === 'workbench' && (
+          <>
+            <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
+            <VariantProgressPill />
+            {bounds && <DimsReadout bounds={bounds} />}
+            {stale && <RenderedFromCaption />}
+          </>
+        )}
+        {view === 'history' && (
+          <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
+        )}
+        {view === 'settings' && <span className="pc-caption">Applies to every project</span>}
+        <span className="flex-1" />
+        {view === 'workbench' && (
+          <>
+            <HistoryControls />
+            <span aria-hidden="true" className="h-5 w-px bg-line" />
+          </>
+        )}
+        <ExportButtons
+          canExportStl={canExportStl}
+          disabledReason={exportDisabledReason(canExportStl ? 'ok' : status === 'ok' ? 'rendering' : status)}
+          onExportStl={() => {
+            const { stl } = useAppStore.getState()
+            if (stl) void exportStl(stl)
+          }}
+          onShare={() => useExportStore.getState().openAt('link')}
+        />
+      </header>
+
       {view === 'settings' && <SettingsPage />}
+      {view === 'history' && <HistoryView createWorker={createWorker} />}
 
       {/* Stays mounted while settings or history is open, so the editor's undo history and the camera survive. */}
-      <div data-testid="workbench" hidden={view === 'settings'} className="flex min-h-0 flex-1 flex-col">
-        <header className="flex h-(--header-height) shrink-0 items-center gap-3 border-b border-line bg-panel pl-4 pr-3">
-          <h1 className="text-[15px] font-bold tracking-tight">PromptCAD</h1>
-          <span aria-hidden="true" className="h-5 w-px bg-line" />
-          <ProjectMenu />
-          <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
-          <VariantProgressPill />
-          {bounds && <DimsReadout bounds={bounds} />}
-          {stale && <RenderedFromCaption />}
-          <span className="flex-1" />
-          <HistoryControls />
-          <button
-            type="button"
-            className="pc-btn is-ghost is-sm is-icon"
-            aria-label="Settings"
-            title="Settings"
-            onClick={() => setView('settings')}
-          >
-            <IconSettings className="pc-i" aria-hidden="true" />
-          </button>
-          <ExportButtons
-            canExportStl={canExportStl}
-            disabledReason={exportDisabledReason(canExportStl ? 'ok' : status === 'ok' ? 'rendering' : status)}
-            onExportStl={() => {
-              const { stl } = useAppStore.getState()
-              if (stl) void exportStl(stl)
-            }}
-            onShare={() => useExportStore.getState().openAt('link')}
-          />
-        </header>
-
-        {view === 'history' && <HistoryView createWorker={createWorker} />}
-
+      <div data-testid="workbench" hidden={view !== 'workbench'} className="flex min-h-0 flex-1 flex-col">
         <main
-          hidden={view !== 'workbench'}
+          role="tabpanel"
+          id={viewPanelId('workbench')}
+          aria-labelledby="view-tab-workbench"
           className="grid min-h-0 flex-1 grid-rows-[repeat(3,minmax(0,1fr))] md:grid-cols-[360px_minmax(0,1fr)_440px] md:grid-rows-1"
         >
           <ChatPanel />

@@ -113,17 +113,12 @@ describe('ProjectMenu', () => {
 })
 
 describe('HistoryControls and shortcuts', () => {
-  it('undoes, redoes and toggles the History view', () => {
+  it('undoes and redoes, and leaves view switching to the tabs', () => {
     render(<HistoryControls />)
     expect(screen.getByRole('button', { name: 'Redo' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     expect(actions.undo).toHaveBeenCalled()
-    const history = screen.getByRole('button', { name: 'History' })
-    fireEvent.click(history)
-    expect(useAppStore.getState().view).toBe('history')
-    expect(history).toHaveAttribute('aria-pressed', 'true')
-    fireEvent.click(history)
-    expect(useAppStore.getState().view).toBe('workbench')
+    expect(screen.queryByRole('button', { name: 'History' })).toBeNull()
   })
 
   it('disables Undo at the first version and enables Redo after an undo', () => {

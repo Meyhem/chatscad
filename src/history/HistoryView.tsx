@@ -4,6 +4,7 @@ import { usageForVersion } from '../db/usageLinks'
 import type { WorkerFactory } from '../render/createRenderWorker'
 import { effectiveValues } from '../scad/customizer'
 import { useAppStore } from '../state/store'
+import { viewPanelId } from '../workbench/ViewTabs'
 import { formatCost, formatTokens } from '../ui/format'
 import { IconRestore, IconX } from '../ui/icons'
 import { Viewer } from '../viewer/Viewer'
@@ -61,7 +62,11 @@ export function HistoryView({ createWorker }: { createWorker: WorkerFactory }) {
   }, [selected?.id])
 
   if (!project || !selected) {
-    return <p className="pc-caption p-6">Open a project to see its versions.</p>
+    return (
+      <p role="tabpanel" id={viewPanelId('history')} aria-labelledby="view-tab-history" className="pc-caption p-6">
+        Open a project to see its versions.
+      </p>
+    )
   }
 
   const now = Date.now()
@@ -84,7 +89,11 @@ export function HistoryView({ createWorker }: { createWorker: WorkerFactory }) {
   const leave = () => useAppStore.getState().setView('workbench')
 
   return (
-    <main className="grid min-h-0 flex-1 grid-cols-1 overflow-auto md:grid-cols-[360px_minmax(0,1fr)_400px] md:overflow-hidden">
+    <main
+      role="tabpanel"
+      id={viewPanelId('history')}
+      aria-labelledby="view-tab-history"
+      className="grid min-h-0 flex-1 grid-cols-1 overflow-auto md:grid-cols-[360px_minmax(0,1fr)_400px] md:overflow-hidden">
       <section aria-label="Versions" className="flex min-h-0 min-w-0 flex-col bg-panel">
         <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
           <span className="pc-label">Versions</span>
