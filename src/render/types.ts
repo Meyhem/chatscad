@@ -3,6 +3,8 @@ export type ParamValue = number | boolean | string | number[]
 export interface RenderRequest {
   code: string
   params?: Record<string, ParamValue>
+  /** Enabled library names (BOSL2, MCAD), written into the FS before compiling (M3). */
+  libraries?: string[]
 }
 
 export type Vec3 = [number, number, number]

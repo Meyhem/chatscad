@@ -1,5 +1,6 @@
 import { buildArgs, INPUT_PATH, OUTPUT_PATH } from './args'
 import { parseDiagnostics } from './diagnostics'
+import { isLibraryName, LIBRARY_NAMES, LIBRARY_ROOT, writeLibraries, type LibraryBundle, type LibraryName } from './libraries'
 import { errorMessage, failedResult } from './result'
 import { parseStl } from './stl'
 import type { LogLine, MeshData, RenderRequest, RenderResult } from './types'
@@ -8,7 +9,10 @@ export interface OpenSCADInstance {
   FS: {
     writeFile(path: string, data: string | Uint8Array): void
     readFile(path: string): Uint8Array
+    mkdirTree(path: string): void
   }
+  /** Emscripten's environment; read by OpenSCAD when callMain starts. */
+  ENV: Record<string, string | undefined>
   callMain(args: string[]): number
 }
 
@@ -36,7 +40,23 @@ function isExitStatus(e: unknown): e is { status: number } {
   return typeof e === 'object' && e !== null && typeof (e as { status?: unknown }).status === 'number'
 }
 
-export async function runOpenSCAD(factory: OpenSCADFactory, req: RenderRequest): Promise<RenderResult> {
+export type LibraryLoader = (name: LibraryName) => Promise<LibraryBundle>
+
+async function loadLibraries(names: string[], load: LibraryLoader | undefined): Promise<LibraryBundle[]> {
+  const bundles: LibraryBundle[] = []
+  for (const name of names) {
+    if (!isLibraryName(name)) throw new Error(`Unknown library "${name}"; available: ${LIBRARY_NAMES.join(', ')}`)
+    if (!load) throw new Error(`The ${name} library is not available in this build`)
+    try {
+      bundles.push(await load(name))
+    } catch (e) {
+      throw new Error(`Couldn't load the ${name} library: ${errorMessage(e)}`)
+    }
+  }
+  return bundles
+}
+
+export async function runOpenSCAD(factory: OpenSCADFactory, req: RenderRequest, loadLibrary?: LibraryLoader): Promise<RenderResult> {
   const startedAt = performance.now()
   const logs: LogLine[] = []
   const fail = (error: string) => failedResult(error, { logs, renderMs: performance.now() - startedAt })
@@ -44,6 +64,13 @@ export async function runOpenSCAD(factory: OpenSCADFactory, req: RenderRequest):
   let args: string[]
   try {
     args = buildArgs(req.params)
+  } catch (e) {
+    return fail(errorMessage(e))
+  }
+
+  let bundles: LibraryBundle[]
+  try {
+    bundles = await loadLibraries(req.libraries ?? [], loadLibrary)
   } catch (e) {
     return fail(errorMessage(e))
   }
@@ -60,6 +87,10 @@ export async function runOpenSCAD(factory: OpenSCADFactory, req: RenderRequest):
   }
 
   instance.FS.writeFile(INPUT_PATH, req.code)
+  if (bundles.length > 0) {
+    writeLibraries(instance.FS, bundles)
+    instance.ENV.OPENSCADPATH = LIBRARY_ROOT
+  }
 
   let exitCode: number
   try {

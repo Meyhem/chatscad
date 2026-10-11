@@ -1,16 +1,20 @@
 import { binaryStl, BOX_TRI } from '../test/stl'
 import { INPUT_PATH, OUTPUT_PATH } from './args'
 import { runOpenSCAD, type OpenSCADFactory, type OpenSCADFactoryOptions, type OpenSCADInstance } from './runOpenSCAD'
+import type { LibraryBundle } from './libraries'
 
-type FakeInstance = OpenSCADInstance & { files: Map<string, Uint8Array | string>; opts: OpenSCADFactoryOptions }
+type FakeInstance = OpenSCADInstance & { files: Map<string, Uint8Array | string>; dirs: string[]; opts: OpenSCADFactoryOptions }
 
 function fakeFactory(behaviour: (inst: FakeInstance, args: string[]) => number) {
   const created: FakeInstance[] = []
   const factory: OpenSCADFactory = async (opts) => {
     const files = new Map<string, Uint8Array | string>()
+    const dirs: string[] = []
     const inst: FakeInstance = {
       files,
+      dirs,
       opts,
+      ENV: {},
       FS: {
         writeFile: (path, data) => void files.set(path, data),
         readFile: (path) => {
@@ -18,6 +22,7 @@ function fakeFactory(behaviour: (inst: FakeInstance, args: string[]) => number) 
           if (f === undefined) throw new Error(`ENOENT ${path}`)
           return typeof f === 'string' ? new TextEncoder().encode(f) : f
         },
+        mkdirTree: (path) => void dirs.push(path),
       },
       callMain: (args) => behaviour(inst, args),
     }
@@ -136,5 +141,49 @@ it('explains a 2D-only model in plain words', async () => {
   expect(await runOpenSCAD(factory, { code: 'square(10);' })).toMatchObject({
     ok: false,
     error: 'The model is 2D only; STL needs a 3D object',
+  })
+})
+
+describe('libraries', () => {
+  const bosl2: LibraryBundle = { name: 'BOSL2', version: 'v', source: 'u', files: { 'std.scad': 'include <shapes3d.scad>', 'shapes3d.scad': '' } }
+
+  it('writes enabled libraries under /libraries and points OPENSCADPATH there before compiling', async () => {
+    let seenEnv: string | undefined
+    const { factory, created } = fakeFactory((inst) => {
+      seenEnv = inst.ENV.OPENSCADPATH
+      return writesBox(inst)
+    })
+    const loader = vi.fn(async () => bosl2)
+    const result = await runOpenSCAD(factory, { code: 'include <BOSL2/std.scad>', libraries: ['BOSL2'] }, loader)
+    expect(result.ok).toBe(true)
+    expect(loader).toHaveBeenCalledWith('BOSL2')
+    expect(seenEnv).toBe('/libraries')
+    expect(created[0]!.dirs).toEqual(['/libraries/BOSL2'])
+    expect(created[0]!.files.get('/libraries/BOSL2/std.scad')).toBe('include <shapes3d.scad>')
+  })
+
+  it('leaves the file system and environment alone when no library is enabled', async () => {
+    const { factory, created } = fakeFactory(writesBox)
+    await runOpenSCAD(factory, { code: 'cube(1);' }, vi.fn())
+    expect(created[0]!.dirs).toEqual([])
+    expect(created[0]!.ENV).toEqual({})
+  })
+
+  it('fails with a plain message for an unknown library, without starting OpenSCAD', async () => {
+    const { factory, created } = fakeFactory(writesBox)
+    const result = await runOpenSCAD(factory, { code: 'x', libraries: ['../etc'] }, vi.fn())
+    expect(result).toMatchObject({ ok: false, error: 'Unknown library "../etc"; available: BOSL2, MCAD' })
+    expect(created).toHaveLength(0)
+  })
+
+  it('names the library when it cannot be loaded', async () => {
+    const { factory } = fakeFactory(writesBox)
+    const loader = vi.fn(async () => {
+      throw new Error('GET /libraries/MCAD.json failed with 404')
+    })
+    expect(await runOpenSCAD(factory, { code: 'x', libraries: ['MCAD'] }, loader)).toMatchObject({
+      ok: false,
+      error: "Couldn't load the MCAD library: GET /libraries/MCAD.json failed with 404",
+    })
   })
 })
