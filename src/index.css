@@ -18,4 +18,17 @@
     line-height: 20px;
     -webkit-font-smoothing: antialiased;
   }
+
+  button.pc-log {
+    appearance: none;
+    width: 100%;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  button.pc-log:hover {
+    text-decoration: underline;
+  }
 }
