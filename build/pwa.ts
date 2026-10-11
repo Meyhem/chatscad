@@ -12,6 +12,9 @@ export const ICONS: IconResource[] = [
   { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
 ]
 
+/** Written by scripts/gen-icons.ts next to the PNGs. */
+export const FAVICON = 'icons/icon.svg'
+
 export interface TokenFile {
   color: { themes: { id: string }[]; tokens: { name: string; value: string | Record<string, string> }[] }
 }
@@ -56,7 +59,7 @@ export function pwaOptions(base: string, tokens: TokenFile = readTokens()): Part
   }
 }
 
-/** iOS reads apple-touch-icon rather than manifest icons; theme-color tints the browser chrome. */
+/** The SVG favicon for browser tabs; iOS reads apple-touch-icon rather than manifest icons; theme-color tints the browser chrome. */
 export function pwaHeadPlugin(base: string, tokens: TokenFile = readTokens()): Plugin {
   const panel = primaryColor(tokens, 'panel')
   return {
@@ -64,7 +67,7 @@ export function pwaHeadPlugin(base: string, tokens: TokenFile = readTokens()): P
     transformIndexHtml: (html) =>
       html.replace(
         '</head>',
-        `  <meta name="theme-color" content="${panel}">\n    <link rel="apple-touch-icon" href="${base}icons/icon-192.png">\n  </head>`,
+        `  <meta name="theme-color" content="${panel}">\n    <link rel="icon" href="${base}${FAVICON}" type="image/svg+xml">\n    <link rel="apple-touch-icon" href="${base}icons/icon-192.png">\n  </head>`,
       ),
   }
 }
