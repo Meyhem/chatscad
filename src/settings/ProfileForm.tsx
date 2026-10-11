@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { createProvider } from '../ai/createProvider'
 import type { AdapterKind, ProviderCapabilities } from '../ai/types'
 import { isLocalBaseUrl } from '../ai/url'
@@ -6,6 +6,7 @@ import type { ProviderProfile } from '../db/db'
 import { IconCheck, IconWarning } from '../ui/icons'
 import { PriceTable } from './PriceTable'
 import { useProvidersStore, type ProfilePatch } from './providersStore'
+import { TranscriptionModelField } from './TranscriptionModelField'
 import { testConnection, type ConnectionResult } from './testConnection'
 
 const CAPABILITIES: Array<[keyof ProviderCapabilities, string]> = [
@@ -160,15 +161,25 @@ export function ProfileForm({ profile }: { profile: ProviderProfile }) {
         <div className="pc-stack">
           <span className="pc-label">Capabilities</span>
           {CAPABILITIES.map(([key, label]) => (
-            <label key={key} className="pc-switch">
-              <input
-                type="checkbox"
-                checked={profile.capabilities[key]}
-                onChange={(e) => patch({ capabilities: { ...profile.capabilities, [key]: e.target.checked } })}
-              />
-              <span className="pc-track" />
-              {label}
-            </label>
+            <Fragment key={key}>
+              <label className="pc-switch">
+                <input
+                  type="checkbox"
+                  checked={profile.capabilities[key]}
+                  onChange={(e) =>
+                    patch({
+                      capabilities: {
+                        ...profile.capabilities,
+                        [key]: e.target.checked,
+                      },
+                    })
+                  }
+                />
+                <span className="pc-track" />
+                {label}
+              </label>
+              {key === 'audio' && profile.capabilities.audio && <TranscriptionModelField />}
+            </Fragment>
           ))}
         </div>
 

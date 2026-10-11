@@ -22,7 +22,7 @@ export function toStored(
     role: m.role,
     content: m.text,
     imageBlobIds: m.imageBlobIds ?? [],
-    audioTranscript: null,
+    audioTranscript: m.audioTranscript ?? null,
     model: m.model,
     usageId: meta.usageId,
     createdAt: meta.createdAt,
@@ -41,6 +41,7 @@ export function fromStored(m: StoredMessage, version: Version | undefined, usage
     status: 'done',
     ...(version && version.compileStatus !== 'pending' ? { compileStatus: version.compileStatus } : {}),
     ...(m.imageBlobIds.length > 0 ? { imageBlobIds: m.imageBlobIds } : {}),
+    ...(m.audioTranscript !== null ? { audioTranscript: m.audioTranscript } : {}),
   }
 }
 

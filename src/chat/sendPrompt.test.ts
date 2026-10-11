@@ -153,3 +153,9 @@ it('a slider move stops the turn, so the turn is never judged on the person\'s p
   expect(chat().messages.at(-1)).toMatchObject({ role: 'note', text: 'Stopped: you changed a parameter.' })
   expect(chat().busy).toBe(false)
 })
+
+it('keeps the dictated transcript on the user message', async () => {
+  const { provider } = scriptedProvider({ text: FULL })
+  await sendPrompt('A block', { createProvider: () => provider, render: async () => okResult(), audioTranscript: 'a block' })
+  expect(chat().messages[0]).toMatchObject({ role: 'user', text: 'A block', audioTranscript: 'a block' })
+})

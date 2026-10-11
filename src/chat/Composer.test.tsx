@@ -80,3 +80,35 @@ it('with 3 variants per prompt, Enter starts the variants instead of a single re
     usePrefs.setState({ variantCount: 1 })
   }
 })
+
+it('shows the mic where the browser can dictate, and sends the dictated transcript with the message', async () => {
+  const { useVoiceStore } = await import('../voice/voiceStore')
+  class FakeRecognition {
+    lang = ''
+    continuous = false
+    interimResults = false
+    onresult = null
+    onerror = null
+    onend: (() => void) | null = null
+    start = vi.fn()
+    stop = vi.fn(() => this.onend?.())
+    abort = vi.fn()
+  }
+  Object.defineProperty(window, 'webkitSpeechRecognition', { value: FakeRecognition, configurable: true })
+  try {
+    useProvidersStore.setState({ settings: { ...DEFAULT_SETTINGS, activeProfileId: profile.id, activeModel: 'm1' } })
+    render(<Composer />)
+    expect(screen.getByRole('button', { name: 'Dictate' })).toBeInTheDocument()
+    useVoiceStore.getState().setTranscript('a box with a lid')
+    await userEvent.type(screen.getByLabelText('Prompt'), 'a box with a lid{Enter}')
+    expect(sendPrompt).toHaveBeenCalledWith('a box with a lid', { audioTranscript: 'a box with a lid' })
+    expect(useVoiceStore.getState().transcript).toBeNull()
+  } finally {
+    Reflect.deleteProperty(window, 'webkitSpeechRecognition')
+  }
+})
+
+it('hides the mic without speech recognition or a provider that can transcribe', () => {
+  render(<Composer />)
+  expect(screen.queryByRole('button', { name: 'Dictate' })).toBeNull()
+})

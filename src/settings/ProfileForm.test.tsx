@@ -129,3 +129,10 @@ it('marks a price that is not a number', async () => {
   await userEvent.type(screen.getByLabelText('m input price'), 'abc')
   expect(screen.getByLabelText('m input price').closest('.pc-input')).toHaveClass('is-invalid')
 })
+
+it('offers the transcription model under the Audio switch once Audio is on', async () => {
+  await setup('openai')
+  expect(screen.queryByLabelText('Transcription model')).toBeNull()
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Audio transcription' }))
+  expect(await screen.findByLabelText('Transcription model')).toBeInTheDocument()
+})

@@ -15,3 +15,17 @@ it('turns the quick preview pass on and off', async () => {
   expect(update).toHaveBeenCalledWith({ lowQualityPreview: true })
   expect(screen.getByText(/Renders once with \$fn = 12/)).toBeInTheDocument()
 })
+
+import { TranscriptionModelField } from './TranscriptionModelField'
+
+it('edits the transcription model and saves it on blur', async () => {
+  const update = vi.fn(async () => {})
+  usePrefs.setState({ update, transcriptionModel: 'whisper-1' })
+  render(<TranscriptionModelField />)
+  const field = screen.getByLabelText('Transcription model')
+  expect(field).toHaveValue('whisper-1')
+  await userEvent.clear(field)
+  await userEvent.type(field, 'gpt-4o-transcribe')
+  await userEvent.tab()
+  expect(update).toHaveBeenCalledWith({ transcriptionModel: 'gpt-4o-transcribe' })
+})

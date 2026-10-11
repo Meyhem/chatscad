@@ -17,6 +17,8 @@ import { streamingText } from './streamingText'
 export interface SendDeps {
   createProvider?(profile: ProviderProfile): LlmProvider
   render?(code: string, signal: AbortSignal): Promise<RenderResult>
+  /** The dictated transcript behind this prompt, kept on the user message. */
+  audioTranscript?: string | null
 }
 
 let inFlight: AbortController | null = null
@@ -57,7 +59,15 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
     }
   })
 
-  chat.addMessage({ role: 'user', text: userText, turnLabel: null, model: null, usage: null, status: 'done' })
+  chat.addMessage({
+    role: 'user',
+    text: userText,
+    turnLabel: null,
+    model: null,
+    usage: null,
+    status: 'done',
+    ...(deps.audioTranscript ? { audioTranscript: deps.audioTranscript } : {}),
+  })
   const openReply = () => chat.addMessage({ role: 'assistant', text: '', turnLabel: null, model, usage: null, status: 'streaming' })
   let current = openReply()
   useChatStore.setState({ busy: true, fixing: null, draft: '', backTo: { label: chat.labelForCode(startCode), code: startCode } })

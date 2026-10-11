@@ -12,6 +12,7 @@ export interface ChatMessage {
   error?: { title: string; body: string }
   compileStatus?: 'ok' | 'error'
   imageBlobIds?: string[] // M5
+  audioTranscript?: string // what was dictated, when the prompt was spoken
 }
 
 export interface AutoFixState {

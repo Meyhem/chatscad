@@ -105,3 +105,12 @@ it('writes nothing while no project is open', async () => {
   await chat.settled()
   expect(await db.messages.count()).toBe(0)
 })
+
+it('stores and restores the transcript of a dictated message', async () => {
+  const { toStored, fromStored } = await import('./chatPersistence')
+  const row = toStored(msg({ text: 'A lid', audioTranscript: 'a lid' }), { projectId: 'p', versionId: null, usageId: null, createdAt: 1 })
+  expect(row.audioTranscript).toBe('a lid')
+  expect(fromStored(row, undefined, undefined).audioTranscript).toBe('a lid')
+  expect(toStored(msg({}), { projectId: 'p', versionId: null, usageId: null, createdAt: 1 }).audioTranscript).toBeNull()
+  expect(fromStored({ ...row, audioTranscript: null }, undefined, undefined)).not.toHaveProperty('audioTranscript')
+})

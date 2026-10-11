@@ -10,6 +10,7 @@ export {
   Download as IconDownload,
   GitBranch as IconBranch,
   History as IconHistory,
+  Mic as IconMic,
   Info as IconInfo,
   Layers as IconLayers,
   LayoutGrid as IconGallery,
