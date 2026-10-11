@@ -1,6 +1,7 @@
 import type { RenderResult } from '../render/types'
 import { librarySection } from './libraryPrompt'
 import type { ContentPart, LlmMessage } from './types'
+import { scopeInstruction } from './scope'
 
 export interface PromptContext {
   code: string // current editor code ('' when empty)
@@ -30,7 +31,7 @@ replacement lines
 - Each SEARCH must copy the current lines exactly, including indentation and comments, and must match only one place in the file. Keep blocks small and in file order.
 - When you are asked to fix compiler errors, change only what is needed to make the file compile.`
 
-export function buildSystemPrompt(ctx: PromptContext): string {
+function buildBaseSystemPrompt(ctx: PromptContext): string {
   const libraries = librarySection(ctx.libraries ?? []) || 'No external libraries are available: do not use include <…> or use <…>.'
   return `${SYSTEM_PROMPT}\n\n${libraries}`
 }
@@ -62,4 +63,10 @@ export function formatCompileErrors(result: RenderResult): string {
   const lines = result.logs.filter((l) => /^(ERROR|WARNING|Execution aborted)/.test(l.text)).map((l) => l.text)
   const text = lines.length > 0 ? lines.join('\n') : result.error
   return text.length > MAX_ERROR_CHARS ? `${text.slice(0, MAX_ERROR_CHARS)}\n…` : text
+}
+
+export function buildSystemPrompt(ctx: PromptContext): string {
+  const base = buildBaseSystemPrompt(ctx)
+  // M5: a scoped edit names its lines. Auto-fix requests (ctx.errors) are not scoped: the line numbers are stale by then.
+  return ctx.selection && !ctx.errors ? `${base}\n\n${scopeInstruction(ctx.selection, ctx.code)}` : base
 }

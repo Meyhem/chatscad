@@ -2,6 +2,7 @@ import type { RenderResult } from '../render/types'
 import { applyEdits, parseReply } from './edits'
 import { buildMessages, buildSystemPrompt, formatCompileErrors, type PromptContext } from './prompt'
 import { DEFAULT_MAX_TOKENS, type ChatRequest, type ContentPart, type LlmMessage, type LlmProvider, type Usage } from './types'
+import { addUsage, changedOutsideRange, scopeCorrection, scopeRejected, withCorrection } from './scope'
 
 export interface GenerateResult {
   code: string | null // null when the reply had no usable code
@@ -51,7 +52,7 @@ function sumUsage(a: Usage, b: Usage): Usage {
 }
 
 /** Streams one reply, applies it to baseCode (full file or edits, with one full-file retry when an edit fails). */
-export async function generateCode(opts: {
+async function generateUnscoped(opts: {
   provider: LlmProvider
   model: string
   history: LlmMessage[]
@@ -144,4 +145,19 @@ export async function runTurn(opts: {
     result = await generate(history, asked, { ...ctx, code: result.code, errors })
     onEvent({ type: 'reply', result, attempt })
   }
+}
+
+type GenerateOptions = Parameters<typeof generateUnscoped>[0]
+
+/** Streams one reply, applies it to baseCode (full file or edits, with one full-file retry when an edit fails). M5: with a selection, a reply that changes other lines is retried once, then rejected. */
+export async function generateCode(opts: GenerateOptions): Promise<GenerateResult> {
+  const selection = opts.ctx.selection
+  const first = await generateUnscoped(opts)
+  if (!selection || opts.ctx.errors || first.code === null || !changedOutsideRange(opts.ctx.code, first.code, selection)) {
+    return first
+  }
+  const retry = await generateUnscoped({ ...opts, userText: withCorrection(opts.userText, scopeCorrection(selection)) })
+  const usage = addUsage(first.usage, retry.usage)
+  if (retry.code !== null && !changedOutsideRange(opts.ctx.code, retry.code, selection)) return { ...retry, usage }
+  return { code: null, prose: scopeRejected(selection), usage, model: retry.model }
 }
