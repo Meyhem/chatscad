@@ -4,6 +4,7 @@ export {
   Check as IconCheck,
   ChevronDown as IconChevronDown,
   ChevronDown as IconChevron,
+  ChevronLeft as IconBack,
   Clock as IconClock,
   Code as IconCode,
   Copy as IconCopy,

@@ -116,3 +116,62 @@ it('exports the project from the footer', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Export project (.json)' }))
   expect(saveProjectFile).toHaveBeenCalledWith('p1')
 })
+
+describe('on a phone', () => {
+  beforeEach(() => {
+    window.matchMedia = vi.fn((query: string) => ({
+      matches: query === '(max-width: 767.98px)',
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia
+  })
+  afterEach(() => Reflect.deleteProperty(window, 'matchMedia'))
+
+  it('lists the versions with a sheet for the selected one, without the compare and preview columns', () => {
+    const { container } = render(<HistoryView createWorker={createWorker} />)
+    expect(rows(container)).toHaveLength(7)
+    expect(screen.queryByRole('region', { name: 'Compare' })).toBeNull()
+    expect(screen.queryByTestId('preview-viewer')).toBeNull()
+    const sheet = screen.getByRole('region', { name: 'Selected version' })
+    expect(within(sheet).getByText('v6 · Slider')).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Restore v6' })).toBeDisabled()
+    expect(within(sheet).getByRole('button', { name: 'Compare with v5' })).toBeEnabled()
+
+    fireEvent.click(rows(container)[1]!)
+    expect(within(sheet).getByText('v5 · Auto-fix')).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Restore v5' })).toBeEnabled()
+    expect(within(sheet).getByRole('button', { name: 'Compare with v6' })).toBeInTheDocument()
+    expect(within(sheet).getByText('Restoring makes a new version. Nothing is deleted.')).toBeInTheDocument()
+  })
+
+  it('opens the comparison with the current version and comes back to the list', async () => {
+    const { container } = render(<HistoryView createWorker={createWorker} />)
+    fireEvent.click(rows(container)[1]!)
+    fireEvent.click(screen.getByRole('button', { name: 'Compare with v6' }))
+    expect(screen.getByRole('combobox', { name: 'From version' })).toHaveDisplayValue('v5')
+    expect(screen.getByRole('combobox', { name: 'To version' })).toHaveDisplayValue('v6')
+    expect(screen.getByTestId('preview-viewer')).toBeInTheDocument()
+    expect(rows(container)).toHaveLength(0)
+    expect(await screen.findByText('Closed the translate() call on line 16. No other changes.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Versions' }))
+    expect(rows(container)[1]).toHaveAttribute('aria-current', 'true')
+    expect(screen.queryByRole('region', { name: 'Compare' })).toBeNull()
+  })
+
+  it('compares the current version with its parent', () => {
+    render(<HistoryView createWorker={createWorker} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Compare with v5' }))
+    expect(screen.getByRole('combobox', { name: 'From version' })).toHaveDisplayValue('v5')
+    expect(screen.getByRole('combobox', { name: 'To version' })).toHaveDisplayValue('v6')
+  })
+
+  it('restores from the sheet and returns to the Project tab', async () => {
+    const { container } = render(<HistoryView createWorker={createWorker} />)
+    fireEvent.click(rows(container)[1]!)
+    fireEvent.click(screen.getByRole('button', { name: 'Restore v5' }))
+    await waitFor(() => expect(restore).toHaveBeenCalledWith('v5'))
+    await waitFor(() => expect(useAppStore.getState().view).toBe('workbench'))
+  })
+})
