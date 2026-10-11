@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { ExportDialog } from '../export/ExportDialog'
 import { usePrefs } from '../settings/prefsStore'
 import { listenForShareLinks } from '../share/importShared'
 import { ShareNotice } from '../share/ShareNotice'
@@ -9,5 +10,10 @@ export function GlobalOverlays() {
     void usePrefs.getState().load()
   }, [])
   useEffect(() => listenForShareLinks(), [])
-  return <ShareNotice />
+  return (
+    <>
+      <ExportDialog />
+      <ShareNotice />
+    </>
+  )
 }

@@ -1,5 +1,5 @@
 import type { RenderStatus } from '../state/store'
-import { IconDownload } from '../ui/icons'
+import { IconDownload, IconShare } from '../ui/icons'
 
 /** Why Export STL is disabled, or null when the file would match the code. */
 export function exportDisabledReason(status: RenderStatus): string | null {
@@ -19,14 +19,15 @@ interface Props {
   canExportStl: boolean
   disabledReason: string | null
   onExportStl(): void
-  onExportScad(): void
+  onShare(): void
 }
 
-export function ExportButtons({ canExportStl, disabledReason, onExportStl, onExportScad }: Props) {
+export function ExportButtons({ canExportStl, disabledReason, onExportStl, onShare }: Props) {
   return (
     <div className="flex items-center gap-2">
-      <button type="button" className="pc-btn is-sm" onClick={onExportScad}>
-        Export .scad
+      <button type="button" className="pc-btn is-sm" onClick={onShare}>
+        <IconShare className="pc-i" aria-hidden="true" />
+        Share
       </button>
       <button
         type="button"

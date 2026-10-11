@@ -2,32 +2,33 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ExportButtons, exportDisabledReason } from './ExportButtons'
 
-it('disables STL export with the reason as a tooltip, but keeps .scad export available', () => {
+it('disables STL export with the reason as a tooltip, and keeps Share available', () => {
   render(
     <ExportButtons
       canExportStl={false}
       disabledReason="Fix the error first, so the file matches the code"
       onExportStl={() => {}}
-      onExportScad={() => {}}
+      onShare={() => {}}
     />,
   )
   const stl = screen.getByRole('button', { name: 'Export STL' })
   expect(stl).toBeDisabled()
   expect(stl).toHaveAttribute('title', 'Fix the error first, so the file matches the code')
   expect(stl).toHaveClass('pc-btn', 'is-primary')
-  expect(screen.getByRole('button', { name: 'Export .scad' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'Share' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'Share' })).not.toHaveClass('is-primary')
 })
 
 it('calls the handlers', async () => {
   const onExportStl = vi.fn()
-  const onExportScad = vi.fn()
-  render(<ExportButtons canExportStl disabledReason={null} onExportStl={onExportStl} onExportScad={onExportScad} />)
+  const onShare = vi.fn()
+  render(<ExportButtons canExportStl disabledReason={null} onExportStl={onExportStl} onShare={onShare} />)
   const stl = screen.getByRole('button', { name: 'Export STL' })
   expect(stl).not.toHaveAttribute('title')
   await userEvent.click(stl)
-  await userEvent.click(screen.getByRole('button', { name: 'Export .scad' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Share' }))
   expect(onExportStl).toHaveBeenCalledOnce()
-  expect(onExportScad).toHaveBeenCalledOnce()
+  expect(onShare).toHaveBeenCalledOnce()
 })
 
 describe('exportDisabledReason', () => {

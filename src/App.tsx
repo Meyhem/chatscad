@@ -4,7 +4,8 @@ import { ChatPanel } from './chat/ChatPanel'
 import { ComposerBridge } from './chat/promptRequest'
 import { CustomizerDock } from './customizer/CustomizerDock'
 import { ExportButtons, exportDisabledReason } from './export/ExportButtons'
-import { exportScad, exportStl } from './export/saveFile'
+import { useExportStore } from './export/exportStore'
+import { exportStl } from './export/saveFile'
 import { GalleryView } from './gallery/GalleryView'
 import { HistoryView } from './history/HistoryView'
 import { useRenderedVersionLabel } from './history/renderedVersion'
@@ -94,7 +95,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
               const { stl } = useAppStore.getState()
               if (stl) void exportStl(stl)
             }}
-            onExportScad={() => void exportScad(useAppStore.getState().code)}
+            onShare={() => useExportStore.getState().openAt('link')}
           />
         </header>
 

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { EditorView } from '@codemirror/view'
 import userEvent from '@testing-library/user-event'
 import { useChatStore } from './chat/chatStore'
@@ -11,6 +11,7 @@ import { useAppStore } from './state/store'
 import { resetDb } from './test/db'
 import { errorResult, okResult } from './test/results'
 import { App } from './App'
+import { useExportStore } from './export/exportStore'
 import { emitLoadProgress } from './render/loadProgress'
 import { usePrefs } from './settings/prefsStore'
 
@@ -23,6 +24,7 @@ beforeEach(async () => {
   useAppStore.setState(useAppStore.getInitialState(), true)
   useChatStore.setState(useChatStore.getInitialState(), true)
   useProvidersStore.setState(useProvidersStore.getInitialState(), true)
+  useExportStore.setState(useExportStore.getInitialState(), true)
 })
 afterEach(() => vi.unstubAllGlobals())
 afterEach(() => usePrefs.setState(usePrefs.getInitialState(), true))
@@ -56,7 +58,7 @@ it('keeps the last mesh (dimmed) but disables STL export after a failed edit, wi
   const stl = screen.getByRole('button', { name: 'Export STL' })
   expect(stl).toBeDisabled()
   expect(stl).toHaveAttribute('title', 'Fix the error first, so the file matches the code')
-  expect(screen.getByRole('button', { name: 'Export .scad' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'Share' })).toBeEnabled()
   expect(screen.getByTestId('dims')).toHaveTextContent('20 × 20 × 10 mm')
   expect(screen.getByTestId('viewer')).toHaveAttribute('data-stale', 'true')
   expect(screen.getByTestId('console')).toHaveTextContent('ERROR: Parser error')
@@ -218,4 +220,11 @@ it('renders a quick $fn = 12 pass before the full render when the setting is on'
   await waitFor(() => expect(screen.getByTestId('render-status')).toHaveTextContent(/^Rendered/))
   expect(seen[0].params).toMatchObject({ $fn: 12 })
   expect(seen[1].params ?? {}).not.toHaveProperty('$fn')
+})
+
+it('opens the export dialog on the Link tab from Share', async () => {
+  render(<App createWorker={scriptedWorker(() => okResult())} />)
+  await userEvent.click(screen.getByRole('button', { name: 'Share' }))
+  const dialog = screen.getByRole('dialog', { name: 'Export and share' })
+  expect(within(dialog).getByRole('tab', { name: 'Link' })).toHaveAttribute('aria-selected', 'true')
 })
