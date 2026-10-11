@@ -14,6 +14,7 @@ export const ICONS: IconResource[] = [
 
 /** Written by scripts/gen-icons.ts next to the PNGs. */
 export const FAVICON = 'icons/icon.svg'
+export const FAVICON_PNG = 'icons/icon-32.png'
 
 export interface TokenFile {
   color: { themes: { id: string }[]; tokens: { name: string; value: string | Record<string, string> }[] }
@@ -59,7 +60,7 @@ export function pwaOptions(base: string, tokens: TokenFile = readTokens()): Part
   }
 }
 
-/** The SVG favicon for browser tabs; iOS reads apple-touch-icon rather than manifest icons; theme-color tints the browser chrome. */
+/** The favicons for browser tabs (PNG first for Safari; SVG-capable browsers prefer the SVG); iOS reads apple-touch-icon rather than manifest icons; theme-color tints the browser chrome. */
 export function pwaHeadPlugin(base: string, tokens: TokenFile = readTokens()): Plugin {
   const panel = primaryColor(tokens, 'panel')
   return {
@@ -67,7 +68,7 @@ export function pwaHeadPlugin(base: string, tokens: TokenFile = readTokens()): P
     transformIndexHtml: (html) =>
       html.replace(
         '</head>',
-        `  <meta name="theme-color" content="${panel}">\n    <link rel="icon" href="${base}${FAVICON}" type="image/svg+xml">\n    <link rel="apple-touch-icon" href="${base}icons/icon-192.png">\n  </head>`,
+        `  <meta name="theme-color" content="${panel}">\n    <link rel="icon" href="${base}${FAVICON_PNG}" sizes="32x32" type="image/png">\n    <link rel="icon" href="${base}${FAVICON}" type="image/svg+xml">\n    <link rel="apple-touch-icon" href="${base}icons/icon-192.png">\n  </head>`,
       ),
   }
 }

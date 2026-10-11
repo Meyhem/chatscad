@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { crc32, inflateSync } from 'node:zlib'
-import { FAVICON, ICONS, primaryColor, readTokens } from '../build/pwa'
-import { cubeShades, encodePng, glyph, hexToRgb, ICON_FILES, ICON_SVG, iconSvg, renderIcon, rgbToHex, type Palette, type Rgb } from './gen-icons'
+import { FAVICON, FAVICON_PNG, ICONS, primaryColor, readTokens } from '../build/pwa'
+import { cubeShades, encodePng, FAVICON_PNG_FILE, glyph, hexToRgb, ICON_FILES, ICON_SVG, iconSvg, renderIcon, rgbToHex, type Palette, type Rgb } from './gen-icons'
 
 function decodePng(png: Uint8Array) {
   expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
@@ -105,4 +105,6 @@ it('reads #rrggbb colours only, and the tokens are such colours', () => {
 it('writes the files the manifest names', () => {
   expect(ICON_FILES.map((f) => `icons/${f.file}`)).toEqual(ICONS.map((i) => i.src))
   expect(`icons/${ICON_SVG}`).toBe(FAVICON)
+  expect(`icons/${FAVICON_PNG_FILE.file}`).toBe(FAVICON_PNG)
+  expect(FAVICON_PNG_FILE).toMatchObject({ size: 32, scale: 1 })
 })

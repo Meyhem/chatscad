@@ -214,6 +214,9 @@ export const ICON_FILES = [
 
 export const ICON_SVG = 'icon.svg'
 
+/** Safari ignores SVG favicons. Full-bleed at the favicon's own grid, so not in the manifest. */
+export const FAVICON_PNG_FILE = { file: 'icon-32.png', size: 32, scale: 1 } as const
+
 const OUT_DIR = fileURLToPath(new URL('../public/icons/', import.meta.url))
 
 async function main(): Promise<void> {
@@ -225,11 +228,11 @@ async function main(): Promise<void> {
   }
   const shapes = glyph(palette)
   await mkdir(OUT_DIR, { recursive: true })
-  for (const { file, size, scale } of ICON_FILES) {
+  for (const { file, size, scale } of [...ICON_FILES, FAVICON_PNG_FILE]) {
     await writeFile(OUT_DIR + file, encodePng(size, size, renderIcon({ size, scale, background: palette.background, shapes })))
   }
   await writeFile(OUT_DIR + ICON_SVG, iconSvg(palette))
-  console.log(`Wrote ${ICON_FILES.length + 1} icons to ${OUT_DIR}`)
+  console.log(`Wrote ${ICON_FILES.length + 2} icons to ${OUT_DIR}`)
 }
 
 const invokedDirectly = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1])

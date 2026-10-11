@@ -43,10 +43,13 @@ it('is an installable standalone app coloured from the design tokens', () => {
   ])
 })
 
-it('adds the SVG favicon, the iOS touch icon and the theme colour under the base path', () => {
+it('adds the PNG and SVG favicons, the iOS touch icon and the theme colour under the base path', () => {
   const transform = pwaHeadPlugin('/chatscad/', tokens).transformIndexHtml as (html: string) => string
   const html = transform('<html><head><title>ChatSCAD</title></head><body></body></html>')
-  expect(html).toContain('<link rel="icon" href="/chatscad/icons/icon.svg" type="image/svg+xml">')
+  // PNG first for Safari, which ignores SVG favicons; browsers that support SVG prefer it.
+  expect(html).toContain(
+    '<link rel="icon" href="/chatscad/icons/icon-32.png" sizes="32x32" type="image/png">\n    <link rel="icon" href="/chatscad/icons/icon.svg" type="image/svg+xml">',
+  )
   expect(html).toContain('<link rel="apple-touch-icon" href="/chatscad/icons/icon-192.png">')
   expect(html).toContain(`<meta name="theme-color" content="${primaryColor(tokens, 'panel')}">`)
 })

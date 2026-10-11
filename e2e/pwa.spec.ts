@@ -37,8 +37,11 @@ test('serves an installable manifest with the generated icons', async ({ page, r
     expect(res.headers()['content-type']).toBe('image/png')
   }
   await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', /icons\/icon-192\.png$/)
-  const favicon = await page.locator('link[rel="icon"]').getAttribute('href')
-  const res = await request.get(new URL(favicon!, page.url()).toString())
-  expect(res.status()).toBe(200)
-  expect(res.headers()['content-type']).toBe('image/svg+xml')
+  const favicons = page.locator('link[rel="icon"]')
+  await expect(favicons).toHaveCount(2)
+  for (const [i, type] of ['image/png', 'image/svg+xml'].entries()) {
+    const res = await request.get(new URL((await favicons.nth(i).getAttribute('href'))!, page.url()).toString())
+    expect(res.status()).toBe(200)
+    expect(res.headers()['content-type']).toBe(type)
+  }
 })
