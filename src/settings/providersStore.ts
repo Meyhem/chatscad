@@ -1,5 +1,7 @@
 import { create } from 'zustand'
+import { createProvider } from '../ai/createProvider'
 import { withEffort } from '../ai/effort'
+import { isOpenRouter } from '../ai/url'
 import type { ReasoningEffort } from '../ai/types'
 import { DEFAULT_SETTINGS, type ProviderProfile, type Settings } from '../db/db'
 import { deleteProfile, listProfiles, newProfile, saveProfile } from '../db/profiles'
@@ -24,7 +26,15 @@ export interface ProvidersState {
   chooseModel(profileId: string, model: string): Promise<void>
   /** null goes back to Default. */
   setReasoningEffort(profileId: string, model: string, effort: ReasoningEffort | null): Promise<void>
+  /** Reloads Anthropic and OpenRouter model lists cached before they carried limits and reasoning support. */
+  refreshStaleModels(create?: typeof createProvider): Promise<void>
 }
+
+/** A list from a provider that reports limits or reasoning, cached before the app read them. */
+const staleModels = (p: ProviderProfile) =>
+  (p.adapter === 'anthropic' || isOpenRouter(p.baseUrl)) &&
+  p.cachedModels.length > 0 &&
+  !p.cachedModels.some((m) => m.reasoning !== undefined || m.maxOutputTokens !== undefined)
 
 function without(status: Record<string, ConnectionStatus>, id: string): Record<string, ConnectionStatus> {
   const next = { ...status }
@@ -90,6 +100,22 @@ export const useProvidersStore = create<ProvidersState>()((set, get) => ({
     const next: ProviderProfile = { ...current, reasoningEffort: withEffort(current, model, effort), updatedAt: Date.now() }
     set((s) => ({ profiles: s.profiles.map((p) => (p.id === profileId ? next : p)) }))
     await saveProfile(next)
+  },
+
+  // Saves directly, like setReasoningEffort: a refreshed list must not clear the connection status.
+  refreshStaleModels: async (create = createProvider) => {
+    for (const stale of get().profiles.filter(staleModels)) {
+      try {
+        const models = await create(stale).listModels()
+        const current = get().profiles.find((p) => p.id === stale.id)
+        if (!current) continue
+        const next: ProviderProfile = { ...current, cachedModels: models, updatedAt: Date.now() }
+        set((s) => ({ profiles: s.profiles.map((p) => (p.id === next.id ? next : p)) }))
+        await saveProfile(next)
+      } catch {
+        // Offline or locked: the old list still works; the next start tries again.
+      }
+    }
   },
 }))
 

@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS } from '../db/db'
+import { DEFAULT_SETTINGS, type ProviderProfile } from '../db/db'
 import { getProfile, newProfile, saveProfile } from '../db/profiles'
 import { getSettings, updateSettings } from '../db/settings'
 import { resetDb } from '../test/db'
@@ -130,4 +130,36 @@ it('stores the reasoning effort per model, clears it back to Default, and keeps 
   expect(useProvidersStore.getState().status[p.id]).toBe('ok')
   await useProvidersStore.getState().setReasoningEffort(p.id, 'r1', null)
   expect((await getProfile(p.id))?.reasoningEffort).toEqual({})
+})
+
+it('refreshes model lists cached before reasoning support, for Anthropic and OpenRouter only, keeping the status', async () => {
+  const stale = await saveProfile({
+    ...newProfile({ name: 'OR', adapter: 'openai-compatible', baseUrl: 'https://openrouter.ai/api/v1' }),
+    cachedModels: [{ id: 'r1' }],
+  })
+  const fresh = await saveProfile({
+    ...newProfile({ name: 'C', adapter: 'anthropic', baseUrl: 'https://api.anthropic.com', apiKey: 'k' }),
+    cachedModels: [{ id: 'c1', maxOutputTokens: 64000 }],
+  })
+  const local = await saveProfile({
+    ...newProfile({ name: 'L', adapter: 'openai-compatible', baseUrl: 'http://localhost:11434/v1' }),
+    cachedModels: [{ id: 'llama' }],
+  })
+  await useProvidersStore.getState().load()
+  useProvidersStore.getState().setStatus(stale.id, 'ok')
+  const listModels = vi.fn(async () => [{ id: 'r1', reasoning: { efforts: true, canDisable: true, adaptive: false } }])
+  const create = vi.fn((_p: ProviderProfile) => ({ listModels, streamChat: () => ({ [Symbol.asyncIterator]: () => ({ next: async () => ({ done: true as const, value: undefined }) }) }) }))
+  await useProvidersStore.getState().refreshStaleModels(create)
+  expect(create.mock.calls.map(([p]) => p.id)).toEqual([stale.id])
+  expect((await getProfile(stale.id))?.cachedModels[0]?.reasoning).toEqual({ efforts: true, canDisable: true, adaptive: false })
+  expect(useProvidersStore.getState().status[stale.id]).toBe('ok')
+  void fresh
+  void local
+})
+
+it('ignores a failed refresh', async () => {
+  await saveProfile({ ...newProfile({ name: 'OR', adapter: 'openai-compatible', baseUrl: 'https://openrouter.ai/api/v1' }), cachedModels: [{ id: 'r1' }] })
+  await useProvidersStore.getState().load()
+  const create = vi.fn(() => ({ listModels: async () => Promise.reject(new Error('offline')), streamChat: () => ({ [Symbol.asyncIterator]: () => ({ next: async () => ({ done: true as const, value: undefined }) }) }) }))
+  await expect(useProvidersStore.getState().refreshStaleModels(create)).resolves.toBeUndefined()
 })

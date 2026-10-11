@@ -54,7 +54,10 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
   const previewing = useAppStore(selectShowingPreview)
   useUndoShortcuts()
   useEffect(() => {
-    void useProvidersStore.getState().load()
+    void useProvidersStore
+      .getState()
+      .load()
+      .then(() => useProvidersStore.getState().refreshStaleModels())
   }, [])
   useEffect(() => onLoadProgress(useAppStore.getState().setLoadProgress), [])
   const loadProgress = useAppStore((s) => s.loadProgress)
