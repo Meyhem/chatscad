@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react'
+import { useEffect, useState, type KeyboardEvent } from 'react'
 import type { ModelInfo, ModelPrice } from '../ai/types'
 import { IconPlus, IconSearch } from '../ui/icons'
 
@@ -35,6 +35,11 @@ export function ModelCombobox({ id, value, models, priceTable, onChange, onPick 
   const count = shown.length + (asTyped ? 1 : 0)
   const listId = `${id}-models`
   const optionId = (i: number) => `${id}-model-${i}`
+
+  // The highlight moves with aria-activedescendant, which does not scroll; keep it in sight.
+  useEffect(() => {
+    if (open && active >= 0) document.getElementById(optionId(active))?.scrollIntoView?.({ block: 'nearest' })
+  }, [open, active]) // optionId only depends on the stable id prop
 
   const close = () => {
     setOpen(false)

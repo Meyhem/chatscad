@@ -88,3 +88,15 @@ it('shows the id once for a model the provider gives no name', async () => {
   await userEvent.type(box(), 'coder')
   expect(within(options()[0]).getAllByText('example/sonnet-coder-32b')).toHaveLength(1)
 })
+
+it('scrolls the highlighted option into view', async () => {
+  const scrolled: string[] = []
+  Element.prototype.scrollIntoView = function (this: Element) {
+    scrolled.push(this.textContent ?? '')
+  }
+  const many = Array.from({ length: 20 }, (_, i) => ({ id: `model-${i}` }))
+  render(<Harness models={many} />)
+  await userEvent.click(box())
+  await userEvent.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}')
+  expect(scrolled.at(-1)).toContain('model-2')
+})
