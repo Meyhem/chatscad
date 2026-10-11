@@ -42,3 +42,12 @@ it('keeps the index inside a shrinking frame list', () => {
   rerender({ n: 2 })
   expect(result.current).toBeLessThan(2)
 })
+
+it('keeps playing while more frames arrive', () => {
+  const { result, rerender } = renderHook(({ n }) => useFrameLoop(n, 100, true), { initialProps: { n: 2 } })
+  for (let n = 3; n <= 8; n++) {
+    act(() => vi.advanceTimersByTime(60))
+    rerender({ n })
+  }
+  expect(result.current).toBeGreaterThan(1)
+})
