@@ -243,3 +243,33 @@ describe('M5: visual check', () => {
     expect(chat().messages.some((m) => m.text.startsWith('Visual check'))).toBe(false)
   })
 })
+
+describe('M5: scope retry in the chat', () => {
+  const CODE3 = 'a();\nb();\nc();\n'
+  const stray = (tag: string) => `${tag}\n\n\`\`\`openscad\nA();\nb();\nc();\n\`\`\`\n`
+
+  beforeEach(async () => {
+    const { useAttachments } = await import('../images/attachments')
+    const { useRefineStore } = await import('../refine/refineStore')
+    const { partPickFixture } = await import('../test/picks')
+    useAttachments.setState({ items: [], error: null })
+    useAppStore.setState({ code: CODE3 })
+    useRefineStore.setState({ pick: { ...partPickFixture(), scope: { startLine: 2, endLine: 2 } } })
+  })
+
+  it('starts the retry in an empty bubble and keeps the rejection out of the model history', async () => {
+    const seen: string[] = []
+    const unsubscribe = useChatStore.subscribe((s) => {
+      const reply = s.messages.find((m) => m.role === 'assistant')
+      if (reply) seen.push(reply.text)
+    })
+    const { provider } = scriptedProvider({ text: stray('FIRST') }, { text: stray('SECOND') })
+    await sendPrompt('Make b bigger', { createProvider: () => provider, render: async () => okResult() })
+    unsubscribe()
+
+    expect(seen.some((t) => t.includes('FIRST') && t.includes('SECOND'))).toBe(false)
+    expect(chat().messages.at(-1)?.text).toMatch(/^The reply changed lines outside line 2, so it was not applied/)
+    expect(chat().history.at(-1)).toEqual({ role: 'assistant', content: 'Made no change.' })
+    expect(useAppStore.getState().code).toBe(CODE3)
+  })
+})

@@ -9,6 +9,8 @@ export interface GenerateResult {
   prose: string
   usage: Usage
   model: string
+  /** M5: the reply strayed outside the picked part twice, so nothing was applied. */
+  scopeRejected?: true
 }
 
 export type TurnEvent =
@@ -17,6 +19,7 @@ export type TurnEvent =
   | { type: 'rendered'; result: RenderResult; attempt: number }
   | { type: 'fixing'; attempt: number; of: number; errors: string }
   | { type: 'gave-up'; attempts: number }
+  | { type: 'retry' } // M5: a scoped reply strayed; the next deltas belong to a fresh reply
 
 const FIX_REQUEST = 'The code did not compile. Fix the errors above.'
 
@@ -112,7 +115,7 @@ export async function runTurn(opts: {
 }): Promise<void> {
   const { provider, model, ctx, maxFixAttempts, render, apply, onEvent, signal } = opts
   const generate = (history: LlmMessage[], userText: string | ContentPart[], context: PromptContext) =>
-    generateCode({ provider, model, history, userText, ctx: context, signal, onDelta: (text) => onEvent({ type: 'delta', text }) })
+    generateCode({ provider, model, history, userText, ctx: context, signal, onDelta: (text) => onEvent({ type: 'delta', text }), onRetry: () => onEvent({ type: 'retry' }) })
 
   let history = opts.history
   let asked: string | ContentPart[] = opts.userText
@@ -147,7 +150,10 @@ export async function runTurn(opts: {
   }
 }
 
-type GenerateOptions = Parameters<typeof generateUnscoped>[0]
+type GenerateOptions = Parameters<typeof generateUnscoped>[0] & {
+  /** M5: called before a scoped reply is asked for again, so a streamed bubble can start over. */
+  onRetry?(): void
+}
 
 /** Streams one reply, applies it to baseCode (full file or edits, with one full-file retry when an edit fails). M5: with a selection, a reply that changes other lines is retried once, then rejected. */
 export async function generateCode(opts: GenerateOptions): Promise<GenerateResult> {
@@ -156,8 +162,9 @@ export async function generateCode(opts: GenerateOptions): Promise<GenerateResul
   if (!selection || opts.ctx.errors || first.code === null || !changedOutsideRange(opts.ctx.code, first.code, selection)) {
     return first
   }
+  opts.onRetry?.()
   const retry = await generateUnscoped({ ...opts, userText: withCorrection(opts.userText, scopeCorrection(selection)) })
   const usage = addUsage(first.usage, retry.usage)
   if (retry.code !== null && !changedOutsideRange(opts.ctx.code, retry.code, selection)) return { ...retry, usage }
-  return { code: null, prose: scopeRejected(selection), usage, model: retry.model }
+  return { code: null, prose: scopeRejected(selection), usage, model: retry.model, scopeRejected: true }
 }

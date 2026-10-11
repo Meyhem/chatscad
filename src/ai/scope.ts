@@ -34,7 +34,7 @@ export function changedOutsideRange(before: string, after: string, { startLine, 
 
 export function scopeCorrection(selection: ScopedSelection): string {
   const where = formatLines(selection)
-  return `Your previous reply changed lines outside ${where}. Reply again and change only ${where}; keep every other line exactly as it is.`
+  return `Change only ${where}; keep every other line exactly as it is. A reply that changes other lines cannot be applied.`
 }
 
 export function scopeRejected(selection: ScopedSelection): string {

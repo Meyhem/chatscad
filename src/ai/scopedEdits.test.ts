@@ -39,7 +39,10 @@ describe('generateCode with a selection', () => {
     const result = await run(provider)
     expect(result.code).toBe(CODE.replace('cube(10)', 'cube(12)'))
     expect(provider.requests).toHaveLength(2)
-    expect(JSON.stringify(provider.requests[1].messages)).toContain('Your previous reply changed lines outside line 2')
+    const retried = JSON.stringify(provider.requests[1].messages)
+    expect(retried).toContain('Change only line 2')
+    // The retry request does not carry the first reply, so the correction must not refer to it.
+    expect(retried).not.toContain('previous reply')
     expect(result.usage).toEqual({ inputTokens: 20, outputTokens: 10 })
   })
 
@@ -63,6 +66,18 @@ describe('generateCode with a selection', () => {
     const provider = scriptedProvider([full, INSIDE])
     expect((await run(provider)).code).toBe(CODE.replace('cube(10)', 'cube(12)'))
     expect(provider.requests).toHaveLength(2)
+  })
+
+  it('announces the retry before streaming it and flags a rejected reply', async () => {
+    const onRetry = vi.fn()
+    const strays = await generateCode({
+      provider: scriptedProvider([OUTSIDE, OUTSIDE]), model: 'm', history: [], userText: 'Taller', ctx: { code: CODE, selection: SELECTION },
+      signal: new AbortController().signal, onRetry,
+    })
+    expect(onRetry).toHaveBeenCalledOnce()
+    expect(strays).toMatchObject({ code: null, scopeRejected: true })
+    const fine = await run(scriptedProvider([INSIDE]))
+    expect(fine.scopeRejected).toBeUndefined()
   })
 
   it('does not restrict auto-fix replies', async () => {

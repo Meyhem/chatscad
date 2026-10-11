@@ -108,6 +108,9 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
       case 'delta':
         store.appendText(current, e.text)
         return
+      case 'retry':
+        store.patchMessage(current, { text: '' })
+        return
       case 'reply': {
         const { result } = e
         const { cost, costSource } = computeCost(result.usage, priceFor(profile, result.model))
@@ -121,7 +124,12 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
         })
         if (e.attempt === 0) {
           useChatStore.setState((s) => ({
-            history: [...s.history, { role: 'user', content: userText }, { role: 'assistant', content: result.prose || 'Updated main.scad.' }],
+            // A scope rejection is the app's words, not the model's; the model only learns nothing changed.
+            history: [
+              ...s.history,
+              { role: 'user', content: userText },
+              { role: 'assistant', content: result.scopeRejected ? 'Made no change.' : result.prose || 'Updated main.scad.' },
+            ],
           }))
         }
         void addUsage({
