@@ -15,6 +15,7 @@ import { useIsPhone } from './layout/useIsPhone'
 import { createRenderWorker, type WorkerFactory } from './render/createRenderWorker'
 import { onLoadProgress } from './render/loadProgress'
 import { withPreviewPass } from './render/previewPass'
+import { showPreviewIfCurrent } from './render/showPreview'
 import { useRenderLoop } from './render/useRenderLoop'
 import { SettingsPage } from './settings/SettingsPage'
 import { useProvidersStore } from './settings/providersStore'
@@ -39,7 +40,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
     () =>
       withPreviewPass(createWorker, {
         enabled: () => usePrefs.getState().lowQualityPreview,
-        onPreview: (result, req) => useAppStore.getState().showPreview({ code: req.code, params: req.params ?? {}, mesh: result.mesh }),
+        onPreview: (result, req) => showPreviewIfCurrent(req, result.mesh),
       }),
     [createWorker],
   )
