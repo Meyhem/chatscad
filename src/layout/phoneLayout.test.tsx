@@ -1,5 +1,6 @@
 import { act, render, renderHook, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { focusComposer } from '../refine/focusComposer'
 import { useAppStore } from '../state/store'
 import { ParamSheet } from './ParamSheet'
 import { PhoneLayout } from './PhoneLayout'
@@ -44,7 +45,11 @@ function layout() {
   render(
     <PhoneLayout
       header={<header>PromptCAD</header>}
-      chat={<textarea aria-label="Prompt" />}
+      chat={
+        <div className="pc-composer">
+          <textarea aria-label="Prompt" />
+        </div>
+      }
       code={<div data-testid="code-slot" />}
       keyRow={<div role="toolbar" aria-label="Code symbols" />}
       viewer={viewer}
@@ -97,4 +102,14 @@ it('opens and closes the parameter sheet from its grabber', async () => {
   await userEvent.click(grabber)
   expect(grabber).toHaveAttribute('aria-expanded', 'true')
   expect(screen.getByTestId('params')).toBeVisible()
+})
+
+it('Ask AI from the 3D tab switches to Chat and puts the cursor in the prompt', async () => {
+  layout()
+  await userEvent.click(screen.getByRole('tab', { name: '3D' }))
+  act(() => {
+    expect(focusComposer()).toBe(true)
+  })
+  expect(screen.getByRole('tab', { name: 'Chat' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('textbox', { name: 'Prompt' })).toHaveFocus()
 })

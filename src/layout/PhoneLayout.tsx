@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
+import { SHOW_CHAT_EVENT } from '../refine/focusComposer'
 import { useAppStore } from '../state/store'
 import { IconBox, IconChat, IconCode } from '../ui/icons'
 import { ParamSheet } from './ParamSheet'
@@ -30,6 +32,13 @@ export function PhoneLayout({ header, chat, code, keyRow, viewer, params, overla
   useEffect(() => {
     if (reveal) setTab('code')
   }, [reveal])
+
+  // "Ask AI" from the 3D tab: the composer must be visible before it can take focus.
+  useEffect(() => {
+    const showChat = () => flushSync(() => setTab('chat'))
+    window.addEventListener(SHOW_CHAT_EVENT, showChat)
+    return () => window.removeEventListener(SHOW_CHAT_EVENT, showChat)
+  }, [])
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLElement>) => {
     const i = TABS.findIndex((t) => t.id === tab)

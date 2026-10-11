@@ -17,6 +17,7 @@ import { onLoadProgress } from './render/loadProgress'
 import { withPreviewPass } from './render/previewPass'
 import { showPreviewIfCurrent } from './render/showPreview'
 import { useRenderLoop } from './render/useRenderLoop'
+import { useRefineSync } from './refine/useRefineSync'
 import { SettingsPage } from './settings/SettingsPage'
 import { useProvidersStore } from './settings/providersStore'
 import { usePrefs } from './settings/prefsStore'
@@ -45,6 +46,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
     [createWorker],
   )
   useRenderLoop(renderWorker, debounceMs, timeoutMs)
+  useRefineSync()
   const displayMesh = useAppStore(selectDisplayMesh)
   const previewing = useAppStore(selectShowingPreview)
   useUndoShortcuts()
@@ -91,7 +93,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
         chat={<ChatPanel />}
         code={<CodePane />}
         keyRow={<KeyRow onInsert={insertText} />}
-        viewer={(paused) => <Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} paused={paused} />}
+        viewer={(paused) => <Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} paused={paused} refine />}
         params={<CustomizerDock />}
         overlays={
           <>
@@ -149,7 +151,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
 
           <section aria-label="3D view" className="flex min-h-0 min-w-0 flex-col md:border-l md:border-line">
             <div className="min-h-0 flex-1">
-              <Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} />
+              <Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} refine />
             </div>
             <CustomizerDock />
           </section>

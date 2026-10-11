@@ -1,31 +1,56 @@
 import { GizmoHelper, GizmoViewport, Grid, OrbitControls } from '@react-three/drei'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas, useThree, type ThreeEvent } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AxesHelper, Color, Object3D, type PerspectiveCamera, type Vector3 } from 'three'
+import { focusComposer } from '../refine/focusComposer'
+import { isTap, resolvePick, type ScreenPoint } from '../refine/pick'
+import { PickPopover } from '../refine/PickPopover'
+import { partTagsState, useRefineStore } from '../refine/refineStore'
+import { useEscapeToClearPick } from '../refine/useEscapeToClearPick'
+import { useVisionSupport } from '../refine/useVisionSupport'
 import type { Bounds, MeshData } from '../render/types'
+import { useAppStore } from '../state/store'
 import { useTokens } from '../theme/tokens'
 import { DimsReadout } from '../ui/DimsReadout'
 import { IconFit, IconSpinner, IconWarning } from '../ui/icons'
 import { TriangleWarning } from './TriangleWarning'
 import { computeCameraFit } from './cameraFit'
 import { meshToGeometry } from './geometry'
+import { PickHighlight } from './PickHighlight'
 import { staleText } from './staleText'
 import { setViewerPose } from './viewerCamera'
 import { setThumbnailSource } from './thumbnail'
+import { ViewportCapture } from './ViewportCapture'
 
 // OpenSCAD is Z-up. This must run before any camera or controls are created.
 Object3D.DEFAULT_UP.set(0, 0, 1)
 
-const TOKENS = ['viewport', 'filament', 'grid-minor', 'grid-major', 'axis-x', 'axis-y', 'axis-z', 'ink'] as const
+const TOKENS = ['viewport', 'filament', 'grid-minor', 'grid-major', 'axis-x', 'axis-y', 'axis-z', 'ink', 'pick'] as const
 
 /** The screens dim the last good model to 55 % while the current code fails (`scene.is-stale`). */
 const STALE_OPACITY = 0.55
 
-function Model({ mesh, color, stale }: { mesh: MeshData; color: string; stale: boolean }) {
+function Model({
+  mesh,
+  color,
+  stale,
+  onTap,
+}: {
+  mesh: MeshData
+  color: string
+  stale: boolean
+  onTap?(faceIndex: number, at: ScreenPoint): void
+}) {
   const geometry = useMemo(() => meshToGeometry(mesh), [mesh])
   useEffect(() => () => geometry.dispose(), [geometry])
+  // R3F raycasts click-only meshes on click, never on pointer moves.
+  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+    if (!onTap || typeof e.faceIndex !== 'number') return
+    e.stopPropagation()
+    onTap(e.faceIndex, { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY })
+  }
   return (
-    <mesh geometry={geometry}>
+    <mesh geometry={geometry} onClick={onTap ? handleClick : undefined}>
       <meshStandardMaterial color={color} roughness={0.6} metalness={0.1} transparent={stale} opacity={stale ? STALE_OPACITY : 1} />
     </mesh>
   )
@@ -124,6 +149,7 @@ export function Viewer({
   staleLabel = null,
   previewing = false,
   paused = false,
+  refine = false,
 }: {
   mesh: MeshData | null
   stale: boolean
@@ -131,14 +157,50 @@ export function Viewer({
   staleLabel?: string | null
   previewing?: boolean
   paused?: boolean
+  /** Click-to-refine: tap a part of the workbench model (M5). Off for other viewers, such as History's. */
+  refine?: boolean
 }) {
   const t = useTokens(TOKENS)
   const [fitToken, setFitToken] = useState(0)
   const axisColors = [t['axis-x'], t['axis-y'], t['axis-z']] as const
 
+  const pointerDown = useRef<ScreenPoint | null>(null)
+  const tags = useRefineStore((s) => s.tags)
+  const pendingBase = useRefineStore((s) => s.pendingBase)
+  const storePick = useRefineStore((s) => s.pick)
+  const setPick = useRefineStore((s) => s.setPick)
+  const current = useAppStore((s) => s.status === 'ok' && s.renderedCode === s.code)
+  const goToLine = useAppStore((s) => s.goToLine)
+  const vision = useVisionSupport()
+  useEscapeToClearPick()
+  const tagState = refine ? partTagsState(mesh, tags, pendingBase) : 'none'
+  const pick = refine ? storePick : null
+  const shown = refine && tags && tagState === 'ready' ? tags.mesh : mesh
+  const canPick = refine && shown !== null && !stale && !previewing && current && tagState !== 'pending'
+  const onTap = (faceIndex: number, at: ScreenPoint) => {
+    if (!canPick || !shown || !isTap(pointerDown.current, at)) return
+    const statements = tags && tagState === 'ready' ? tags.statements : []
+    setPick(resolvePick({ mesh: shown, faceIndex, statements, code: useAppStore.getState().code }))
+  }
+  const onMissed = (e: MouseEvent) => {
+    if (refine && isTap(pointerDown.current, { x: e.clientX, y: e.clientY })) setPick(null)
+  }
+
   return (
-    <div className="relative h-full w-full bg-viewport" data-testid="viewer">
-      <Canvas frameloop={paused ? 'never' : 'demand'} dpr={[1, 2]} camera={{ fov: 45, near: 0.1, far: 10_000, position: [60, -80, 60] }}>
+    <div
+      className="relative h-full w-full bg-viewport"
+      data-testid="viewer"
+      data-part-tags={refine ? tagState : undefined}
+      onPointerDown={(e) => {
+        pointerDown.current = { x: e.clientX, y: e.clientY }
+      }}
+    >
+      <Canvas
+        frameloop={paused ? 'never' : 'demand'}
+        dpr={[1, 2]}
+        camera={{ fov: 45, near: 0.1, far: 10_000, position: [60, -80, 60] }}
+        onPointerMissed={onMissed}
+      >
         <color attach="background" args={[t.viewport]} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[50, -80, 100]} intensity={1.4} />
@@ -153,7 +215,9 @@ export function Viewer({
           fadeDistance={400}
         />
         <Axes colors={axisColors} />
-        {mesh && <Model mesh={mesh} color={t.filament} stale={stale} />}
+        {shown && <Model mesh={shown} color={t.filament} stale={stale} onTap={refine ? onTap : undefined} />}
+        {pick && shown && <PickHighlight pick={pick} mesh={shown} color={t.pick} />}
+        {refine && <ViewportCapture />}
         <OrbitControls makeDefault />
         <GizmoHelper alignment="bottom-right" margin={[48, 48]}>
           <GizmoViewport axisColors={[...axisColors]} labelColor={t.ink} />
@@ -193,11 +257,24 @@ export function Viewer({
         </button>
       </div>
 
-      {mesh && (
-        <div className="absolute bottom-3 left-3 flex flex-col items-start gap-2">
-          <TriangleWarning count={mesh.triangleCount} />
-          <div className="pc-caption pc-mono">{mesh.triangleCount.toLocaleString('en-US')} triangles</div>
+      {pick && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2">
+          <PickPopover pick={pick} vision={vision} onAskAi={() => void focusComposer()} onShowCode={goToLine} />
         </div>
+      )}
+
+      {pick ? (
+        <div className="pc-caption absolute bottom-3 left-3">Tap empty space to clear · Esc</div>
+      ) : (
+        mesh && (
+          <div className="absolute bottom-3 left-3 flex flex-col items-start gap-2">
+            <TriangleWarning count={mesh.triangleCount} />
+            <div className="pc-caption pc-mono">
+              {mesh.triangleCount.toLocaleString('en-US')} triangles
+              {tagState === 'pending' && ' · finding parts…'}
+            </div>
+          </div>
+        )
       )}
     </div>
   )
