@@ -2,14 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { errorMessage } from '../../render/result'
 import { useAppStore } from '../../state/store'
 import { readToken } from '../../theme/tokens'
-import { IconDownload } from '../../ui/icons'
+import { IconDownload, IconPause, IconPlay } from '../../ui/icons'
+import { useReducedMotion } from '../../ui/useReducedMotion'
 import { isAbortError } from '../../util/abort'
 import { FramePreview } from '../FramePreview'
-import { presetPose, renderFrames } from '../frames'
+import { renderFrames, turntablePoses } from '../frames'
 import { ProgressBar } from '../ProgressBar'
 import { saveFile } from '../saveFile'
 import { GIF_SIZES, previewSize } from '../sizes'
-import { clampFrames, exportTurntable, formatGifProgress, type GifProgress } from '../turntable'
+import { clampFrames, exportTurntable, formatGifProgress, turntableDelayMs, type GifProgress } from '../turntable'
+import { useFrameLoop } from '../useFrameLoop'
 import { NothingToExport, TabBody, TabFooter } from './layout'
 
 export function TurntableTab() {
@@ -21,28 +23,39 @@ export function TurntableTab() {
   const [progress, setProgress] = useState<GifProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
   const run = useRef<AbortController | null>(null)
+  const [committedFrames, setCommittedFrames] = useState(48)
   const frames = clampFrames(Number(framesText))
+  const [previewFrames, setPreviewFrames] = useState<ImageData[]>([])
+  const reducedMotion = useReducedMotion()
+  const [paused, setPaused] = useState(reducedMotion)
+  const delay = turntableDelayMs(committedFrames)
+  const index = useFrameLoop(previewFrames.length, delay, !paused && progress === null)
 
   useEffect(() => () => run.current?.abort(), [])
 
+  // The preview plays the GIF's own frames, rendered small once and looped; a settings change starts it again.
   useEffect(() => {
-    if (!mesh || run.current) return
+    if (!mesh) return
     let live = true
-    const background = transparent ? null : readToken('viewport')
+    const [width, height] = GIF_SIZES[sizeIndex].size
+    const frames = renderFrames({
+      mesh,
+      size: previewSize([width, height]),
+      background: transparent ? null : readToken('viewport'),
+      cameras: turntablePoses(mesh.bounds, committedFrames, width / height),
+    })
+    setPreviewFrames([])
     void (async () => {
-      for await (const frame of renderFrames({
-        mesh,
-        size: previewSize(GIF_SIZES[sizeIndex].size),
-        background,
-        cameras: [presetPose(mesh.bounds, 'iso', GIF_SIZES[sizeIndex].size[0] / GIF_SIZES[sizeIndex].size[1])],
-      })) {
-        if (live) setPreview(frame)
+      for await (const frame of frames) {
+        if (!live) break
+        setPreviewFrames((f) => [...f, frame])
       }
-    })()
+    })().catch(() => {})
     return () => {
       live = false
+      void frames.return(undefined)
     }
-  }, [mesh, sizeIndex, transparent])
+  }, [mesh, sizeIndex, transparent, committedFrames])
 
   if (!mesh) return <NothingToExport />
 
@@ -73,17 +86,46 @@ export function TurntableTab() {
   return (
     <>
       <TabBody>
-        <FramePreview
-          frame={preview}
-          label="Turntable preview"
-          overlay={
-            progress && (
-              <span className="pc-caption pc-mono absolute top-3 right-3">
-                frame {progress.done} / {progress.total}
-              </span>
-            )
-          }
-        />
+        <div className="flex min-w-0 flex-col gap-3">
+          <FramePreview
+            frame={progress ? preview : (previewFrames[index] ?? null)}
+            label="Turntable preview"
+            overlay={
+              progress ? (
+                <span className="pc-caption pc-mono absolute top-3 right-3">
+                  frame {progress.done} / {progress.total}
+                </span>
+              ) : (
+                <>
+                  {previewFrames.length > 0 && (
+                    <span className="pc-caption pc-mono absolute top-3 right-3">
+                      frame {index + 1} / {committedFrames}
+                    </span>
+                  )}
+                  <div className="absolute bottom-3 left-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label={paused ? 'Play preview' : 'Pause preview'}
+                      title={paused ? 'Play preview' : 'Pause preview'}
+                      className="grid size-(--control-sm) place-items-center rounded-sm border border-line bg-panel text-ink-muted hover:text-ink"
+                      onClick={() => setPaused((p) => !p)}
+                    >
+                      {paused ? <IconPlay className="pc-i" aria-hidden="true" /> : <IconPause className="pc-i" aria-hidden="true" />}
+                    </button>
+                    {previewFrames.length < committedFrames && (
+                      <span className="pc-caption">
+                        Rendering preview frames · {previewFrames.length} of {committedFrames}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )
+            }
+          />
+          <span className="pc-caption">
+            Plays like the GIF: {committedFrames} frames, one turn every {((delay * committedFrames) / 1000).toFixed(1)} s.
+          </span>
+        </div>
         <div className="flex flex-col gap-4">
           <div className="pc-field">
             <label htmlFor="turntable-frames">Frames</label>
@@ -93,7 +135,10 @@ export function TurntableTab() {
                 inputMode="numeric"
                 value={framesText}
                 onChange={(e) => setFramesText(e.target.value)}
-                onBlur={() => setFramesText(String(frames))}
+                onBlur={() => {
+                  setFramesText(String(frames))
+                  setCommittedFrames(frames)
+                }}
               />
               <span className="pc-unit">frames</span>
             </div>

@@ -42,6 +42,8 @@ export {
   Eraser as IconErase,
   ImagePlus as IconAttach,
   Pen as IconPen,
+  Pause as IconPause,
+  Play as IconPlay,
   Ruler as IconSize,
   Slash as IconLine,
   Sparkles as IconAskAi,
