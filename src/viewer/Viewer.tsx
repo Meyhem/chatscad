@@ -8,6 +8,8 @@ import { DimsReadout } from '../ui/DimsReadout'
 import { IconFit, IconWarning } from '../ui/icons'
 import { computeCameraFit } from './cameraFit'
 import { meshToGeometry } from './geometry'
+import { staleText } from './staleText'
+import { setThumbnailSource } from './thumbnail'
 
 // OpenSCAD is Z-up. This must run before any camera or controls are created.
 Object3D.DEFAULT_UP.set(0, 0, 1)
@@ -66,7 +68,32 @@ function CameraFitter({ bounds, fitToken }: { bounds: Bounds | null; fitToken: n
   return null
 }
 
-export function Viewer({ mesh, stale }: { mesh: MeshData | null; stale: boolean }) {
+/** Lets captureThumbnail() render this scene on demand and read the canvas in the same task. */
+function ThumbnailRegistrar() {
+  const gl = useThree((s) => s.gl)
+  const scene = useThree((s) => s.scene)
+  const camera = useThree((s) => s.camera)
+  useEffect(() => {
+    setThumbnailSource(() => {
+      gl.render(scene, camera)
+      return gl.domElement
+    })
+    return () => setThumbnailSource(null)
+  }, [gl, scene, camera])
+  return null
+}
+
+export function Viewer({
+  mesh,
+  stale,
+  thumbnails = false,
+  staleLabel = null,
+}: {
+  mesh: MeshData | null
+  stale: boolean
+  thumbnails?: boolean
+  staleLabel?: string | null
+}) {
   const t = useTokens(TOKENS)
   const [fitToken, setFitToken] = useState(0)
   const axisColors = [t['axis-x'], t['axis-y'], t['axis-z']] as const
@@ -94,13 +121,14 @@ export function Viewer({ mesh, stale }: { mesh: MeshData | null; stale: boolean 
           <GizmoViewport axisColors={[...axisColors]} labelColor={t.ink} />
         </GizmoHelper>
         <CameraFitter bounds={mesh?.bounds ?? null} fitToken={fitToken} />
+        {thumbnails && <ThumbnailRegistrar />}
       </Canvas>
 
       <div className="absolute top-3 left-3">
         {stale ? (
           <span className="pc-status is-warn">
             <IconWarning className="pc-i" aria-hidden="true" />
-            Showing the last model that compiled
+            {staleText(staleLabel)}
           </span>
         ) : (
           mesh && <DimsReadout bounds={mesh.bounds} axes />
