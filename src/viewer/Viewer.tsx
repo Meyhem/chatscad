@@ -10,6 +10,7 @@ import { TriangleWarning } from './TriangleWarning'
 import { computeCameraFit } from './cameraFit'
 import { meshToGeometry } from './geometry'
 import { staleText } from './staleText'
+import { setViewerPose } from './viewerCamera'
 import { setThumbnailSource } from './thumbnail'
 
 // OpenSCAD is Z-up. This must run before any camera or controls are created.
@@ -69,6 +70,29 @@ function CameraFitter({ bounds, fitToken }: { bounds: Bounds | null; fitToken: n
   return null
 }
 
+interface ControlsWithEvents extends ControlsLike {
+  addEventListener(type: 'change', listener: () => void): void
+  removeEventListener(type: 'change', listener: () => void): void
+}
+
+/** Reports the orbit pose so the PNG export can use "Current view". */
+function PoseReporter() {
+  const camera = useThree((s) => s.camera)
+  const controls = useThree((s) => s.controls) as unknown as ControlsWithEvents | null
+  useEffect(() => {
+    if (!controls) return
+    const save = () =>
+      setViewerPose({ position: camera.position.toArray(), target: controls.target.toArray(), up: camera.up.toArray() })
+    save()
+    controls.addEventListener('change', save)
+    return () => {
+      controls.removeEventListener('change', save)
+      setViewerPose(null)
+    }
+  }, [camera, controls])
+  return null
+}
+
 /** Lets captureThumbnail() render this scene on demand and read the canvas in the same task. */
 function ThumbnailRegistrar() {
   const gl = useThree((s) => s.gl)
@@ -124,6 +148,7 @@ export function Viewer({
           <GizmoViewport axisColors={[...axisColors]} labelColor={t.ink} />
         </GizmoHelper>
         <CameraFitter bounds={mesh?.bounds ?? null} fitToken={fitToken} />
+        <PoseReporter />
         {thumbnails && <ThumbnailRegistrar />}
       </Canvas>
 

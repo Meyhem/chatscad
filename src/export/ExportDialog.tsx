@@ -1,4 +1,6 @@
 import type { ComponentType } from 'react'
+import { ImageTab } from './tabs/ImageTab'
+import { TurntableTab } from './tabs/TurntableTab'
 import { IconX } from '../ui/icons'
 import { Modal } from '../ui/Modal'
 import { useExportStore, type ExportTab } from './exportStore'
@@ -8,6 +10,8 @@ import { ModelFileTab } from './tabs/ModelFileTab'
 /** In the screen's order; Tasks 10 and 11 insert Image, Turntable and Timelapse before Link. */
 export const TABS: Array<{ id: ExportTab; label: string; Panel: ComponentType }> = [
   { id: 'model', label: 'Model file', Panel: ModelFileTab },
+  { id: 'image', label: 'Image', Panel: ImageTab },
+  { id: 'turntable', label: 'Turntable', Panel: TurntableTab },
   { id: 'link', label: 'Link', Panel: LinkTab },
 ]
 
