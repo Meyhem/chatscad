@@ -95,11 +95,14 @@ export function CodeEditor({ value, onChange, diagnostics, reveal = null, onBlur
     view.focus()
   }, [reveal])
 
-  // Keyed on the id, so re-rendering with an equal request never inserts twice.
+  // Keyed on the id, so re-rendering with an equal request never inserts twice; a request that was already
+  // there when the editor mounted (the phone tabs remount it) was consumed by an earlier editor.
   const insertId = insert?.id
+  const consumedInsert = useRef(insertId)
   useEffect(() => {
     const view = viewRef.current
-    if (!view || !insert) return
+    if (!view || !insert || insert.id === consumedInsert.current) return
+    consumedInsert.current = insert.id
     view.dispatch({ ...view.state.replaceSelection(insert.text), scrollIntoView: true, userEvent: 'input.type' })
     view.focus()
     // eslint-disable-next-line react-hooks/exhaustive-deps

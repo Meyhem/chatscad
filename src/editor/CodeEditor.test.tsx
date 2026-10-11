@@ -104,3 +104,11 @@ it('inserts key-row text at the cursor and keeps focus in the editor', () => {
   rerender(<CodeEditor value="cube(1)" onChange={onChange} diagnostics={[]} insert={{ text: ';', id: 1 }} />)
   expect(view.state.doc.toString()).toBe('cube(1);')
 })
+
+it('does not replay an earlier key-row insert when the editor mounts again', () => {
+  const onChange = vi.fn()
+  render(<CodeEditor value="cube(1)" onChange={onChange} diagnostics={[]} insert={{ text: ';', id: 7 }} />)
+  expect(onChange).not.toHaveBeenCalled()
+  expect(screen.getByTestId('code-editor')).toHaveTextContent('cube(1)')
+  expect(screen.getByTestId('code-editor')).not.toHaveTextContent(';')
+})
