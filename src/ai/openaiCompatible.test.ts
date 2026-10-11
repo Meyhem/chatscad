@@ -98,6 +98,34 @@ describe('streamChat', () => {
     expect(toStopReason('content_filter')).toBe('other')
   })
 
+  it('streams OpenRouter reasoning and DeepSeek reasoning_content as reasoning events, before the text', async () => {
+    const { fetch } = fakeFetch(
+      sse(
+        { choices: [{ index: 0, delta: { reasoning: 'Wall is ' } }] },
+        { choices: [{ index: 0, delta: { reasoning_content: '1.6 mm.' } }] },
+        delta('Made it.'),
+        '[DONE]',
+      ),
+    )
+    expect(await collect(provider(fetch).streamChat(REQ))).toEqual([
+      { type: 'reasoning', delta: 'Wall is ' },
+      { type: 'reasoning', delta: '1.6 mm.' },
+      { type: 'text', delta: 'Made it.' },
+      { type: 'usage', usage: { inputTokens: 0, outputTokens: 0 }, stopReason: 'end' },
+    ])
+  })
+
+  it('yields the reasoning of a plain (non-streaming) reply', async () => {
+    const { fetch } = fakeFetch(
+      json(200, { choices: [{ message: { content: 'Done.', reasoning_content: 'Think.' }, finish_reason: 'stop' }] }),
+    )
+    expect(await collect(provider(fetch, 'sk', false).streamChat(REQ))).toEqual([
+      { type: 'reasoning', delta: 'Think.' },
+      { type: 'text', delta: 'Done.' },
+      { type: 'usage', usage: { inputTokens: 0, outputTokens: 0 }, stopReason: 'end' },
+    ])
+  })
+
   it('sends temperature only when the request sets it', async () => {
     const { fetch, calls } = fakeFetch(sse('[DONE]'))
     await collect(provider(fetch).streamChat({ ...REQ, temperature: 0.7, maxTokens: 512 }))

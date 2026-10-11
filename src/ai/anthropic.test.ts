@@ -162,3 +162,82 @@ it('lists models with their display names', async () => {
   ])
   expect(calls[0].url).toContain('https://api.anthropic.com/v1/models')
 })
+
+/** A thinking block, then the text block (shape of the Messages API stream with summarized thinking). */
+const THINKING_SSE = [
+  'event: message_start',
+  'data: {"type":"message_start","message":{"id":"msg_02","type":"message","role":"assistant","model":"claude-test","content":[],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":812,"output_tokens":3}}}',
+  '',
+  'event: content_block_start',
+  'data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}}',
+  '',
+  'event: content_block_delta',
+  'data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"Wall is 1.6 mm."}}',
+  '',
+  'event: content_block_delta',
+  'data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"sig"}}',
+  '',
+  'event: content_block_stop',
+  'data: {"type":"content_block_stop","index":0}',
+  '',
+  'event: content_block_start',
+  'data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}}',
+  '',
+  'event: content_block_delta',
+  'data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Made a cube."}}',
+  '',
+  'event: content_block_stop',
+  'data: {"type":"content_block_stop","index":1}',
+  '',
+  'event: message_delta',
+  'data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},"usage":{"output_tokens":498}}',
+  '',
+  'event: message_stop',
+  'data: {"type":"message_stop"}',
+  '',
+  '',
+].join('\n')
+
+it('streams thinking deltas as reasoning events', async () => {
+  const { fetch } = fakeFetch(sse(THINKING_SSE))
+  expect(await collect(provider(fetch).streamChat(REQ))).toEqual([
+    { type: 'reasoning', delta: 'Wall is 1.6 mm.' },
+    { type: 'text', delta: 'Made a cube.' },
+    { type: 'usage', usage: { inputTokens: 812, outputTokens: 498 }, stopReason: 'end' },
+  ])
+})
+
+const CAPS = {
+  thinking: { supported: true, types: { enabled: { supported: false }, adaptive: { supported: true }, disabled: { supported: false } } },
+  effort: { supported: true, low: { supported: true }, medium: { supported: true }, high: { supported: true } },
+}
+
+it('reads the output limit and thinking support from the model list', async () => {
+  const { anthropicModelInfo } = await import('./anthropic')
+  expect(anthropicModelInfo({ id: 'claude-x', display_name: 'Claude X', max_tokens: 128000, capabilities: CAPS })).toEqual({
+    id: 'claude-x',
+    name: 'Claude X',
+    maxOutputTokens: 128000,
+    reasoning: { efforts: true, canDisable: false, adaptive: true },
+  })
+  expect(anthropicModelInfo({ id: 'old', display_name: 'Old' })).toEqual({ id: 'old', name: 'Old' })
+  expect(anthropicModelInfo({ id: 'odd', max_tokens: 'lots', capabilities: 'yes' })).toEqual({
+    id: 'odd',
+    reasoning: { efforts: false, canDisable: false, adaptive: false },
+  })
+})
+
+it('sends the model limit as max_tokens and asks for summarized thinking on adaptive models', async () => {
+  const { fetch, calls } = fakeFetch(sse(RECORDED_SSE))
+  const p = createAnthropicProvider({
+    baseUrl: 'https://api.anthropic.com',
+    apiKey: 'sk-ant-test',
+    fetch,
+    maxRetries: 0,
+    models: [{ id: 'claude-test', maxOutputTokens: 128000, reasoning: { efforts: true, canDisable: false, adaptive: true } }],
+  })
+  await collect(p.streamChat(REQ))
+  const body = JSON.parse(String(calls[0].init.body))
+  expect(body).toMatchObject({ max_tokens: 128000, thinking: { type: 'adaptive', display: 'summarized' } })
+  expect(body).not.toHaveProperty('output_config')
+})

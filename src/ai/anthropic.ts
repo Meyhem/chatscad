@@ -8,6 +8,8 @@ export interface AnthropicOptions {
   fetch?: FetchLike
   /** SDK retries for 408/409/429/5xx and connection errors. Default 2; tests pass 0. */
   maxRetries?: number
+  /** The profile's cached model list: output limits and thinking support per model. */
+  models?: ModelInfo[]
 }
 
 /** `max_tokens` is required; used when the model list did not report the model's limit. */
@@ -16,6 +18,33 @@ export const ANTHROPIC_FALLBACK_MAX_TOKENS = 64000
 export function anthropicStopReason(r: string | null | undefined): StopReason {
   if (r === 'max_tokens') return 'length'
   return r === 'end_turn' || r === null || r === undefined ? 'end' : 'other'
+}
+
+/** True when the untyped capabilities tree has `supported: true` at `path`. */
+function supported(node: unknown, ...path: string[]): boolean {
+  let n: unknown = node
+  for (const key of path) {
+    if (typeof n !== 'object' || n === null) return false
+    n = (n as Record<string, unknown>)[key]
+  }
+  return typeof n === 'object' && n !== null && (n as { supported?: unknown }).supported === true
+}
+
+export function anthropicModelInfo(m: { id: string; display_name?: string; max_tokens?: unknown; capabilities?: unknown }): ModelInfo {
+  return {
+    id: m.id,
+    ...(typeof m.display_name === 'string' ? { name: m.display_name } : {}),
+    ...(typeof m.max_tokens === 'number' && m.max_tokens > 0 ? { maxOutputTokens: m.max_tokens } : {}),
+    ...(m.capabilities !== undefined
+      ? {
+          reasoning: {
+            efforts: supported(m.capabilities, 'effort'),
+            canDisable: supported(m.capabilities, 'thinking', 'types', 'disabled'),
+            adaptive: supported(m.capabilities, 'thinking', 'types', 'adaptive'),
+          },
+        }
+      : {}),
+  }
 }
 
 function apiMessage(err: InstanceType<typeof Anthropic.APIError>): string {
@@ -71,7 +100,7 @@ export function createAnthropicProvider(opts: AnthropicOptions): LlmProvider {
     async listModels(signal) {
       const models: ModelInfo[] = []
       try {
-        for await (const m of getClient().models.list({ limit: 100 }, { signal })) models.push({ id: m.id, name: m.display_name })
+        for await (const m of getClient().models.list({ limit: 100 }, { signal })) models.push(anthropicModelInfo(m as unknown as Parameters<typeof anthropicModelInfo>[0]))
       } catch (err) {
         throw toProviderError(err, signal)
       }
@@ -82,22 +111,25 @@ export function createAnthropicProvider(opts: AnthropicOptions): LlmProvider {
       const usage: Usage = { inputTokens: 0, outputTokens: 0 }
       let stopReason: StopReason = 'end'
       try {
-        // No `thinking` and no `temperature`: current Claude models reject sampling parameters.
-        const stream = getClient().messages.stream(
-          {
-            model: req.model,
-            max_tokens: req.maxTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS,
-            system: req.system,
-            messages: req.messages.map(toAnthropicMessage),
-          },
-          { signal },
-        )
+        // No `temperature`: current Claude models reject sampling parameters.
+        const info = opts.models?.find((m) => m.id === req.model)
+        const params: Record<string, unknown> = {
+          model: req.model,
+          max_tokens: req.maxTokens ?? info?.maxOutputTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS,
+          system: req.system,
+          messages: req.messages.map(toAnthropicMessage),
+          // Current models return empty thinking text unless asked for a summary.
+          ...(info?.reasoning?.adaptive ? { thinking: { type: 'adaptive', display: 'summarized' } } : {}),
+        }
+        const stream = getClient().messages.stream(params as unknown as Anthropic.MessageStreamParams, { signal })
         for await (const event of stream) {
           if (event.type === 'message_start') {
             usage.inputTokens = event.message.usage.input_tokens
             usage.outputTokens = event.message.usage.output_tokens
           } else if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
             yield { type: 'text', delta: event.delta.text }
+          } else if (event.type === 'content_block_delta' && event.delta.type === 'thinking_delta') {
+            yield { type: 'reasoning', delta: event.delta.thinking }
           } else if (event.type === 'message_delta') {
             usage.outputTokens = event.usage.output_tokens
             stopReason = anthropicStopReason(event.delta.stop_reason)

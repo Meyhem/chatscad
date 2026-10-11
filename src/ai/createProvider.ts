@@ -29,7 +29,7 @@ export function createProvider(profile: ProviderProfile): LlmProvider {
   }
   switch (profile.adapter) {
     case 'anthropic':
-      return createAnthropicProvider({ baseUrl: profile.baseUrl, apiKey })
+      return createAnthropicProvider({ baseUrl: profile.baseUrl, apiKey, models: profile.cachedModels })
     case 'openai-compatible':
       return createOpenAiCompatibleProvider({
         baseUrl: profile.baseUrl,

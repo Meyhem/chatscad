@@ -89,6 +89,11 @@ export function relaxRequest(body: Body, errorText: string): Body | null {
   return null
 }
 
+const reasoningOf = (d: OpenAiDelta | undefined): string => {
+  const r = d?.reasoning ?? d?.reasoning_content
+  return typeof r === 'string' ? r : ''
+}
+
 export function toStopReason(finish: string | null | undefined): StopReason {
   if (finish === 'length') return 'length'
   return finish === 'stop' || finish === null || finish === undefined ? 'end' : 'other'
@@ -223,6 +228,8 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): L
         }
         const choice = reply.choices?.[0]
         const text = choice?.message?.content ?? ''
+        const thought = reasoningOf(choice?.message)
+        if (thought) yield { type: 'reasoning', delta: thought }
         if (text) yield { type: 'text', delta: text }
         if (reply.usage) usage = toUsage(reply.usage)
         yield { type: 'usage', usage, stopReason: toStopReason(choice?.finish_reason) }
@@ -243,6 +250,8 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): L
           if (chunk.error) throw new ProviderError('server', messageFrom(JSON.stringify(chunk)))
           const choice = chunk.choices?.[0]
           if (choice?.finish_reason) finish = choice.finish_reason
+          const thought = reasoningOf(choice?.delta)
+          if (thought) yield { type: 'reasoning', delta: thought }
           const text = choice?.delta?.content
           if (typeof text === 'string' && text !== '') yield { type: 'text', delta: text }
           if (chunk.usage) usage = toUsage(chunk.usage)
