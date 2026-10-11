@@ -54,3 +54,28 @@ Feature ideas not yet scheduled into a plan. Each entry says what the user gets 
 - It is a real button or link, reachable from the keyboard, with an accessible name such as "PromptCAD, back to project" and a visible focus ring. The title looks the same as today apart from hover and focus states.
 
 **Touches.** The title in `src/App.tsx`, `src/settings/SettingsPage.tsx` and `src/gallery/GalleryView.tsx`. Easiest as one shared header-title component.
+
+## Image export shows the whole model
+
+**Idea.** In the share/export window, the Image tab's preview and saved PNG show the whole model, or exactly what the viewer camera shows for "Current view". Today the preview crops part of the model.
+
+**Behaviour.**
+
+- "Current view" matches the viewer: same camera position, target, field of view and framing. If the image's aspect ratio differs from the viewport, the image widens or heightens the frame and never crops what the viewer shows.
+- The preset cameras (Iso, Front, Top) fit the whole model's bounds into the chosen image size, with the same margin as the viewer's Fit view.
+- The preview and the saved file match, at every image size.
+
+**Likely cause.** Both cameras use a 45° vertical FOV, but the aspect ratio differs. `poseFor` in `src/export/tabs/ImageTab.tsx` copies only the viewer's position and target (`getViewerPose` in `src/viewer/viewerCamera.ts`), which were framed for the viewer's wide canvas. When `renderFrames` in `src/export/frames.ts` renders that pose into a narrower image (square, for example), the sides get cut off. The presets also fit with a fixed aspect of 1 (`computeCameraFit(bounds, FRAME_FOV, 1)` in `presetPose`), not the chosen image size. The fix probably stores the viewer's aspect with the pose, keeps the horizontal extent when the export is narrower, and fits presets to the real export aspect. A test should check that the model's projected bounds stay inside the frame.
+
+## Animated turntable preview
+
+**Idea.** In the export and share window, the Turntable tab's preview already spins the way the GIF will, so the user sees the result before saving. Today the preview is one still iso frame. It only moves while the GIF is being encoded.
+
+**Behaviour.**
+
+- The preview loops through the turntable poses at the GIF's frame rate, using the current frame count, size and background settings. Changing a setting restarts the loop with the new frames.
+- Frames are rendered at preview size and cached for the loop, so playing it doesn't re-render every frame each turn. While frames are still rendering, the preview shows the ones it already has.
+- The preview pauses when the tab or window is hidden, and with `prefers-reduced-motion` it shows a still frame plus a play control.
+- Saving the GIF still works as it does today.
+
+**Touches.** The preview effect in `src/export/tabs/TurntableTab.tsx` renders one `presetPose(mesh.bounds, 'iso')` frame. It would render `turntablePoses(mesh.bounds, frames)` from `src/export/frames.ts` and play them through `FramePreview`, which needs a frame-sequence mode or an animated sibling. The Timelapse tab could reuse the same player.
