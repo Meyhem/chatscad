@@ -2,15 +2,19 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A Vite + React (TSX) app where you paste OpenSCAD into a CodeMirror editor, it compiles in a Web Worker with OpenSCAD WASM (Manifold backend), the mesh shows in a three.js viewer with mm dimensions, and you can download binary STL and the `.scad` source.
+**Goal:** A Vite + React (TSX) app, styled from the PromptCAD design system, where you paste OpenSCAD into a CodeMirror editor, it compiles in a Web Worker with OpenSCAD WASM (Manifold backend), the mesh shows in a three.js viewer with mm dimensions, and you can download binary STL and the `.scad` source.
 
-**Architecture:** All work is client-side. A single `RenderController` is the only path to the render worker; it owns debounce (600 ms), cancellation (a newer request terminates the in-flight worker) and the 60 s timeout. The worker (Comlink) creates a fresh OpenSCAD WASM instance per render, writes `/main.scad`, runs `callMain`, parses the binary STL into typed arrays and transfers them back. A Zustand store holds code, render status, the last good mesh/STL, logs and diagnostics; React components (`.tsx`) render from it.
+**Architecture:** All work is client-side. A single `RenderController` is the only path to the render worker; it owns debounce (600 ms), cancellation (a newer request terminates the in-flight worker) and the 60 s timeout. The worker (Comlink) creates a fresh OpenSCAD WASM instance per render, writes `/main.scad`, runs `callMain`, parses the binary STL into typed arrays and transfers them back. A Zustand store holds code, render status, the last good mesh/STL, logs, diagnostics and a "reveal this line" request; React components (`.tsx`) render from it. Every colour, radius, font and size comes from `design/tokens.json`, generated into CSS custom properties; the design system's `pc-*` component classes are used as-is from `design/components.css`, and Tailwind v4 is used for layout with a token-backed theme.
 
-**Tech Stack:** Vite, React 19, TypeScript (strict, `.tsx` components), Tailwind CSS v4 (`@tailwindcss/vite`), Zustand, Comlink, CodeMirror 6, three.js via `@react-three/fiber` + `@react-three/drei`, OpenSCAD WASM (official WebAssembly snapshot build), Vitest + Testing Library (jsdom), Playwright, `tsx` for Node scripts, `fflate` for unzipping.
+**Tech Stack:** Vite, React 19, TypeScript (strict, `.tsx` components), Tailwind CSS v4 (`@tailwindcss/vite`), Zustand, Comlink, CodeMirror 6, three.js via `@react-three/fiber` + `@react-three/drei`, OpenSCAD WASM (official WebAssembly snapshot build), `@fontsource-variable/archivo` + `@fontsource/jetbrains-mono` (self-hosted fonts), `lucide-react` (icons), Vitest + Testing Library (jsdom), Playwright, `tsx` for Node scripts, `fflate` for unzipping.
 
 **Spec:** [`docs/SPEC.md`](../../SPEC.md). This plan implements Milestone 1 ("Render core") plus the cross-cutting rules from "Rendering pipeline", "Security" and "Tech stack" that M1 code touches.
 
+**Design sources:** the PromptCAD design system and screens, copied into [`design/`](../../../design/README.md) (`tokens.json`, `components.css`) so every task can read them. Originals: design system https://claude.ai/artifact/Ww9x79XKgeaW9w19vs13io and screens https://claude.ai/artifact/TNXkMGKfbuVrEAh8MEvMDA. M1 builds the **Workbench** screen without its chat column, the **Compile error** screen's status pill, stale viewer, editor gutter and inline callout, and the **First run** screen's "Loading OpenSCAD…" state. Chat, Customizer dock, history, settings, share, the export dialog and the phone tab bar belong to later milestones (see "Deferred from M1").
+
 ## Global Constraints
+
+From the spec:
 
 - No backend: the build output is static files only ("nothing needs a server beyond static hosting").
 - TypeScript `strict`; every React component is a `.tsx` file; Node scripts are `.ts` run with `tsx`.
@@ -21,17 +25,46 @@
 - Display: "auto-fit camera on first render, keep the camera on re-renders, show bounding-box dimensions in mm." OpenSCAD is Z-up.
 - Report: "stdout/stderr, warnings, `echo()` output and render time to a console panel; map error line numbers back into the editor as diagnostics."
 - Export: "STL (binary) is the v1 target"; ".scad source" too. "On mobile, use the Web Share API with a file, falling back to a download link."
-- Security: "`script-src 'self' 'wasm-unsafe-eval'`" … "No analytics, no CDN scripts." All assets (including the OpenSCAD WASM) are self-hosted under `/openscad/`. Do not use drei helpers that fetch from a CDN (`Environment` presets, remote fonts).
-- "Model output is untrusted. Generated code only ever runs inside the OpenSCAD WASM sandbox; never `eval`, never rendered as HTML." Console text is rendered as React text nodes only.
+- Security: "`script-src 'self' 'wasm-unsafe-eval'`" … "No analytics, no CDN scripts." All assets (including the OpenSCAD WASM and both fonts) are self-hosted. Do not use drei helpers that fetch from a CDN (`Environment` presets, remote fonts).
+- "Model output is untrusted. Generated code only ever runs inside the OpenSCAD WASM sandbox; never `eval`, never rendered as HTML." Console and editor callout text are rendered as text nodes only.
 - Units are millimetres.
+
+From the design system (`design/tokens.json`, its README and component docs):
+
+- "Build every surface from tokens and never hard-code a hex." No hex literals and no Tailwind palette classes (`neutral-800`, `red-400`, …) anywhere in `src/` except the generated `src/styles/tokens.css`. A test enforces this (Task 2).
+- "Dark is the primary theme (`dark`); `light` is a full peer." Dark is `:root`; light applies via `[data-theme="light"]` or the OS preference. Viewer colours (WebGL cannot read CSS variables) are read from the computed style and re-read when the theme changes.
+- Surfaces: app ground `bg`, panels `panel`, wells (editor, console) `inset`, 3D view `viewport`; panels are separated by 1px `line` borders, never shadows.
+- "`accent` marks what the person is working on": the one primary button per region (Export STL in the header), keyboard focus (`focus-ring`), selection. "`filament` is the model" and nothing else.
+- Status "always carries an icon and a word", using `ok` / `warn` / `error` on their `*-soft` grounds. "The last good model stays on screen when a render fails; the failure shows in the status pill, the console and the editor gutter, never as a modal."
+- Type: Archivo for the interface, JetBrains Mono for code, readouts and the console, self-hosted via `@fontsource-variable/archivo` and `@fontsource/jetbrains-mono`. Every changing number sits in mono with tabular figures.
+- Voice: sentence case everywhere ("Export STL", "Fit view"); numbers always carry their unit ("20 × 20 × 10 mm", "Rendered 412 ms", "Timed out after 60 s") with the multiplication sign `×`; errors "say what failed, where, and what to do"; no exclamation marks, no emoji; never "head", "blob", "AST" in the UI.
+- Icons: 16px line icons, 1.5px stroke, square caps, `currentColor`, from Lucide (`lucide-react`, bundled, no CDN), always with the `pc-i` class so `components.css` sizes them.
+- Controls are `control-md` (36px) on desktop and at least `touch-target` (44px) on coarse pointers; `components.css` handles this for `pc-*` controls.
+- Corners: `radius-sm` inputs and chips, `radius-md` buttons, `radius-lg` dialogs, `radius-pill` only for status pills and switches.
+- Wordmark only: "There is no logo yet. Set the name 'PromptCAD' in Archivo 700 and never draw a stand-in mark."
 
 ## Review Focus
 
-1. **Runaway model** (`for (i=[0:1e9]) cube(1);`, `$fn=1e6`). Expected: after 60 s the render stops, the console says it timed out, the last good mesh stays, and the next edit renders normally in a new worker. *Pinned in Task 6 (timeout test) and Task 6 (respawn test).*
-2. **Fast typing.** Expected: only the latest code's result is ever shown, and a slow older result arriving late is discarded. *Pinned in Task 6 (stale-result test).*
-3. **Code that produces no geometry** (empty file, only comments, `echo("hi");`). Expected: a plain "produced no output / model is empty" message with no crash, and the last mesh stays. *Pinned in Task 5 (no-output and zero-triangle tests) and Task 7 (store keeps mesh).*
-4. **Export while the code is broken or still rendering.** Expected: Export STL is disabled, so you never download geometry that doesn't match the code in the editor. Export .scad stays enabled. *Pinned in Task 7 (`selectCanExport`) and Task 12 (App test).*
-5. **HTML-looking text in model output** (`echo("<img src=x onerror=alert(1)>")`). Expected: it shows as literal text in the console and no element is created. *Pinned in Task 10 (ConsolePanel test).*
+1. **Runaway model** (`for (i=[0:1e9]) cube(1);`, `$fn=1e6`). Expected: after 60 s the render stops, the status pill says "Timed out after 60 s", the console shows the same, the last good mesh stays (dimmed, with "Showing the last model that compiled"), and the next edit renders normally in a new worker. *Pinned in Task 7 (timeout and respawn tests), Task 10 (StatusPill timeout label) and Task 11 (stale model opacity).*
+2. **Fast typing.** Expected: only the latest code's result is ever shown, and a slow older result arriving late is discarded. *Pinned in Task 7 (stale-result test).*
+3. **Code that produces no geometry** (empty file, only comments, `echo("hi");`). Expected: a plain "produced no output / model is empty" message in the pill tooltip and console with no crash, and the last mesh stays. *Pinned in Task 6 (no-output and zero-triangle tests), Task 8 (store keeps mesh) and Task 10 (console summary line).*
+4. **Export while the code is broken or still rendering.** Expected: Export STL is disabled with a tooltip saying why ("Fix the error first, so the file matches the code" / "Wait for the render to finish"), so you never download geometry that doesn't match the editor. Export .scad stays enabled. *Pinned in Task 8 (`selectCanExport`), Task 12 (disabled reason) and Task 13 (App test).*
+5. **HTML-looking text in model output** (`echo("<img src=x onerror=alert(1)>")`). Expected: it shows as literal text in the console and in the editor's inline callout, and no element is created. *Pinned in Task 10 (ConsolePanel test) and Task 9 (callout widget uses `textContent`).*
+
+## Design fidelity checks
+
+Rules from the design system that no spec requirement covers, each pinned to a test:
+
+| Rule (source) | Where it is enforced |
+| --- | --- |
+| No hard-coded colours; tokens only (README "Colour") | Task 2: `src/styles/noHardcodedColors.test.ts` scans `src/` for hex literals and palette classes |
+| `tokens.css` is generated from `design/tokens.json`, not edited (README "Colour") | Task 2: `scripts/gen-tokens.test.ts` compares the committed file with the generator's output |
+| Light theme is a full peer; viewer follows it (README "Colour") | Task 2: `useTokens` re-reads on theme change; Task 13 e2e: `body` background under `colorScheme: 'light'` |
+| Status pill is always icon + word; failure names the line and jumps to it (StatusPill) | Task 10: StatusPill tests, including the click handler |
+| Console lines are text only, toned, and ERROR/WARNING lines link to the editor (Console) | Task 10: ConsolePanel tests |
+| A render failure is never a modal (README "Layout", Dialog) | Task 13: App test asserts no `role="dialog"` after a failed render |
+| Export STL is disabled while rendering or failed, with the reason; .scad stays enabled (Button) | Task 12: ExportButtons tests |
+| Dimensions round to two decimals, drop trailing zeros, and stay put on failure (DimsReadout) | Task 5: `formatDims` tests; Task 13: App test |
 
 ---
 
@@ -39,40 +72,55 @@
 
 ```
 package.json, tsconfig.json, vite.config.ts, index.html, playwright.config.ts
+design/README.md                 where the design files come from and how to refresh them
+design/tokens.json               design tokens (copied verbatim from the design system)
+design/components.css            pc-* component classes (copied; Google Fonts import removed)
 build/csp.ts                     Vite plugin: inject CSP <meta> into production HTML
 build/csp.test.ts
 scripts/fetch-openscad.ts        tsx script: download OpenSCAD WASM into public/openscad/
 scripts/fetch-openscad.test.ts
+scripts/gen-tokens.ts            tsx script: design/tokens.json → src/styles/tokens.css (+ Tailwind @theme)
+scripts/gen-tokens.test.ts
 public/openscad/                 (git-ignored) openscad.js, openscad.wasm, VERSION
-src/main.tsx                     React entry
-src/App.tsx                      layout + wiring
+src/main.tsx                     React entry; imports the fonts and index.css
+src/App.tsx                      header + workbench layout + wiring
 src/App.test.tsx
-src/index.css                    Tailwind import + full-height root
+src/index.css                    Tailwind, tokens, components layer, body defaults
+src/styles/tokens.css            GENERATED: :root (dark), [data-theme="light"], prefers-color-scheme, @theme inline
+src/styles/noHardcodedColors.test.ts
+src/theme/tokens.ts              readToken(), useTokens() for WebGL colours that follow the theme
+src/theme/tokens.test.ts
+src/ui/icons.ts                  the Lucide icons M1 uses, re-exported
+src/ui/StatusPill.tsx            pc-status: icon + word, render time in mono, click → line
+src/ui/StatusPill.test.tsx
+src/ui/DimsReadout.tsx           pc-dims: "20 × 20 × 10 mm" or the axis form "X 20 Y 20 Z 10 mm"
+src/ui/DimsReadout.test.tsx
 src/test/setup.ts                jest-dom matchers, jsdom shims for CodeMirror
 src/test/stl.ts                  STL fixture builders (shared by tests)
 src/test/results.ts              RenderResult fixtures (shared by tests)
 src/render/types.ts              RenderRequest, RenderResult, MeshData, Bounds, LogLine, Diagnostic, ParamValue
 src/render/result.ts             failedResult(), errorMessage()
 src/render/args.ts               buildArgs(), formatParamValue(), INPUT_PATH, OUTPUT_PATH
-src/render/diagnostics.ts        parseDiagnostics()
+src/render/diagnostics.ts        parseDiagnosticLine(), parseDiagnostics()
 src/render/stl.ts                parseStl()
-src/render/dims.ts               formatDims()
+src/render/dims.ts               formatDimParts(), formatDims()
 src/render/runOpenSCAD.ts        one compile against an injected OpenSCAD factory (pure, testable)
 src/render/render.worker.ts      Comlink glue: loads /openscad/openscad.js, calls runOpenSCAD
 src/render/createRenderWorker.ts real WorkerFactory (new Worker + Comlink.wrap)
 src/render/controller.ts         RenderController: debounce, cancel, timeout, respawn
 src/render/useRenderLoop.ts      hook: store.code → controller → store
-src/state/store.ts               Zustand store, DEFAULT_CODE, selectCanExport
+src/state/store.ts               Zustand store, DEFAULT_CODE, selectCanExport, goToLine
 src/editor/openscadLanguage.ts   CodeMirror StreamLanguage for OpenSCAD
-src/editor/CodeEditor.tsx        CodeMirror wrapper + toCmDiagnostics()
+src/editor/theme.ts              editor chrome + syntax colours from tokens (syn-*)
+src/editor/diagnosticsExtension.ts  error line ground, gutter number colour, inline pc-callout widget
+src/editor/CodeEditor.tsx        CodeMirror wrapper + toCmDiagnostics() + reveal-line
 src/viewer/geometry.ts           meshToGeometry()
 src/viewer/cameraFit.ts          computeCameraFit()
-src/viewer/Viewer.tsx            Canvas, grid, axes, model, orbit controls, Fit button
-src/panels/ConsolePanel.tsx      log lines (text only)
-src/panels/StatusBar.tsx         render status + dims
+src/viewer/Viewer.tsx            Canvas, grid, axes, gizmo, model (filament), overlays, Fit view
+src/panels/ConsolePanel.tsx      pc-console: toned log lines, clickable error lines, summary line
 src/export/saveFile.ts           Web Share with file → download fallback
-src/export/ExportButtons.tsx     Export STL / Export .scad buttons
-e2e/smoke.spec.ts                Playwright: real WASM, production build, CSP on
+src/export/ExportButtons.tsx     Export STL (primary) / Export .scad
+e2e/smoke.spec.ts                Playwright: real WASM, production build, CSP on, light theme
 ```
 
 ---
@@ -89,7 +137,7 @@ e2e/smoke.spec.ts                Playwright: real WASM, production build, CSP on
 
 - [ ] **Step 1: Create package.json and install dependencies**
 
-Run from the repo root (it already has `README.md`, `docs/` and `.gitignore`):
+Run from the repo root (it already has `README.md`, `docs/`, `design/` and `.gitignore`):
 
 ```bash
 npm init -y
@@ -145,7 +193,7 @@ export default defineConfig({
 })
 ```
 
-`index.html`:
+`index.html` (no colour classes here; Task 2 styles `body` from tokens):
 
 ```html
 <!doctype html>
@@ -155,14 +203,14 @@ export default defineConfig({
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>PromptCAD</title>
   </head>
-  <body class="bg-neutral-950 text-neutral-100">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
 ```
 
-`src/index.css`:
+`src/index.css` (Task 2 replaces this):
 
 ```css
 @import "tailwindcss";
@@ -230,7 +278,7 @@ Expected: FAIL, because `./App` can't be resolved.
 export function App() {
   return (
     <div className="flex h-full flex-col">
-      <header className="border-b border-neutral-800 px-3 py-2">
+      <header className="border-b px-3 py-2">
         <h1 className="font-semibold">PromptCAD</h1>
       </header>
     </div>
@@ -252,7 +300,438 @@ git commit -m "chore: scaffold Vite + React TSX app with Tailwind and Vitest"
 
 ---
 
-### Task 2: OpenSCAD WASM fetch script (run with tsx)
+### Task 2: Design tokens, fonts and component styles
+
+**Files:**
+- Create: `scripts/gen-tokens.ts`, `src/styles/tokens.css` (generated), `src/theme/tokens.ts`, `src/ui/icons.ts`
+- Modify: `src/index.css`, `src/main.tsx`, `src/App.tsx`, `package.json` (scripts)
+- Test: `scripts/gen-tokens.test.ts`, `src/styles/noHardcodedColors.test.ts`, `src/theme/tokens.test.ts`
+
+**Interfaces:**
+- Consumes: `design/tokens.json`, `design/components.css` (already in the repo; see `design/README.md`).
+- Produces:
+  - `tokensToCss(tokens: DesignTokens): string` and the `DesignTokens` type (in `scripts/gen-tokens.ts`); npm script `tokens`
+  - CSS custom properties `--bg`, `--panel`, `--inset`, `--viewport`, `--line`, `--ink`, `--accent`, `--filament`, `--ok`, `--warn`, `--error`, `--*-soft`, `--grid-minor`, `--grid-major`, `--axis-x/y/z`, `--syn-*`, `--space-*`, `--radius-*`, `--shadow-pop`, `--control-sm`, `--control-md`, `--touch-target`, `--header-height`, `--font-sans`, `--font-mono` on `:root`
+  - Tailwind utilities backed by those tokens: `bg-bg`, `bg-panel`, `bg-inset`, `bg-viewport`, `border-line`, `text-ink`, `text-ink-muted`, `text-accent`, `font-sans`, `font-mono`, `rounded-sm/md/lg/pill`, `shadow-pop`; the default Tailwind palette is removed
+  - `readToken(name: string): string` and `useTokens<N extends string>(names: readonly N[]): Record<N, string>` (in `src/theme/tokens.ts`)
+  - Icons re-exported from `src/ui/icons.ts`: `IconCheck`, `IconX`, `IconWarning`, `IconSpinner`, `IconDownload`, `IconFit`
+
+The design system ships colours for two themes. Dark is primary, so it lives on `:root`; light applies when `<html data-theme="light">` is set (a setting arrives in M3) or when the OS prefers light and nothing forces dark. `@theme inline` tells Tailwind v4 to generate utilities that point at the variables, so `bg-panel` follows the theme at runtime.
+
+- [ ] **Step 1: Install fonts and icons**
+
+```bash
+npm i @fontsource-variable/archivo @fontsource/jetbrains-mono lucide-react
+npm pkg set scripts.tokens="tsx scripts/gen-tokens.ts"
+```
+
+- [ ] **Step 2: Write the failing generator tests**
+
+`scripts/gen-tokens.test.ts`:
+
+```ts
+import { readFile } from 'node:fs/promises'
+import { tokensToCss, type DesignTokens } from './gen-tokens'
+
+const tokens: DesignTokens = {
+  color: {
+    themes: [{ id: 'dark' }, { id: 'light' }],
+    tokens: [
+      { name: 'bg', value: { dark: '#0d1015', light: '#eef1f4' } },
+      { name: 'accent', value: { dark: '#6e9bff', light: '#1f4fd1' } },
+      { name: 'focus-ring', value: { dark: '{accent}', light: '{accent}' } },
+      { name: 'filament', value: '#e9a23b' },
+    ],
+  },
+  type: { families: { sans: '"Archivo", sans-serif', mono: '"JetBrains Mono", monospace' } },
+  spacing: { tokens: [{ name: 'space-1', value: '4px' }] },
+  radius: { tokens: [{ name: 'radius-sm', value: '3px' }] },
+  shadow: { tokens: [{ name: 'shadow-pop', value: { dark: '0 12px 32px rgba(0, 0, 0, 0.55)', light: '0 12px 32px rgba(16, 21, 28, 0.16)' } }] },
+  size: { tokens: [{ name: 'control-md', value: '36px' }] },
+}
+
+const css = tokensToCss(tokens)
+const section = (selector: string) => {
+  const start = css.indexOf(`${selector} {`)
+  if (start < 0) throw new Error(`no block for ${selector}`)
+  return css.slice(start, css.indexOf('\n}', start))
+}
+
+it('puts the primary (dark) theme on :root with every family', () => {
+  const root = section(':root')
+  expect(root).toContain('color-scheme: dark;')
+  expect(root).toContain('--bg: #0d1015;')
+  expect(root).toContain('--filament: #e9a23b;')
+  expect(root).toContain('--shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);')
+  expect(root).toContain('--space-1: 4px;')
+  expect(root).toContain('--radius-sm: 3px;')
+  expect(root).toContain('--control-md: 36px;')
+})
+
+it('resolves {alias} values to var() references', () => {
+  expect(section(':root')).toContain('--focus-ring: var(--accent);')
+})
+
+it('prepends the fontsource variable family name to the sans stack', () => {
+  expect(section(':root')).toContain('--font-sans: "Archivo Variable", "Archivo", sans-serif;')
+  expect(section(':root')).toContain('--font-mono: "JetBrains Mono", monospace;')
+})
+
+it('emits the light theme for data-theme and for the OS preference, inheriting single values', () => {
+  const forced = section('[data-theme="light"]')
+  expect(forced).toContain('color-scheme: light;')
+  expect(forced).toContain('--bg: #eef1f4;')
+  expect(forced).toContain('--filament: #e9a23b;')
+  expect(css).toContain('@media (prefers-color-scheme: light) {\n  :root:not([data-theme="dark"]) {')
+  expect(forced).not.toContain('--space-1') // spacing is not themed
+})
+
+it('maps colours, fonts, radii and shadows into the Tailwind theme and drops the default palette', () => {
+  expect(css).toContain('@theme {\n  --color-*: initial;\n  --font-*: initial;\n  --shadow-*: initial;\n}')
+  const theme = section('@theme inline')
+  expect(theme).toContain('--color-bg: var(--bg);')
+  expect(theme).toContain('--color-focus-ring: var(--focus-ring);')
+  expect(theme).toContain('--font-sans: var(--font-sans);')
+  expect(theme).toContain('--radius-sm: var(--radius-sm);')
+  expect(theme).toContain('--shadow-pop: var(--shadow-pop);')
+  expect(theme).not.toContain('--space-1')
+})
+
+it('src/styles/tokens.css is up to date with design/tokens.json (run `npm run tokens`)', async () => {
+  const source = JSON.parse(await readFile(new URL('../design/tokens.json', import.meta.url), 'utf8')) as DesignTokens
+  const committed = await readFile(new URL('../src/styles/tokens.css', import.meta.url), 'utf8')
+  expect(committed).toBe(tokensToCss(source))
+})
+```
+
+- [ ] **Step 3: Run tests to verify they fail**
+
+Run: `npx vitest run scripts/gen-tokens.test.ts`
+Expected: FAIL, because `./gen-tokens` can't be resolved.
+
+- [ ] **Step 4: Write the generator**
+
+`scripts/gen-tokens.ts`:
+
+```ts
+import { readFile, writeFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+export type ThemedValue = Record<string, string>
+export interface TokenEntry {
+  name: string
+  value: string | ThemedValue
+  usage?: string
+}
+interface TokenFamily {
+  tokens: TokenEntry[]
+}
+export interface DesignTokens {
+  color: { themes: { id: string; name?: string }[]; tokens: TokenEntry[] }
+  type: { families: Record<string, string> }
+  spacing?: TokenFamily
+  radius?: TokenFamily
+  shadow?: TokenFamily
+  size?: TokenFamily
+}
+
+const TOKENS_PATH = fileURLToPath(new URL('../design/tokens.json', import.meta.url))
+const OUT_PATH = fileURLToPath(new URL('../src/styles/tokens.css', import.meta.url))
+
+/** fontsource ships Archivo as a variable font registered under this family name. */
+const FONT_PREPEND: Record<string, string> = { sans: '"Archivo Variable"' }
+
+const cssValue = (v: string) => v.replace(/\{([A-Za-z0-9_.-]+)\}/g, 'var(--$1)')
+
+function pick(value: string | ThemedValue, theme: string, primary: string): string {
+  if (typeof value === 'string') return value
+  const v = value[theme] ?? value[primary]
+  if (v === undefined) throw new Error(`Token has no value for theme "${theme}" or "${primary}"`)
+  return v
+}
+
+function block(selector: string, lines: string[], indent = ''): string {
+  return `${indent}${selector} {\n${lines.map((l) => `${indent}  ${l}`).join('\n')}\n${indent}}`
+}
+
+export function tokensToCss(t: DesignTokens): string {
+  const [primary, ...others] = t.color.themes.map((th) => th.id)
+  if (!primary) throw new Error('tokens.json declares no colour themes')
+  const themedFamilies = [t.color, t.shadow].flatMap((f) => f?.tokens ?? [])
+  const unthemedFamilies = [t.spacing, t.radius, t.size].flatMap((f) => f?.tokens ?? [])
+
+  const themed = (theme: string) => [
+    `color-scheme: ${theme};`,
+    ...themedFamilies.map((tok) => `--${tok.name}: ${cssValue(pick(tok.value, theme, primary))};`),
+  ]
+  const unthemed = [
+    ...Object.entries(t.type.families).map(
+      ([k, stack]) => `--font-${k}: ${[FONT_PREPEND[k], stack].filter(Boolean).join(', ')};`,
+    ),
+    ...unthemedFamilies.map((tok) => `--${tok.name}: ${cssValue(pick(tok.value, primary, primary))};`),
+  ]
+  const tailwind = [
+    ...t.color.tokens.map((tok) => `--color-${tok.name}: var(--${tok.name});`),
+    ...Object.keys(t.type.families).map((k) => `--font-${k}: var(--font-${k});`),
+    ...(t.radius?.tokens ?? []).map((tok) => `--${tok.name}: var(--${tok.name});`),
+    ...(t.shadow?.tokens ?? []).map((tok) => `--${tok.name}: var(--${tok.name});`),
+  ]
+
+  return [
+    '/* Generated from design/tokens.json by scripts/gen-tokens.ts. Do not edit; run `npm run tokens`. */',
+    block(':root', [...themed(primary), ...unthemed]),
+    ...others.flatMap((id) => [
+      block(`[data-theme="${id}"]`, themed(id)),
+      `@media (prefers-color-scheme: ${id}) {\n${block(`:root:not([data-theme="${primary}"])`, themed(id), '  ')}\n}`,
+    ]),
+    block('@theme', ['--color-*: initial;', '--font-*: initial;', '--shadow-*: initial;']),
+    block('@theme inline', tailwind),
+  ].join('\n\n') + '\n'
+}
+
+async function main(): Promise<void> {
+  const tokens = JSON.parse(await readFile(TOKENS_PATH, 'utf8')) as DesignTokens
+  await writeFile(OUT_PATH, tokensToCss(tokens))
+  console.log(`Wrote ${OUT_PATH}`)
+}
+
+const invokedDirectly = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1])
+if (invokedDirectly) {
+  main().catch((err: unknown) => {
+    console.error(err instanceof Error ? err.message : err)
+    process.exit(1)
+  })
+}
+```
+
+- [ ] **Step 5: Generate the stylesheet and run the generator tests**
+
+```bash
+mkdir -p src/styles
+npm run tokens
+head -5 src/styles/tokens.css
+```
+
+Expected: the file starts with the "Generated from" comment and `:root {` with `color-scheme: dark;`.
+
+Run: `npx vitest run scripts/gen-tokens.test.ts`
+Expected: PASS (6 tests).
+
+- [ ] **Step 6: Write the failing no-hard-coded-colours test**
+
+`src/styles/noHardcodedColors.test.ts`:
+
+```ts
+import { readdir, readFile } from 'node:fs/promises'
+import { join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const SRC = fileURLToPath(new URL('..', import.meta.url))
+const HEX = /#[0-9a-fA-F]{3,8}\b/
+const PALETTE =
+  /\b(?:bg|text|border|fill|stroke|ring|outline|from|via|to|decoration|accent|caret|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(?:-\d{2,3})?\b/
+
+async function walk(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true })
+  const files = await Promise.all(
+    entries.map((e) => (e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)])),
+  )
+  return files.flat()
+}
+
+it('src uses design tokens: no hex literals, no Tailwind palette classes', async () => {
+  const offenders: string[] = []
+  for (const file of await walk(SRC)) {
+    if (!/\.(tsx?|css)$/.test(file) || /\.test\.tsx?$/.test(file) || file.endsWith('styles/tokens.css')) continue
+    const lines = (await readFile(file, 'utf8')).split('\n')
+    lines.forEach((line, i) => {
+      if (HEX.test(line) || PALETTE.test(line)) offenders.push(`${relative(SRC, file)}:${i + 1}: ${line.trim()}`)
+    })
+  }
+  expect(offenders).toEqual([])
+})
+```
+
+- [ ] **Step 7: Run it to verify it fails**
+
+Run: `npx vitest run src/styles`
+Expected: PASS. Nothing in `src/` names a colour yet, so this guard starts green; it exists to fail the moment a later task writes a hex value or a palette class. To see it bite once, add `className="bg-neutral-900"` to the header in `src/App.tsx`, run it again (FAIL, naming `App.tsx` and the line), then remove the class.
+
+- [ ] **Step 8: Wire the stylesheet, fonts and body defaults**
+
+Replace `src/index.css`. The component classes go into Tailwind's `components` layer so that `utilities` (layout classes in TSX) win over `.pc-root`'s own background:
+
+```css
+@import "tailwindcss";
+@import "./styles/tokens.css";
+@import "../design/components.css" layer(components);
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+```
+
+`src/main.tsx`: add the font imports above `./index.css`:
+
+```tsx
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { App } from './App'
+import '@fontsource-variable/archivo'
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/500.css'
+import './index.css'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)
+```
+
+`src/App.tsx` (still a placeholder; Task 13 builds the real layout). `pc-root` enables the `svg.pc-i` icon sizing from `components.css`; the header is a `panel` 48px tall per the screens' `topbar`:
+
+```tsx
+export function App() {
+  return (
+    <div className="pc-root flex h-full flex-col bg-bg text-ink">
+      <header className="flex h-(--header-height) shrink-0 items-center gap-3 border-b border-line bg-panel pl-4 pr-3">
+        <h1 className="text-[15px] font-bold tracking-tight">PromptCAD</h1>
+      </header>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 9: Write the failing token-reader tests**
+
+The viewer (Task 11) draws in WebGL, which cannot read CSS variables, so it needs the computed values and must re-read them when the theme changes.
+
+`src/theme/tokens.test.ts`:
+
+```ts
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { readToken, useTokens } from './tokens'
+
+const values: Record<string, string> = { '--filament': ' #e9a23b ', '--viewport': '#0b0e12' }
+
+beforeEach(() => {
+  vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+    getPropertyValue: (name: string) => values[name] ?? '',
+  } as unknown as CSSStyleDeclaration)
+})
+afterEach(() => {
+  vi.restoreAllMocks()
+  document.documentElement.removeAttribute('data-theme')
+})
+
+it('reads a trimmed token value from the root element', () => {
+  expect(readToken('filament')).toBe('#e9a23b')
+  expect(readToken('missing')).toBe('')
+})
+
+it('returns every requested token', () => {
+  const { result } = renderHook(() => useTokens(['filament', 'viewport'] as const))
+  expect(result.current).toEqual({ filament: '#e9a23b', viewport: '#0b0e12' })
+})
+
+it('re-reads when data-theme changes on <html>', async () => {
+  const { result } = renderHook(() => useTokens(['filament'] as const))
+  values['--filament'] = '#d4861a'
+  act(() => document.documentElement.setAttribute('data-theme', 'light'))
+  await waitFor(() => expect(result.current.filament).toBe('#d4861a'))
+})
+```
+
+- [ ] **Step 10: Run tests to verify they fail**
+
+Run: `npx vitest run src/theme`
+Expected: FAIL, because `./tokens` can't be resolved.
+
+- [ ] **Step 11: Implement the token reader and the icon set**
+
+`src/theme/tokens.ts`:
+
+```ts
+import { useEffect, useState } from 'react'
+
+/** Computed value of a design token (`--name`) on <html>, trimmed. Empty string if unset. */
+export function readToken(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim()
+}
+
+function readAll<N extends string>(names: readonly N[]): Record<N, string> {
+  return Object.fromEntries(names.map((n) => [n, readToken(n)])) as Record<N, string>
+}
+
+/**
+ * Token values for code that cannot use CSS variables (WebGL materials, canvas).
+ * Re-reads when the OS colour scheme flips or `data-theme` changes on <html>.
+ */
+export function useTokens<N extends string>(names: readonly N[]): Record<N, string> {
+  const key = names.join(',')
+  const [values, setValues] = useState(() => readAll(names))
+
+  useEffect(() => {
+    const update = () => setValues(readAll(key.split(',') as N[]))
+    update()
+    const media = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: light)') : null
+    media?.addEventListener('change', update)
+    const observer = new MutationObserver(update)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => {
+      media?.removeEventListener('change', update)
+      observer.disconnect()
+    }
+  }, [key])
+
+  return values
+}
+```
+
+`src/ui/icons.ts`. One place to swap icons; every use passes `className="pc-i"` so `components.css` sets the 16px size, 1.5px stroke and square caps:
+
+```ts
+export {
+  Check as IconCheck,
+  Download as IconDownload,
+  LoaderCircle as IconSpinner,
+  Scan as IconFit,
+  TriangleAlert as IconWarning,
+  X as IconX,
+} from 'lucide-react'
+```
+
+- [ ] **Step 12: Run all tests, typecheck and build**
+
+Run: `npm test && npm run typecheck && npm run build`
+Expected: all tests pass (including the no-hard-coded-colours scan and the tokens.css up-to-date check), no type errors, `dist/` contains hashed `.woff2` files for Archivo and JetBrains Mono.
+
+- [ ] **Step 13: Commit**
+
+```bash
+git add package.json package-lock.json scripts/gen-tokens.ts scripts/gen-tokens.test.ts src/styles src/theme src/ui src/index.css src/main.tsx src/App.tsx
+git commit -m "feat(design): generate token CSS from design/tokens.json, self-hosted fonts, pc-* components, token reader"
+```
+
+---
+
+### Task 3: OpenSCAD WASM fetch script (run with tsx)
 
 **Files:**
 - Create: `scripts/fetch-openscad.ts`
@@ -387,18 +866,18 @@ Expected: `openscad.js`, `openscad.wasm` (several MB) and `VERSION`. If the list
 Check that the build is an ES module with a default export:
 
 Run: `grep -c "export default" public/openscad/openscad.js`
-Expected: `1` or more. If it is `0`, stop and report: the worker in Task 5 imports it as an ES module.
+Expected: `1` or more. If it is `0`, stop and report: the worker in Task 6 imports it as an ES module.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add scripts package.json package-lock.json .gitignore
+git add scripts/fetch-openscad.ts scripts/fetch-openscad.test.ts package.json package-lock.json .gitignore
 git commit -m "build: fetch OpenSCAD WASM snapshot into public/openscad via tsx script"
 ```
 
 ---
 
-### Task 3: Render types, OpenSCAD arguments and diagnostics parsing
+### Task 4: Render types, OpenSCAD arguments and diagnostics parsing
 
 **Files:**
 - Create: `src/render/types.ts`, `src/render/result.ts`, `src/render/args.ts`, `src/render/diagnostics.ts`
@@ -411,9 +890,12 @@ git commit -m "build: fetch OpenSCAD WASM snapshot into public/openscad via tsx 
   - `INPUT_PATH = '/main.scad'`, `OUTPUT_PATH = '/out.stl'`
   - `buildArgs(params?: Record<string, ParamValue>): string[]`, which throws on an invalid parameter name or a non-finite number
   - `formatParamValue(value: ParamValue): string`
+  - `parseDiagnosticLine(text: string): Diagnostic | null` (one console line → diagnostic, used by the console to make lines clickable)
   - `parseDiagnostics(logs: LogLine[]): Diagnostic[]`
   - `failedResult(error: string, opts?: { logs?: LogLine[]; renderMs?: number }): RenderResult`
   - `errorMessage(e: unknown): string`
+
+The design system's voice for errors is "what failed, where, and what to do", shown as "Line 7: syntax error". OpenSCAD's own text embeds the location mid-sentence (`Parser error in file "/main.scad", line 3: syntax error`), so `Diagnostic.message` strips the location clause and the UI prefixes `Line N:` itself.
 
 - [ ] **Step 1: Write the types (no behaviour, no test)**
 
@@ -452,6 +934,7 @@ export interface Diagnostic {
   /** 1-based line in main.scad */
   line: number
   severity: 'error' | 'warning'
+  /** OpenSCAD's message without the "in file …, line N" clause, e.g. "Parser error: syntax error". */
   message: string
 }
 
@@ -506,20 +989,20 @@ describe('formatParamValue', () => {
 `src/render/diagnostics.test.ts`:
 
 ```ts
-import { parseDiagnostics } from './diagnostics'
+import { parseDiagnosticLine, parseDiagnostics } from './diagnostics'
 import type { LogLine } from './types'
 
 const err = (text: string): LogLine => ({ stream: 'stderr', text })
 
-it('maps parser errors in main.scad to a line', () => {
+it('maps parser errors in main.scad to a line and strips the location clause', () => {
   expect(parseDiagnostics([err('ERROR: Parser error in file "/main.scad", line 3: syntax error')])).toEqual([
-    { severity: 'error', line: 3, message: 'Parser error in file "/main.scad", line 3: syntax error' },
+    { severity: 'error', line: 3, message: 'Parser error: syntax error' },
   ])
 })
 
 it('maps warnings with an unquoted file name', () => {
   expect(parseDiagnostics([err("WARNING: Ignoring unknown variable 'x' in file main.scad, line 2")])).toEqual([
-    { severity: 'warning', line: 2, message: "Ignoring unknown variable 'x' in file main.scad, line 2" },
+    { severity: 'warning', line: 2, message: "Ignoring unknown variable 'x'" },
   ])
 })
 
@@ -532,6 +1015,16 @@ it('ignores lines without a location, other files, and non-diagnostic output', (
       err('TRACE: called by module'),
     ]),
   ).toEqual([])
+})
+
+it('parses a single line, returning null for anything that is not a located diagnostic', () => {
+  expect(parseDiagnosticLine('WARNING: variable w not specified as parameter, in file main.scad, line 12')).toEqual({
+    severity: 'warning',
+    line: 12,
+    message: 'variable w not specified as parameter',
+  })
+  expect(parseDiagnosticLine('ECHO: "wall = 2"')).toBeNull()
+  expect(parseDiagnosticLine('ERROR: Execution aborted')).toBeNull()
 })
 ```
 
@@ -580,16 +1073,23 @@ export function buildArgs(params: Record<string, ParamValue> = {}): string[] {
 import type { Diagnostic, LogLine } from './types'
 
 const PREFIX = /^(ERROR|WARNING):\s*(.*)$/
-const LOCATION = /in file\s+"?([^",]+?)"?,\s*line\s+(\d+)/
+/** `, in file main.scad, line 12` or ` in file "/main.scad", line 3` */
+const LOCATION = /,?\s*in file\s+"?([^",]+?)"?,\s*line\s+(\d+)/
+
+export function parseDiagnosticLine(text: string): Diagnostic | null {
+  const m = PREFIX.exec(text.trim())
+  if (!m) return null
+  const loc = LOCATION.exec(m[2])
+  if (!loc || !/(^|\/)main\.scad$/.test(loc[1])) return null
+  const message = m[2].replace(LOCATION, '').replace(/\s{2,}/g, ' ').trim()
+  return { severity: m[1] === 'ERROR' ? 'error' : 'warning', line: Number(loc[2]), message }
+}
 
 export function parseDiagnostics(logs: LogLine[]): Diagnostic[] {
   const out: Diagnostic[] = []
   for (const { text } of logs) {
-    const m = PREFIX.exec(text.trim())
-    if (!m) continue
-    const loc = LOCATION.exec(m[2])
-    if (!loc || !/(^|\/)main\.scad$/.test(loc[1])) continue
-    out.push({ severity: m[1] === 'ERROR' ? 'error' : 'warning', line: Number(loc[2]), message: m[2] })
+    const d = parseDiagnosticLine(text)
+    if (d) out.push(d)
   }
   return out
 }
@@ -616,7 +1116,7 @@ export function failedResult(
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `npx vitest run src/render && npm run typecheck`
-Expected: PASS (8 tests), no type errors.
+Expected: PASS (9 tests), no type errors.
 
 - [ ] **Step 6: Commit**
 
@@ -627,7 +1127,7 @@ git commit -m "feat(render): request/result types, OpenSCAD args and diagnostics
 
 ---
 
-### Task 4: STL parsing and dimensions
+### Task 5: STL parsing and dimensions
 
 **Files:**
 - Create: `src/render/stl.ts`, `src/render/dims.ts`, `src/test/stl.ts`
@@ -637,7 +1137,8 @@ git commit -m "feat(render): request/result types, OpenSCAD args and diagnostics
 - Consumes: `MeshData`, `Bounds`, `Vec3` from `src/render/types.ts`.
 - Produces:
   - `parseStl(buffer: ArrayBuffer): MeshData`, which accepts binary and ASCII STL and throws `'Unrecognised STL data'` / `'Malformed ASCII STL'`
-  - `formatDims(bounds: Bounds): string`, for example `"20 × 20 × 10 mm"`
+  - `formatDimParts(bounds: Bounds): [string, string, string]`, each side rounded to two decimals with trailing zeros dropped (for the axis form "X 20 Y 20 Z 10 mm")
+  - `formatDims(bounds: Bounds): string`, for example `"20 × 20 × 10 mm"` (DimsReadout: "Round to two decimals and drop trailing zeros")
   - Test helpers: `type Tri = [Vec3, Vec3, Vec3]`, `binaryStl(tris: Tri[]): ArrayBuffer`, `asciiStl(tris: Tri[]): string`, `BOX_TRI: Tri` (bounds 20×20×10)
 
 - [ ] **Step 1: Write test helpers**
@@ -732,14 +1233,18 @@ it('rejects ASCII STL with a partial triangle', () => {
 `src/render/dims.test.ts`:
 
 ```ts
-import { formatDims } from './dims'
+import { formatDimParts, formatDims } from './dims'
 
-it('formats bounding box size in mm', () => {
+it('formats bounding box size in mm with the multiplication sign', () => {
   expect(formatDims({ min: [0, 0, 0], max: [20, 20, 10] })).toBe('20 × 20 × 10 mm')
 })
 
 it('rounds to two decimals and trims zeros', () => {
   expect(formatDims({ min: [-1, 0, 0], max: [1.5, 0.333333, 2] })).toBe('2.5 × 0.33 × 2 mm')
+})
+
+it('exposes the three sides separately for the axis readout', () => {
+  expect(formatDimParts({ min: [0, 0, 0], max: [88.8, 25.4, 22] })).toEqual(['88.8', '25.4', '22'])
 })
 ```
 
@@ -821,8 +1326,12 @@ import type { Bounds } from './types'
 
 const fmt = (n: number) => String(Number(n.toFixed(2)))
 
-export function formatDims({ min, max }: Bounds): string {
-  return `${fmt(max[0] - min[0])} × ${fmt(max[1] - min[1])} × ${fmt(max[2] - min[2])} mm`
+export function formatDimParts({ min, max }: Bounds): [string, string, string] {
+  return [fmt(max[0] - min[0]), fmt(max[1] - min[1]), fmt(max[2] - min[2])]
+}
+
+export function formatDims(bounds: Bounds): string {
+  return `${formatDimParts(bounds).join(' × ')} mm`
 }
 ```
 
@@ -840,14 +1349,14 @@ git commit -m "feat(render): binary/ASCII STL parser with flat normals, bounds a
 
 ---
 
-### Task 5: One OpenSCAD compile (`runOpenSCAD`) and the Comlink worker
+### Task 6: One OpenSCAD compile (`runOpenSCAD`) and the Comlink worker
 
 **Files:**
 - Create: `src/render/runOpenSCAD.ts`, `src/render/render.worker.ts`, `src/render/createRenderWorker.ts`
 - Test: `src/render/runOpenSCAD.test.ts`
 
 **Interfaces:**
-- Consumes: `buildArgs`, `INPUT_PATH`, `OUTPUT_PATH` (Task 3); `parseStl` (Task 4); `failedResult`, `errorMessage` (Task 3); `parseDiagnostics` (Task 3); `binaryStl`, `BOX_TRI` (test helpers, Task 4).
+- Consumes: `buildArgs`, `INPUT_PATH`, `OUTPUT_PATH` (Task 4); `parseStl` (Task 5); `failedResult`, `errorMessage` (Task 4); `parseDiagnostics` (Task 4); `binaryStl`, `BOX_TRI` (test helpers, Task 5).
 - Produces:
   - `interface OpenSCADInstance { FS: { writeFile(path: string, data: string | Uint8Array): void; readFile(path: string): Uint8Array }; callMain(args: string[]): number }`
   - `interface OpenSCADFactoryOptions { noInitialRun: true; print(text: string): void; printErr(text: string): void; locateFile?(path: string): string }`
@@ -1084,7 +1593,7 @@ Expected: PASS (9 tests).
 npm i comlink
 ```
 
-`src/render/render.worker.ts`. This file is thin glue and is exercised by the Playwright test in Task 12:
+`src/render/render.worker.ts`. This file is thin glue and is exercised by the Playwright test in Task 13:
 
 ```ts
 import * as Comlink from 'comlink'
@@ -1162,19 +1671,20 @@ git commit -m "feat(render): runOpenSCAD with fresh WASM instance per render, Co
 
 ---
 
-### Task 6: RenderController (debounce, cancel, timeout, respawn)
+### Task 7: RenderController (debounce, cancel, timeout, respawn)
 
 **Files:**
 - Create: `src/render/controller.ts`, `src/test/results.ts`
 - Test: `src/render/controller.test.ts`
 
 **Interfaces:**
-- Consumes: `RenderWorkerHandle`, `WorkerFactory` (Task 5); `failedResult`, `errorMessage` (Task 3); `parseStl` (Task 4); `binaryStl`, `BOX_TRI` (Task 4 test helpers).
+- Consumes: `RenderWorkerHandle`, `WorkerFactory` (Task 6); `failedResult`, `errorMessage` (Task 4); `parseStl` (Task 5); `binaryStl`, `BOX_TRI` (Task 5 test helpers).
 - Produces:
   - `DEFAULT_DEBOUNCE_MS = 600`, `DEFAULT_TIMEOUT_MS = 60_000`
   - `interface RenderControllerOptions { createWorker: WorkerFactory; onResult(result: RenderResult): void; onStart?(): void; debounceMs?: number; timeoutMs?: number }`
   - `class RenderController { constructor(opts: RenderControllerOptions); request(req: RenderRequest, opts?: { immediate?: boolean }): void; cancel(): void; dispose(): void }`
-  - Test helper `okResult(): RenderResult` (the 20×20×10 mesh) and `errorResult(message?: string): RenderResult`
+  - The timeout error string is exactly `Render timed out after 60 s` (the StatusPill in Task 10 derives "Timed out after 60 s" from it)
+  - Test helpers `okResult(): RenderResult` (the 20×20×10 mesh) and `errorResult(message?: string): RenderResult`
 
 - [ ] **Step 1: Write the shared result fixtures**
 
@@ -1502,19 +2012,20 @@ git commit -m "feat(render): RenderController with debounce, cancel-on-newer, 60
 
 ---
 
-### Task 7: App store and render loop hook
+### Task 8: App store and render loop hook
 
 **Files:**
 - Create: `src/state/store.ts`, `src/render/useRenderLoop.ts`
 - Test: `src/state/store.test.ts`, `src/render/useRenderLoop.test.ts`
 
 **Interfaces:**
-- Consumes: `RenderController`, `DEFAULT_DEBOUNCE_MS`, `DEFAULT_TIMEOUT_MS` (Task 6); `WorkerFactory`, `createRenderWorker` (Task 5); `okResult`, `errorResult` (Task 6 helpers).
+- Consumes: `RenderController`, `DEFAULT_DEBOUNCE_MS`, `DEFAULT_TIMEOUT_MS` (Task 7); `WorkerFactory`, `createRenderWorker` (Task 6); `okResult`, `errorResult` (Task 7 helpers).
 - Produces:
   - `type RenderStatus = 'idle' | 'rendering' | 'ok' | 'error'`
-  - `interface AppState { code; status; mesh: MeshData | null; stl: ArrayBuffer | null; logs; diagnostics; error: string | null; renderMs: number | null; setCode(code: string): void; renderStarted(): void; renderFinished(result: RenderResult): void }`
+  - `interface RevealRequest { line: number; id: number }` (a fresh `id` per request so the editor reacts even when the same line is asked for twice)
+  - `interface AppState { code; status; mesh: MeshData | null; stl: ArrayBuffer | null; logs; diagnostics; error: string | null; renderMs: number | null; reveal: RevealRequest | null; setCode(code: string): void; renderStarted(): void; renderFinished(result: RenderResult): void; goToLine(line: number): void }`
   - `useAppStore` (Zustand hook; also `.getState()`, `.setState()`, `.subscribe()`, `.getInitialState()`)
-  - `DEFAULT_CODE: string` (renders to 20 × 20 × 10 mm)
+  - `DEFAULT_CODE: string` (renders to 20 × 20 × 10 mm, with Customizer-style comments as the design system's example code does)
   - `selectCanExport(state: AppState): boolean`
   - `useRenderLoop(createWorker?: WorkerFactory, debounceMs?: number, timeoutMs?: number): void`
 
@@ -1537,6 +2048,7 @@ it('starts idle with the default model code', () => {
   expect(s.code).toBe(DEFAULT_CODE)
   expect(s.status).toBe('idle')
   expect(s.mesh).toBeNull()
+  expect(s.reveal).toBeNull()
 })
 
 it('stores mesh, STL, logs and timing on success', () => {
@@ -1567,6 +2079,16 @@ it('clears the error after the next successful render', () => {
   useAppStore.getState().renderFinished(errorResult())
   useAppStore.getState().renderFinished(okResult())
   expect(useAppStore.getState().error).toBeNull()
+})
+
+it('issues a new reveal request each time a line is asked for, even the same line', () => {
+  useAppStore.getState().goToLine(7)
+  const first = useAppStore.getState().reveal
+  useAppStore.getState().goToLine(7)
+  const second = useAppStore.getState().reveal
+  expect(first).toEqual({ line: 7, id: expect.any(Number) })
+  expect(second?.line).toBe(7)
+  expect(second?.id).not.toBe(first?.id)
 })
 
 describe('selectCanExport', () => {
@@ -1657,7 +2179,13 @@ import type { Diagnostic, LogLine, MeshData, RenderResult } from '../render/type
 
 export type RenderStatus = 'idle' | 'rendering' | 'ok' | 'error'
 
+export interface RevealRequest {
+  line: number
+  id: number
+}
+
 export const DEFAULT_CODE = `// PromptCAD: edit me
+/* [Dimensions] */
 width = 20;  // [5:1:100]
 depth = 20;  // [5:1:100]
 height = 10; // [2:1:50]
@@ -1680,10 +2208,15 @@ export interface AppState {
   diagnostics: Diagnostic[]
   error: string | null
   renderMs: number | null
+  /** Asks the editor to scroll to and select a line (status pill and console clicks). */
+  reveal: RevealRequest | null
   setCode(code: string): void
   renderStarted(): void
   renderFinished(result: RenderResult): void
+  goToLine(line: number): void
 }
+
+let revealId = 0
 
 export const useAppStore = create<AppState>()((set) => ({
   code: DEFAULT_CODE,
@@ -1694,6 +2227,7 @@ export const useAppStore = create<AppState>()((set) => ({
   diagnostics: [],
   error: null,
   renderMs: null,
+  reveal: null,
   setCode: (code) => set({ code }),
   renderStarted: () => set({ status: 'rendering' }),
   renderFinished: (r) =>
@@ -1702,6 +2236,7 @@ export const useAppStore = create<AppState>()((set) => ({
         ? { status: 'ok', mesh: r.mesh, stl: r.stl, error: null, logs: r.logs, diagnostics: r.diagnostics, renderMs: r.renderMs }
         : { status: 'error', error: r.error, logs: r.logs, diagnostics: r.diagnostics, renderMs: r.renderMs },
     ),
+  goToLine: (line) => set({ reveal: { line, id: ++revealId } }),
 }))
 
 export const selectCanExport = (s: AppState): boolean => s.status === 'ok' && s.stl !== null
@@ -1750,30 +2285,34 @@ Expected: PASS, no type errors.
 
 ```bash
 git add package.json package-lock.json src/state src/render/useRenderLoop.ts src/render/useRenderLoop.test.ts
-git commit -m "feat(state): Zustand app store, export guard, and render loop hook"
+git commit -m "feat(state): Zustand app store, export guard, go-to-line request, render loop hook"
 ```
 
 ---
 
-### Task 8: CodeMirror editor with OpenSCAD highlighting and diagnostics
+### Task 9: CodeMirror editor with token theme, OpenSCAD highlighting, inline diagnostics and go-to-line
 
 **Files:**
-- Create: `src/editor/openscadLanguage.ts`, `src/editor/CodeEditor.tsx`
-- Test: `src/editor/openscadLanguage.test.ts`, `src/editor/CodeEditor.test.tsx`
+- Create: `src/editor/openscadLanguage.ts`, `src/editor/theme.ts`, `src/editor/diagnosticsExtension.ts`, `src/editor/CodeEditor.tsx`
+- Test: `src/editor/openscadLanguage.test.ts`, `src/editor/diagnosticsExtension.test.ts`, `src/editor/CodeEditor.test.tsx`
 
 **Interfaces:**
-- Consumes: `Diagnostic` (Task 3).
+- Consumes: `Diagnostic` (Task 4); `RevealRequest` (Task 8); CSS variables `--inset`, `--ink`, `--ink-muted`, `--accent-soft`, `--line`, `--line-strong`, `--panel-raised`, `--shadow-pop`, `--error`, `--error-soft`, `--warn`, `--warn-soft`, `--syn-*`, `--font-mono`, `--font-sans`, `--space-*` (Task 2).
 - Produces:
   - `openscadParser: StreamParser<{ inComment: boolean }>` and `openscad(): StreamLanguage<…>`
+  - `tokenTheme: Extension` (editor chrome + `openscadHighlight: HighlightStyle` from the `syn-*` tokens)
+  - `setAppDiagnostics: StateEffectType<readonly Diagnostic[]>`, `diagnosticsExtension: Extension`, `diagnosticsByLine(doc: Text, diagnostics: readonly Diagnostic[]): Diagnostic[]`, `calloutHeadline(d: Diagnostic): string` (`"Line 7: Parser error: syntax error"`)
   - `toCmDiagnostics(doc: Text, diagnostics: Diagnostic[]): CmDiagnostic[]`, which clamps out-of-range lines into the document
-  - `<CodeEditor value={string} onChange={(code: string) => void} diagnostics={Diagnostic[]} />`, which renders `data-testid="code-editor"`
+  - `<CodeEditor value={string} onChange={(code: string) => void} diagnostics={Diagnostic[]} reveal?={RevealRequest | null} />`, which renders `data-testid="code-editor"`
+
+The Compile error screen shows three things on a failing line: the whole line on an `error-soft` ground, its line number in `error`, and a `pc-callout is-error` block directly under it with the headline "Line 16: …". `@codemirror/lint` keeps the wavy underline and hover tooltip; the rest is a small extension of our own. The callout is built with `textContent` only, because the message comes from model output.
 
 This uses a hand-written grammar for now. The spec's open question about reusing tree-sitter is decided in M3, when tree-sitter arrives for Customizer parsing.
 
 - [ ] **Step 1: Install CodeMirror**
 
 ```bash
-npm i codemirror @codemirror/state @codemirror/view @codemirror/language @codemirror/lint @codemirror/theme-one-dark
+npm i codemirror @codemirror/state @codemirror/view @codemirror/language @codemirror/lint @lezer/highlight
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -1831,11 +2370,48 @@ it('handles line comments and block comments spanning lines', () => {
 })
 ```
 
+`src/editor/diagnosticsExtension.test.ts`:
+
+```ts
+import { Text } from '@codemirror/state'
+import { calloutHeadline, diagnosticsByLine } from './diagnosticsExtension'
+
+const doc = Text.of(['cube(1);', 'sphere(', 'x'])
+
+it('keeps one diagnostic per line, preferring errors over warnings, sorted by line', () => {
+  const result = diagnosticsByLine(doc, [
+    { line: 3, severity: 'warning', message: 'w3' },
+    { line: 2, severity: 'warning', message: 'w2' },
+    { line: 2, severity: 'error', message: 'e2' },
+    { line: 2, severity: 'warning', message: 'w2 again' },
+  ])
+  expect(result).toEqual([
+    { line: 2, severity: 'error', message: 'e2' },
+    { line: 3, severity: 'warning', message: 'w3' },
+  ])
+})
+
+it('clamps lines outside the document instead of throwing', () => {
+  expect(diagnosticsByLine(doc, [{ line: 99, severity: 'error', message: 'late' }, { line: 0, severity: 'warning', message: 'early' }])).toEqual([
+    { line: 1, severity: 'warning', message: 'early' },
+    { line: 3, severity: 'error', message: 'late' },
+  ])
+})
+
+it('writes the headline in the design system voice', () => {
+  expect(calloutHeadline({ line: 16, severity: 'error', message: 'Parser error: syntax error' })).toBe(
+    'Line 16: Parser error: syntax error',
+  )
+})
+```
+
 `src/editor/CodeEditor.test.tsx`:
 
 ```tsx
+import { highlightingFor } from '@codemirror/language'
 import { Text } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
+import { tags } from '@lezer/highlight'
 import { render, screen } from '@testing-library/react'
 import { CodeEditor, toCmDiagnostics } from './CodeEditor'
 
@@ -1864,11 +2440,38 @@ it('replaces the document when the value prop changes externally', () => {
   expect(viewOf(container).state.doc.toString()).toBe('b')
 })
 
+it('colours keywords with the syn-keyword token class', () => {
+  const { container } = render(<CodeEditor value="module m() {}" onChange={() => {}} diagnostics={[]} />)
+  const cls = highlightingFor(viewOf(container).state, [tags.keyword])
+  expect(cls).toBeTruthy()
+  const keyword = container.querySelector(`.${cls!.split(' ').join('.')}`)
+  expect(keyword).toHaveTextContent('module')
+})
+
+it('marks the error line, colours its gutter number, and shows the callout as text only', () => {
+  const evil = 'syntax error <img src=x onerror=alert(1)>'
+  const { container } = render(
+    <CodeEditor value={'cube(1);\nsphere(\nx'} onChange={() => {}} diagnostics={[{ line: 2, severity: 'error', message: evil }]} />,
+  )
+  expect(container.querySelector('.cm-diag-line-error')).toHaveTextContent('sphere(')
+  expect(container.querySelector('.cm-gutterElement.cm-diag-gutter-error')).toHaveTextContent('2')
+  const callout = container.querySelector('.cm-diag-callout')
+  expect(callout).toHaveClass('pc-callout', 'is-error')
+  expect(callout).toHaveTextContent(`Line 2: ${evil}`)
+  expect(callout?.querySelector('img')).toBeNull()
+})
+
+it('reveals a requested line by selecting its start', () => {
+  const { container, rerender } = render(<CodeEditor value={'a\nb\nc'} onChange={() => {}} diagnostics={[]} reveal={null} />)
+  rerender(<CodeEditor value={'a\nb\nc'} onChange={() => {}} diagnostics={[]} reveal={{ line: 3, id: 1 }} />)
+  expect(viewOf(container).state.selection.main.head).toBe(4)
+})
+
 describe('toCmDiagnostics', () => {
   const doc = Text.of(['cube(1);', 'sphere(', 'x'])
-  it('spans the whole reported line', () => {
+  it('spans the whole reported line with the headline as the message', () => {
     expect(toCmDiagnostics(doc, [{ line: 2, severity: 'error', message: 'syntax error' }])).toEqual([
-      { from: 9, to: 16, severity: 'error', message: 'syntax error' },
+      { from: 9, to: 16, severity: 'error', message: 'Line 2: syntax error' },
     ])
   })
   it('clamps lines outside the document instead of throwing', () => {
@@ -1883,7 +2486,7 @@ describe('toCmDiagnostics', () => {
 Run: `npx vitest run src/editor`
 Expected: FAIL, because the modules can't be resolved.
 
-- [ ] **Step 4: Implement**
+- [ ] **Step 4: Implement the language**
 
 `src/editor/openscadLanguage.ts`:
 
@@ -1944,22 +2547,176 @@ export const openscadParser: StreamParser<{ inComment: boolean }> = {
 export const openscad = () => StreamLanguage.define(openscadParser)
 ```
 
+- [ ] **Step 5: Implement the token theme**
+
+`src/editor/theme.ts`. Everything is a CSS variable, so the editor follows the theme without re-creating the view. StreamParser style names map to Lezer tags as `keyword → tags.keyword`, `builtin → tags.standard(tags.variableName)`, `number`, `string`, `comment`; `atom` (`$fn`) stays `ink`, as in the screens.
+
+```ts
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import type { Extension } from '@codemirror/state'
+import { EditorView } from '@codemirror/view'
+import { tags } from '@lezer/highlight'
+
+export const openscadHighlight = HighlightStyle.define([
+  { tag: tags.keyword, color: 'var(--syn-keyword)' },
+  { tag: tags.standard(tags.variableName), color: 'var(--syn-builtin)' },
+  { tag: tags.number, color: 'var(--syn-number)' },
+  { tag: tags.string, color: 'var(--syn-string)' },
+  { tag: tags.comment, color: 'var(--syn-comment)' },
+])
+
+const chrome = EditorView.theme({
+  '&': { height: '100%', backgroundColor: 'var(--inset)', color: 'var(--ink)', fontSize: '13px' },
+  '&.cm-focused': { outline: 'none' },
+  '.cm-scroller': { overflow: 'auto', fontFamily: 'var(--font-mono)', lineHeight: '20px' },
+  '.cm-content': { caretColor: 'var(--ink)', padding: 'var(--space-2) 0' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--ink)' },
+  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+    backgroundColor: 'var(--accent-soft)',
+  },
+  '.cm-activeLine': { backgroundColor: 'transparent' },
+  '.cm-gutters': { backgroundColor: 'var(--inset)', color: 'var(--syn-comment)', border: 'none' },
+  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--ink-muted)' },
+  '.cm-lineNumbers .cm-gutterElement': { padding: '0 var(--space-2) 0 var(--space-3)', minWidth: '44px' },
+  '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': { backgroundColor: 'var(--accent-soft)', outline: '1px solid var(--line-strong)' },
+  '.cm-lintRange-error': { backgroundImage: 'none', textDecoration: 'underline wavy var(--error)' },
+  '.cm-lintRange-warning': { backgroundImage: 'none', textDecoration: 'underline wavy var(--warn)' },
+  '.cm-tooltip': {
+    backgroundColor: 'var(--panel-raised)',
+    color: 'var(--ink)',
+    border: '1px solid var(--line)',
+    borderRadius: 'var(--radius-md)',
+    boxShadow: 'var(--shadow-pop)',
+    fontFamily: 'var(--font-sans)',
+  },
+  // diagnosticsExtension (Step 6)
+  '.cm-diag-line-error': { backgroundColor: 'var(--error-soft)' },
+  '.cm-diag-line-warning': { backgroundColor: 'var(--warn-soft)' },
+  '.cm-gutterElement.cm-diag-gutter-error': { color: 'var(--error)' },
+  '.cm-gutterElement.cm-diag-gutter-warning': { color: 'var(--warn)' },
+  '.cm-diag-callout': {
+    margin: 'var(--space-1) var(--space-3) var(--space-1) 0',
+    fontFamily: 'var(--font-sans)',
+    fontSize: '14px',
+    lineHeight: '20px',
+    whiteSpace: 'normal',
+  },
+})
+
+export const tokenTheme: Extension = [chrome, syntaxHighlighting(openscadHighlight)]
+```
+
+- [ ] **Step 6: Implement the diagnostics extension**
+
+`src/editor/diagnosticsExtension.ts`:
+
+```ts
+import { RangeSetBuilder, StateEffect, StateField, type Extension, type Text } from '@codemirror/state'
+import { Decoration, EditorView, GutterMarker, gutterLineClass, WidgetType } from '@codemirror/view'
+import type { Diagnostic } from '../render/types'
+
+export const setAppDiagnostics = StateEffect.define<readonly Diagnostic[]>()
+
+/** One diagnostic per line (errors beat warnings), clamped into the document, sorted by line. */
+export function diagnosticsByLine(doc: Text, diagnostics: readonly Diagnostic[]): Diagnostic[] {
+  const byLine = new Map<number, Diagnostic>()
+  for (const d of diagnostics) {
+    const line = Math.min(Math.max(d.line, 1), doc.lines)
+    const existing = byLine.get(line)
+    if (!existing || (existing.severity === 'warning' && d.severity === 'error')) byLine.set(line, { ...d, line })
+  }
+  return [...byLine.values()].sort((a, b) => a.line - b.line)
+}
+
+export function calloutHeadline(d: Diagnostic): string {
+  return `Line ${d.line}: ${d.message}`
+}
+
+class CalloutWidget extends WidgetType {
+  constructor(readonly diagnostic: Diagnostic) {
+    super()
+  }
+
+  eq(other: CalloutWidget): boolean {
+    const a = this.diagnostic
+    const b = other.diagnostic
+    return a.line === b.line && a.severity === b.severity && a.message === b.message
+  }
+
+  toDOM(): HTMLElement {
+    const el = document.createElement('div')
+    el.className = `pc-callout cm-diag-callout is-${this.diagnostic.severity === 'error' ? 'error' : 'warn'}`
+    el.setAttribute('role', 'note')
+    const body = document.createElement('div')
+    body.className = 'pc-callout-body'
+    const headline = document.createElement('strong')
+    headline.textContent = calloutHeadline(this.diagnostic) // text only: the message is model output
+    body.append(headline)
+    el.append(body)
+    return el
+  }
+
+  ignoreEvent(): boolean {
+    return true
+  }
+}
+
+class ToneMarker extends GutterMarker {
+  constructor(readonly elementClass: string) {
+    super()
+  }
+}
+
+const diagnosticsField = StateField.define<readonly Diagnostic[]>({
+  create: () => [],
+  update(value, tr) {
+    for (const e of tr.effects) if (e.is(setAppDiagnostics)) return e.value
+    return value
+  },
+})
+
+const lineDecorations = EditorView.decorations.compute(['doc', diagnosticsField], (state) => {
+  const builder = new RangeSetBuilder<Decoration>()
+  for (const d of diagnosticsByLine(state.doc, state.field(diagnosticsField))) {
+    const line = state.doc.line(d.line)
+    builder.add(line.from, line.from, Decoration.line({ class: `cm-diag-line cm-diag-line-${d.severity}` }))
+    builder.add(line.to, line.to, Decoration.widget({ widget: new CalloutWidget(d), block: true, side: 1 }))
+  }
+  return builder.finish()
+})
+
+const gutterTones = gutterLineClass.compute(['doc', diagnosticsField], (state) => {
+  const builder = new RangeSetBuilder<GutterMarker>()
+  for (const d of diagnosticsByLine(state.doc, state.field(diagnosticsField))) {
+    const line = state.doc.line(d.line)
+    builder.add(line.from, line.from, new ToneMarker(`cm-diag-gutter-${d.severity}`))
+  }
+  return builder.finish()
+})
+
+export const diagnosticsExtension: Extension = [diagnosticsField, lineDecorations, gutterTones]
+```
+
+- [ ] **Step 7: Implement the editor component**
+
 `src/editor/CodeEditor.tsx`:
 
 ```tsx
+import { setDiagnostics, type Diagnostic as CmDiagnostic } from '@codemirror/lint'
 import { EditorState, type Text } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { lintGutter, setDiagnostics, type Diagnostic as CmDiagnostic } from '@codemirror/lint'
-import { oneDark } from '@codemirror/theme-one-dark'
 import { basicSetup } from 'codemirror'
 import { useEffect, useRef } from 'react'
 import type { Diagnostic } from '../render/types'
+import type { RevealRequest } from '../state/store'
+import { calloutHeadline, diagnosticsByLine, diagnosticsExtension, setAppDiagnostics } from './diagnosticsExtension'
 import { openscad } from './openscadLanguage'
+import { tokenTheme } from './theme'
 
 export function toCmDiagnostics(doc: Text, diagnostics: Diagnostic[]): CmDiagnostic[] {
-  return diagnostics.map((d) => {
-    const line = doc.line(Math.min(Math.max(d.line, 1), doc.lines))
-    return { from: line.from, to: line.to, severity: d.severity, message: d.message }
+  return diagnosticsByLine(doc, diagnostics).map((d) => {
+    const line = doc.line(d.line)
+    return { from: line.from, to: line.to, severity: d.severity, message: calloutHeadline(d) }
   })
 }
 
@@ -1967,9 +2724,10 @@ interface Props {
   value: string
   onChange(code: string): void
   diagnostics: Diagnostic[]
+  reveal?: RevealRequest | null
 }
 
-export function CodeEditor({ value, onChange, diagnostics }: Props) {
+export function CodeEditor({ value, onChange, diagnostics, reveal = null }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
@@ -1983,9 +2741,8 @@ export function CodeEditor({ value, onChange, diagnostics }: Props) {
         extensions: [
           basicSetup,
           openscad(),
-          oneDark,
-          lintGutter(),
-          EditorView.theme({ '&': { height: '100%' }, '.cm-scroller': { overflow: 'auto' } }),
+          tokenTheme,
+          diagnosticsExtension,
           EditorView.updateListener.of((u) => {
             if (u.docChanged) onChangeRef.current(u.state.doc.toString())
           }),
@@ -2010,41 +2767,519 @@ export function CodeEditor({ value, onChange, diagnostics }: Props) {
 
   useEffect(() => {
     const view = viewRef.current
-    if (view) view.dispatch(setDiagnostics(view.state, toCmDiagnostics(view.state.doc, diagnostics)))
+    if (!view) return
+    // setDiagnostics() returns a TransactionSpec with its own lint effect; keep it and add ours.
+    const spec = setDiagnostics(view.state, toCmDiagnostics(view.state.doc, diagnostics))
+    const lintEffects = Array.isArray(spec.effects) ? spec.effects : spec.effects ? [spec.effects] : []
+    view.dispatch({ ...spec, effects: [...lintEffects, setAppDiagnostics.of(diagnostics)] })
   }, [diagnostics])
 
-  return <div ref={hostRef} className="h-full min-h-0" data-testid="code-editor" />
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view || !reveal) return
+    const line = view.state.doc.line(Math.min(Math.max(reveal.line, 1), view.state.doc.lines))
+    view.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: 'center' }) })
+    view.focus()
+  }, [reveal])
+
+  return <div ref={hostRef} className="h-full min-h-0 bg-inset" data-testid="code-editor" />
 }
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [ ] **Step 8: Run tests to verify they pass**
 
-Run: `npx vitest run src/editor && npm run typecheck`
-Expected: PASS, no type errors. If `StringStream`'s constructor signature differs in the installed version, check `node_modules/@codemirror/language/dist/index.d.ts` and adjust the test helper to match. Do not change the parser for this.
+Run: `npx vitest run src/editor && npm run typecheck && npm test`
+Expected: PASS, no type errors, and the no-hard-coded-colours scan still passes (every colour in `theme.ts` is a `var(--…)`). If `StringStream`'s constructor signature differs in the installed version, check `node_modules/@codemirror/language/dist/index.d.ts` and adjust the test helper to match. Do not change the parser for this.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add package.json package-lock.json src/editor
-git commit -m "feat(editor): CodeMirror 6 editor with OpenSCAD highlighting and lint diagnostics"
+git commit -m "feat(editor): CodeMirror 6 with token theme, OpenSCAD highlighting, inline diagnostics and go-to-line"
 ```
 
 ---
 
-### Task 9: three.js viewer (geometry, camera fit, Z-up scene)
+### Task 10: Status pill, dimension readout and console panel
+
+**Files:**
+- Create: `src/ui/StatusPill.tsx`, `src/ui/DimsReadout.tsx`, `src/panels/ConsolePanel.tsx`
+- Modify: `src/index.css`
+- Test: `src/ui/StatusPill.test.tsx`, `src/ui/DimsReadout.test.tsx`, `src/panels/ConsolePanel.test.tsx`
+
+**Interfaces:**
+- Consumes: `LogLine`, `Bounds`, `Diagnostic` (Task 4); `parseDiagnosticLine` (Task 4); `formatDims`, `formatDimParts` (Task 5); `RenderStatus` (Task 8); icons (Task 2); `pc-status`, `pc-dims`, `pc-console`, `pc-log`, `pc-label`, `pc-caption`, `pc-mono` classes (Task 2).
+- Produces:
+  - `describeStatus(status: RenderStatus, renderMs: number | null, error: string | null, diagnostics: Diagnostic[]): StatusDescription` with `{ tone: 'busy' | 'ok' | 'warn' | 'error'; label: string; ms: string | null; suffix: string; line: number | null; title: string | null }`
+  - `<StatusPill status renderMs error diagnostics onGoToLine?={(line: number) => void} />`, which renders `data-testid="render-status"`; a `<button>` when it names a line, else a `<span>`
+  - `<DimsReadout bounds={Bounds} axes?={boolean} />`, which renders `data-testid="dims"` (inline form "20 × 20 × 10 mm") or `data-testid="dims-axes"` (axis form, for the viewer overlay)
+  - `logTone(line: LogLine): LogTone`, `summaryLine(status, error, renderMs, logs): { text: string; tone: LogTone } | null`
+  - `<ConsolePanel status logs error renderMs onGoToLine?={(line: number) => void} />`, which renders `data-testid="console"` around the lines
+
+StatusPill rules (component doc): "Always icon plus word; colour alone never carries the state." "Put render time in `.pc-mono` inside the pill: 'Rendered 412 ms'." "A failure names the first error line ('Failed · line 7'); clicking it scrolls the editor there." The preview also shows "Loading OpenSCAD…", "Rendering…", "3 warnings" and "Timed out after 60 s".
+
+Console rules: tones `is-muted` (progress, timing), `is-warn`, `is-error`, `is-ok`; "ERROR and WARNING lines that name a line in main.scad link to that line in the editor"; "Keep it scrolled to the newest line"; "Render every line as text." The Compile error screen ends the log with a muted summary ("OpenSCAD exited with code 1 · 38 ms"). When OpenSCAD printed no ERROR line of its own (timeout, crash, empty model) the summary is the only explanation, so it takes the `is-error` tone.
+
+- [ ] **Step 1: Write the failing tests**
+
+`src/ui/StatusPill.test.tsx`:
+
+```tsx
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import type { Diagnostic } from '../render/types'
+import { StatusPill } from './StatusPill'
+
+const errAt7: Diagnostic = { line: 7, severity: 'error', message: 'Parser error: syntax error' }
+const warn: Diagnostic = { line: 2, severity: 'warning', message: "Ignoring unknown variable 'x'" }
+
+it('shows a busy pill with an icon while OpenSCAD loads', () => {
+  render(<StatusPill status="idle" renderMs={null} error={null} diagnostics={[]} />)
+  const pill = screen.getByTestId('render-status')
+  expect(pill).toHaveTextContent('Loading OpenSCAD…')
+  expect(pill).toHaveClass('pc-status', 'is-busy')
+  expect(pill.querySelector('svg.pc-i')).not.toBeNull()
+})
+
+it('shows "Rendering…" while a render runs', () => {
+  render(<StatusPill status="rendering" renderMs={null} error={null} diagnostics={[]} />)
+  expect(screen.getByTestId('render-status')).toHaveTextContent('Rendering…')
+  expect(screen.getByTestId('render-status')).toHaveClass('is-busy')
+})
+
+it('shows the render time in mono after success', () => {
+  render(<StatusPill status="ok" renderMs={412.4} error={null} diagnostics={[]} />)
+  const pill = screen.getByTestId('render-status')
+  expect(pill).toHaveTextContent('Rendered 412 ms')
+  expect(pill).toHaveClass('is-ok')
+  expect(pill.querySelector('.pc-mono')).toHaveTextContent('412 ms')
+})
+
+it('turns to the warn tone and counts warnings', () => {
+  render(<StatusPill status="ok" renderMs={50} error={null} diagnostics={[warn, { ...warn, line: 5 }]} />)
+  const pill = screen.getByTestId('render-status')
+  expect(pill).toHaveTextContent('Rendered 50 ms · 2 warnings')
+  expect(pill).toHaveClass('is-warn')
+})
+
+it('names the first error line, explains in the tooltip, and jumps there on click', async () => {
+  const onGoToLine = vi.fn()
+  render(<StatusPill status="error" renderMs={38} error="OpenSCAD exited with code 1" diagnostics={[warn, errAt7]} onGoToLine={onGoToLine} />)
+  const pill = screen.getByRole('button', { name: 'Failed · line 7' })
+  expect(pill).toHaveClass('is-error')
+  expect(pill).toHaveAttribute('title', 'OpenSCAD exited with code 1')
+  await userEvent.click(pill)
+  expect(onGoToLine).toHaveBeenCalledWith(7)
+})
+
+it('says "Timed out after 60 s" for a timeout', () => {
+  render(<StatusPill status="error" renderMs={60_000} error="Render timed out after 60 s" diagnostics={[]} />)
+  expect(screen.getByTestId('render-status')).toHaveTextContent('Timed out after 60 s')
+  expect(screen.queryByRole('button')).toBeNull()
+})
+
+it('falls back to "Failed" with the reason as a tooltip', () => {
+  render(<StatusPill status="error" renderMs={5} error="Render worker crashed: worker died" diagnostics={[]} />)
+  const pill = screen.getByTestId('render-status')
+  expect(pill).toHaveTextContent(/^Failed$/)
+  expect(pill).toHaveAttribute('title', 'Render worker crashed: worker died')
+})
+```
+
+`src/ui/DimsReadout.test.tsx`:
+
+```tsx
+import { render, screen } from '@testing-library/react'
+import { DimsReadout } from './DimsReadout'
+
+const box = { min: [0, 0, 0] as [number, number, number], max: [88.8, 25.4, 22] as [number, number, number] }
+
+it('renders the inline form', () => {
+  render(<DimsReadout bounds={box} />)
+  const dims = screen.getByTestId('dims')
+  expect(dims).toHaveTextContent('88.8 × 25.4 × 22 mm')
+  expect(dims).toHaveClass('pc-dims')
+})
+
+it('renders the axis form with coloured axis letters and a readable label', () => {
+  render(<DimsReadout bounds={box} axes />)
+  const dims = screen.getByTestId('dims-axes')
+  expect(dims).toHaveAttribute('aria-label', '88.8 × 25.4 × 22 mm')
+  expect(dims.querySelector('.x')).toHaveTextContent('X')
+  expect(dims.querySelector('.y')).toHaveTextContent('Y')
+  expect(dims.querySelector('.z')).toHaveTextContent('Z')
+  expect(dims).toHaveTextContent('X 88.8')
+  expect(dims).toHaveTextContent('Z 22')
+  expect(dims).toHaveTextContent('mm')
+})
+```
+
+`src/panels/ConsolePanel.test.tsx`:
+
+```tsx
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import type { LogLine } from '../render/types'
+import { ConsolePanel } from './ConsolePanel'
+
+const out = (text: string): LogLine => ({ stream: 'stdout', text })
+const err = (text: string): LogLine => ({ stream: 'stderr', text })
+const lines = () => Array.from(screen.getByTestId('console').children) as HTMLElement[]
+
+it('tones each line like the design system console', () => {
+  render(
+    <ConsolePanel
+      status="error"
+      renderMs={38}
+      error="OpenSCAD exited with code 1"
+      logs={[
+        err('Parsing design (AST generation)...'),
+        out('ECHO: "wall = 2"'),
+        err("WARNING: Ignoring unknown variable 'lid_h' in file main.scad, line 12"),
+        err('ERROR: Parser error in file "/main.scad", line 7: syntax error'),
+        err('Execution aborted'),
+      ]}
+    />,
+  )
+  expect(lines().map((l) => [l.textContent, l.className.trim()])).toEqual([
+    ['Parsing design (AST generation)...', 'pc-log is-muted'],
+    ['ECHO: "wall = 2"', 'pc-log'],
+    ["WARNING: Ignoring unknown variable 'lid_h' in file main.scad, line 12", expect.stringContaining('pc-log is-warn')],
+    ['ERROR: Parser error in file "/main.scad", line 7: syntax error', expect.stringContaining('pc-log is-error')],
+    ['Execution aborted', 'pc-log is-error'],
+    ['OpenSCAD exited with code 1 · 38 ms', 'pc-log is-muted'],
+  ])
+})
+
+it('marks OpenSCAD timing as ok and adds a render summary on success', () => {
+  render(<ConsolePanel status="ok" renderMs={412} error={null} logs={[err('Total rendering time: 0:00:00.412')]} />)
+  expect(lines().map((l) => [l.textContent, l.className.trim()])).toEqual([
+    ['Total rendering time: 0:00:00.412', 'pc-log is-ok'],
+    ['Rendered in 412 ms', 'pc-log is-ok'],
+  ])
+})
+
+it('uses the error tone for the summary when OpenSCAD printed no ERROR line (timeout, crash, empty model)', () => {
+  render(<ConsolePanel status="error" renderMs={60_000} error="Render timed out after 60 s" logs={[]} />)
+  expect(lines().map((l) => [l.textContent, l.className.trim()])).toEqual([
+    ['Render timed out after 60 s · 60000 ms', 'pc-log is-error'],
+  ])
+})
+
+it('shows a loading line before the first render and a compiling line during one', () => {
+  const { rerender } = render(<ConsolePanel status="idle" renderMs={null} error={null} logs={[]} />)
+  expect(screen.getByTestId('console')).toHaveTextContent('Loading OpenSCAD…')
+  rerender(<ConsolePanel status="rendering" renderMs={null} error={null} logs={[]} />)
+  expect(screen.getByTestId('console')).toHaveTextContent('Compiling main.scad…')
+})
+
+it('makes located ERROR and WARNING lines jump to the editor line', async () => {
+  const onGoToLine = vi.fn()
+  render(
+    <ConsolePanel
+      status="error"
+      renderMs={1}
+      error="OpenSCAD exited with code 1"
+      logs={[out('ECHO: 1'), err("WARNING: Ignoring unknown variable 'x' in file main.scad, line 2"), err('ERROR: Parser error in file "/main.scad", line 7: syntax error')]}
+      onGoToLine={onGoToLine}
+    />,
+  )
+  await userEvent.click(screen.getByRole('button', { name: /line 7/ }))
+  expect(onGoToLine).toHaveBeenLastCalledWith(7)
+  await userEvent.click(screen.getByRole('button', { name: /line 2/ }))
+  expect(onGoToLine).toHaveBeenLastCalledWith(2)
+  expect(screen.getByText('ECHO: 1').tagName).toBe('DIV')
+})
+
+it('renders model output as plain text, never as HTML', () => {
+  const evil = 'ECHO: "<img src=x onerror=alert(1)>"'
+  render(<ConsolePanel status="ok" renderMs={1} error={null} logs={[out(evil)]} />)
+  expect(screen.getByText(evil)).toBeInTheDocument()
+  expect(screen.getByTestId('console').querySelector('img')).toBeNull()
+})
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `npx vitest run src/ui src/panels`
+Expected: FAIL, because the modules can't be resolved.
+
+- [ ] **Step 3: Implement StatusPill and DimsReadout**
+
+`src/ui/StatusPill.tsx`:
+
+```tsx
+import type { Diagnostic } from '../render/types'
+import type { RenderStatus } from '../state/store'
+import { IconCheck, IconSpinner, IconWarning, IconX } from './icons'
+
+export type PillTone = 'busy' | 'ok' | 'warn' | 'error'
+
+export interface StatusDescription {
+  tone: PillTone
+  label: string
+  /** Render time, shown in mono after the label. */
+  ms: string | null
+  /** Trailing text after the time, e.g. " · 2 warnings". */
+  suffix: string
+  /** First error line, when the failure names one. */
+  line: number | null
+  /** Full reason, for the tooltip. */
+  title: string | null
+}
+
+const TIMEOUT = /timed out after (\d+ s)/i
+
+export function describeStatus(
+  status: RenderStatus,
+  renderMs: number | null,
+  error: string | null,
+  diagnostics: Diagnostic[],
+): StatusDescription {
+  const base = { ms: null, suffix: '', line: null, title: null }
+  switch (status) {
+    case 'idle':
+      return { ...base, tone: 'busy', label: 'Loading OpenSCAD…' }
+    case 'rendering':
+      return { ...base, tone: 'busy', label: 'Rendering…' }
+    case 'ok': {
+      const warnings = diagnostics.filter((d) => d.severity === 'warning').length
+      return {
+        ...base,
+        tone: warnings > 0 ? 'warn' : 'ok',
+        label: 'Rendered',
+        ms: `${Math.round(renderMs ?? 0)} ms`,
+        suffix: warnings > 0 ? ` · ${warnings} warning${warnings === 1 ? '' : 's'}` : '',
+      }
+    }
+    case 'error': {
+      const first = diagnostics.find((d) => d.severity === 'error')
+      if (first) return { ...base, tone: 'error', label: `Failed · line ${first.line}`, line: first.line, title: error }
+      const timeout = TIMEOUT.exec(error ?? '')
+      return { ...base, tone: 'error', label: timeout ? `Timed out after ${timeout[1]}` : 'Failed', title: error }
+    }
+  }
+}
+
+const ICONS = { busy: IconSpinner, ok: IconCheck, warn: IconWarning, error: IconX } as const
+
+interface Props {
+  status: RenderStatus
+  renderMs: number | null
+  error: string | null
+  diagnostics: Diagnostic[]
+  onGoToLine?(line: number): void
+}
+
+export function StatusPill({ status, renderMs, error, diagnostics, onGoToLine }: Props) {
+  const d = describeStatus(status, renderMs, error, diagnostics)
+  const Icon = ICONS[d.tone]
+  const className = `pc-status is-${d.tone}`
+  const content = (
+    <>
+      <Icon className="pc-i" aria-hidden="true" />
+      {d.label}
+      {d.ms && (
+        <>
+          {' '}
+          <span className="pc-mono">{d.ms}</span>
+        </>
+      )}
+      {d.suffix}
+    </>
+  )
+  if (d.line !== null && onGoToLine) {
+    const line = d.line
+    return (
+      <button
+        type="button"
+        data-testid="render-status"
+        className={`${className} cursor-pointer`}
+        title={d.title ?? undefined}
+        onClick={() => onGoToLine(line)}
+      >
+        {content}
+      </button>
+    )
+  }
+  return (
+    <span data-testid="render-status" role="status" className={className} title={d.title ?? undefined}>
+      {content}
+    </span>
+  )
+}
+```
+
+`src/ui/DimsReadout.tsx`:
+
+```tsx
+import { formatDimParts, formatDims } from '../render/dims'
+import type { Bounds } from '../render/types'
+
+/** Bounding-box size of the last good mesh. Inline in the header; axis form over the viewer. */
+export function DimsReadout({ bounds, axes = false }: { bounds: Bounds; axes?: boolean }) {
+  if (!axes) {
+    return (
+      <span className="pc-dims" data-testid="dims">
+        {formatDims(bounds)}
+      </span>
+    )
+  }
+  const [x, y, z] = formatDimParts(bounds)
+  return (
+    <span className="pc-dims" data-testid="dims-axes" aria-label={formatDims(bounds)}>
+      <span>
+        <span className="x">X</span> {x}
+      </span>
+      <span>
+        <span className="y">Y</span> {y}
+      </span>
+      <span>
+        <span className="z">Z</span> {z}
+      </span>
+      <span className="pc-muted">mm</span>
+    </span>
+  )
+}
+```
+
+- [ ] **Step 4: Implement ConsolePanel**
+
+`src/panels/ConsolePanel.tsx`:
+
+```tsx
+import { useEffect, useRef } from 'react'
+import { parseDiagnosticLine } from '../render/diagnostics'
+import type { LogLine } from '../render/types'
+import type { RenderStatus } from '../state/store'
+
+export type LogTone = '' | 'is-muted' | 'is-ok' | 'is-warn' | 'is-error'
+
+export function logTone({ stream, text }: LogLine): LogTone {
+  if (/^ERROR\b/.test(text) || /^Execution aborted/.test(text)) return 'is-error'
+  if (/^(WARNING|DEPRECATED)\b/.test(text)) return 'is-warn'
+  if (/^Total rendering time/.test(text)) return 'is-ok'
+  if (/^ECHO\b/.test(text)) return ''
+  return stream === 'stderr' ? 'is-muted' : ''
+}
+
+export function summaryLine(
+  status: RenderStatus,
+  error: string | null,
+  renderMs: number | null,
+  logs: LogLine[],
+): { text: string; tone: LogTone } | null {
+  const ms = `${Math.round(renderMs ?? 0)} ms`
+  switch (status) {
+    case 'idle':
+      return { text: 'Loading OpenSCAD…', tone: 'is-muted' }
+    case 'rendering':
+      return { text: 'Compiling main.scad…', tone: 'is-muted' }
+    case 'ok':
+      return { text: `Rendered in ${ms}`, tone: 'is-ok' }
+    case 'error': {
+      const explained = logs.some((l) => /^ERROR\b/.test(l.text))
+      return { text: `${error ?? 'Render failed'} · ${ms}`, tone: explained ? 'is-muted' : 'is-error' }
+    }
+  }
+}
+
+interface Props {
+  status: RenderStatus
+  logs: LogLine[]
+  error: string | null
+  renderMs: number | null
+  onGoToLine?(line: number): void
+}
+
+export function ConsolePanel({ status, logs, error, renderMs, onGoToLine }: Props) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight
+  }, [logs, error, status])
+
+  const summary = summaryLine(status, error, renderMs, logs)
+
+  return (
+    <section className="pc-console flex h-full flex-col rounded-none border-0" aria-label="Console">
+      <div className="pc-console-head shrink-0">
+        <span className="pc-label">Console</span>
+        <span className="pc-caption ml-auto">OpenSCAD · manifold</span>
+      </div>
+      <div ref={ref} data-testid="console" className="min-h-0 flex-1 overflow-auto py-1">
+        {logs.map((line, i) => {
+          const className = `pc-log ${logTone(line)}`.trim()
+          const located = parseDiagnosticLine(line.text)
+          return located && onGoToLine ? (
+            <button
+              key={i}
+              type="button"
+              className={className}
+              title={`Go to line ${located.line}`}
+              onClick={() => onGoToLine(located.line)}
+            >
+              {line.text}
+            </button>
+          ) : (
+            <div key={i} className={className}>
+              {line.text}
+            </div>
+          )
+        })}
+        {summary && <div className={`pc-log ${summary.tone}`.trim()}>{summary.text}</div>}
+      </div>
+    </section>
+  )
+}
+```
+
+A `<button>` carries browser button styling that `.pc-log` does not reset. Add to the `@layer base` block in `src/index.css` (the `components` layer's `.pc-log.is-error` ground still wins over this):
+
+```css
+  button.pc-log {
+    appearance: none;
+    width: 100%;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  button.pc-log:hover {
+    text-decoration: underline;
+  }
+```
+
+- [ ] **Step 5: Run tests to verify they pass**
+
+Run: `npx vitest run src/ui src/panels && npm run typecheck && npm test`
+Expected: PASS, no type errors, no-hard-coded-colours scan still green.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/ui src/panels src/index.css
+git commit -m "feat(ui): status pill, dims readout and console panel as design-system components"
+```
+
+---
+
+### Task 11: three.js viewer (token colours, Z-up scene, stale state, overlays)
 
 **Files:**
 - Create: `src/viewer/geometry.ts`, `src/viewer/cameraFit.ts`, `src/viewer/Viewer.tsx`
 - Test: `src/viewer/geometry.test.ts`, `src/viewer/cameraFit.test.ts`
 
 **Interfaces:**
-- Consumes: `MeshData`, `Bounds`, `Vec3` (Task 3); `parseStl` and test helpers (Task 4).
+- Consumes: `MeshData`, `Bounds`, `Vec3` (Task 4); `parseStl` and test helpers (Task 5); `useTokens` (Task 2); `DimsReadout` (Task 10); `IconFit`, `IconWarning` (Task 2).
 - Produces:
   - `meshToGeometry(mesh: MeshData): BufferGeometry`
   - `interface CameraFit { position: Vec3; target: Vec3; distance: number }` and `computeCameraFit(bounds: Bounds, fovDeg: number, aspect: number, margin?: number): CameraFit`
-  - `<Viewer mesh={MeshData | null} />`, which renders `data-testid="viewer"` with a `<canvas>` and a "Fit view" button
+  - `<Viewer mesh={MeshData | null} stale={boolean} />`, which renders `data-testid="viewer"` with a `<canvas>`, a "Fit view" button, the axis-form `DimsReadout` (or the stale notice) top-left, the triangle count bottom-left and an axis gizmo bottom-right
 
-`<Viewer>` needs WebGL, so jsdom can't render it. Its pure parts are unit-tested here, and the component is covered by Playwright in Task 12.
+From the screens: the viewer ground is `viewport`; the grid has 1 mm `grid-minor` cells and 10 mm `grid-major` sections; the axes and the gizmo use `axis-x/y/z` (RGB = XYZ); the model is `filament`; when the current code failed, the last good model stays at 55 % opacity (`scene.is-stale`) under a `pc-status is-warn` notice "Showing the last model that compiled". WebGL needs literal colours, so `useTokens` supplies them and keeps them in step with the theme.
+
+`<Viewer>` needs WebGL, so jsdom can't render it. Its pure parts are unit-tested here, and the component is covered by Playwright in Task 13.
 
 - [ ] **Step 1: Install three.js stack**
 
@@ -2172,25 +3407,43 @@ Expected: PASS (6 tests).
 `src/viewer/Viewer.tsx`:
 
 ```tsx
-import { Grid, OrbitControls } from '@react-three/drei'
+import { GizmoHelper, GizmoViewport, Grid, OrbitControls } from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Object3D, type PerspectiveCamera, type Vector3 } from 'three'
+import { AxesHelper, Color, Object3D, type PerspectiveCamera, type Vector3 } from 'three'
 import type { Bounds, MeshData } from '../render/types'
+import { useTokens } from '../theme/tokens'
+import { DimsReadout } from '../ui/DimsReadout'
+import { IconFit, IconWarning } from '../ui/icons'
 import { computeCameraFit } from './cameraFit'
 import { meshToGeometry } from './geometry'
 
 // OpenSCAD is Z-up. This must run before any camera or controls are created.
 Object3D.DEFAULT_UP.set(0, 0, 1)
 
-function Model({ mesh }: { mesh: MeshData }) {
+const TOKENS = ['viewport', 'filament', 'grid-minor', 'grid-major', 'axis-x', 'axis-y', 'axis-z', 'ink'] as const
+
+/** The screens dim the last good model to 55 % while the current code fails (`scene.is-stale`). */
+const STALE_OPACITY = 0.55
+
+function Model({ mesh, color, stale }: { mesh: MeshData; color: string; stale: boolean }) {
   const geometry = useMemo(() => meshToGeometry(mesh), [mesh])
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
     <mesh geometry={geometry}>
-      <meshStandardMaterial color="#f59e0b" roughness={0.6} metalness={0.1} />
+      <meshStandardMaterial color={color} roughness={0.6} metalness={0.1} transparent={stale} opacity={stale ? STALE_OPACITY : 1} />
     </mesh>
   )
+}
+
+/** three.js's AxesHelper ships fixed RGB; recolour it from the axis tokens. */
+function Axes({ colors }: { colors: readonly [string, string, string] }) {
+  const ref = useRef<AxesHelper>(null)
+  const [x, y, z] = colors
+  useEffect(() => {
+    ref.current?.setColors(new Color(x), new Color(y), new Color(z))
+  }, [x, y, z])
+  return <axesHelper ref={ref} args={[20]} />
 }
 
 interface ControlsLike {
@@ -2222,12 +3475,15 @@ function CameraFitter({ bounds, fitToken }: { bounds: Bounds | null; fitToken: n
   return null
 }
 
-export function Viewer({ mesh }: { mesh: MeshData | null }) {
+export function Viewer({ mesh, stale }: { mesh: MeshData | null; stale: boolean }) {
+  const t = useTokens(TOKENS)
   const [fitToken, setFitToken] = useState(0)
+  const axisColors = [t['axis-x'], t['axis-y'], t['axis-z']] as const
+
   return (
-    <div className="relative h-full w-full" data-testid="viewer">
+    <div className="relative h-full w-full bg-viewport" data-testid="viewer">
       <Canvas frameloop="demand" dpr={[1, 2]} camera={{ fov: 45, near: 0.1, far: 10_000, position: [60, -80, 60] }}>
-        <color attach="background" args={['#0a0a0a']} />
+        <color attach="background" args={[t.viewport]} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[50, -80, 100]} intensity={1.4} />
         <directionalLight position={[-60, 40, -30]} intensity={0.4} />
@@ -2236,253 +3492,81 @@ export function Viewer({ mesh }: { mesh: MeshData | null }) {
           infiniteGrid
           cellSize={1}
           sectionSize={10}
-          cellColor="#262626"
-          sectionColor="#404040"
+          cellColor={t['grid-minor']}
+          sectionColor={t['grid-major']}
           fadeDistance={400}
         />
-        <axesHelper args={[20]} />
-        {mesh && <Model mesh={mesh} />}
+        <Axes colors={axisColors} />
+        {mesh && <Model mesh={mesh} color={t.filament} stale={stale} />}
         <OrbitControls makeDefault />
+        <GizmoHelper alignment="bottom-right" margin={[48, 48]}>
+          <GizmoViewport axisColors={[...axisColors]} labelColor={t.ink} />
+        </GizmoHelper>
         <CameraFitter bounds={mesh?.bounds ?? null} fitToken={fitToken} />
       </Canvas>
-      <button
-        type="button"
-        className="absolute right-2 top-2 rounded bg-neutral-800/80 px-2 py-1 text-xs hover:bg-neutral-700 disabled:opacity-40"
-        onClick={() => setFitToken((t) => t + 1)}
-        disabled={!mesh}
-      >
-        Fit view
-      </button>
-    </div>
-  )
-}
-```
 
-- [ ] **Step 7: Typecheck and commit**
+      <div className="absolute top-3 left-3">
+        {stale ? (
+          <span className="pc-status is-warn">
+            <IconWarning className="pc-i" aria-hidden="true" />
+            Showing the last model that compiled
+          </span>
+        ) : (
+          mesh && <DimsReadout bounds={mesh.bounds} axes />
+        )}
+      </div>
 
-Run: `npm run typecheck && npm test`
-Expected: no type errors, and all tests pass.
+      <div className="absolute top-3 right-3">
+        <button
+          type="button"
+          aria-label="Fit view"
+          title="Fit view"
+          className="grid size-(--control-sm) place-items-center rounded-sm border border-line bg-panel text-ink-muted hover:text-ink disabled:text-ink-disabled"
+          onClick={() => setFitToken((n) => n + 1)}
+          disabled={!mesh}
+        >
+          <IconFit className="pc-i" aria-hidden="true" />
+        </button>
+      </div>
 
-```bash
-git add package.json package-lock.json src/viewer
-git commit -m "feat(viewer): Z-up three.js viewer with first-render auto-fit and Fit view"
-```
-
----
-
-### Task 10: Console panel and status bar
-
-**Files:**
-- Create: `src/panels/ConsolePanel.tsx`, `src/panels/StatusBar.tsx`
-- Test: `src/panels/ConsolePanel.test.tsx`, `src/panels/StatusBar.test.tsx`
-
-**Interfaces:**
-- Consumes: `LogLine`, `Bounds` (Task 3); `formatDims` (Task 4); `RenderStatus` (Task 7).
-- Produces:
-  - `<ConsolePanel logs={LogLine[]} error={string | null} />`, which renders `data-testid="console"`
-  - `<StatusBar status={RenderStatus} renderMs={number | null} error={string | null} bounds={Bounds | null} />`, which renders `data-testid="render-status"` and `data-testid="dims"`
-
-- [ ] **Step 1: Write the failing tests**
-
-`src/panels/ConsolePanel.test.tsx`:
-
-```tsx
-import { render, screen } from '@testing-library/react'
-import { ConsolePanel } from './ConsolePanel'
-
-it('shows the error first, then every log line', () => {
-  render(
-    <ConsolePanel
-      error="OpenSCAD exited with code 1"
-      logs={[
-        { stream: 'stdout', text: 'ECHO: 42' },
-        { stream: 'stderr', text: 'WARNING: unknown variable' },
-        { stream: 'stderr', text: 'ERROR: Parser error' },
-      ]}
-    />,
-  )
-  const lines = screen.getByTestId('console').children
-  expect(Array.from(lines).map((l) => l.textContent)).toEqual([
-    'OpenSCAD exited with code 1',
-    'ECHO: 42',
-    'WARNING: unknown variable',
-    'ERROR: Parser error',
-  ])
-})
-
-it('colours errors and warnings', () => {
-  render(
-    <ConsolePanel
-      error={null}
-      logs={[
-        { stream: 'stderr', text: 'ERROR: bad' },
-        { stream: 'stderr', text: 'WARNING: meh' },
-      ]}
-    />,
-  )
-  expect(screen.getByText('ERROR: bad')).toHaveClass('text-red-400')
-  expect(screen.getByText('WARNING: meh')).toHaveClass('text-amber-400')
-})
-
-it('renders model output as plain text, never as HTML', () => {
-  const evil = 'ECHO: "<img src=x onerror=alert(1)>"'
-  render(<ConsolePanel error={null} logs={[{ stream: 'stdout', text: evil }]} />)
-  expect(screen.getByText(evil)).toBeInTheDocument()
-  expect(screen.getByTestId('console').querySelector('img')).toBeNull()
-})
-```
-
-`src/panels/StatusBar.test.tsx`:
-
-```tsx
-import { render, screen } from '@testing-library/react'
-import { StatusBar } from './StatusBar'
-
-const box = { min: [0, 0, 0] as [number, number, number], max: [20, 20, 10] as [number, number, number] }
-
-it('says OpenSCAD is loading before the first render', () => {
-  render(<StatusBar status="idle" renderMs={null} error={null} bounds={null} />)
-  expect(screen.getByTestId('render-status')).toHaveTextContent('Loading OpenSCAD…')
-  expect(screen.queryByTestId('dims')).toBeNull()
-})
-
-it('shows render time and dimensions after success', () => {
-  render(<StatusBar status="ok" renderMs={123.4} error={null} bounds={box} />)
-  expect(screen.getByTestId('render-status')).toHaveTextContent('Rendered in 123 ms')
-  expect(screen.getByTestId('dims')).toHaveTextContent('20 × 20 × 10 mm')
-})
-
-it('shows rendering state', () => {
-  render(<StatusBar status="rendering" renderMs={null} error={null} bounds={box} />)
-  expect(screen.getByTestId('render-status')).toHaveTextContent('Rendering…')
-})
-
-it('shows failure with the error as a tooltip and keeps the last dims', () => {
-  render(<StatusBar status="error" renderMs={5} error="Render timed out after 60 s" bounds={box} />)
-  const status = screen.getByTestId('render-status')
-  expect(status).toHaveTextContent('Render failed')
-  expect(status).toHaveAttribute('title', 'Render timed out after 60 s')
-  expect(screen.getByTestId('dims')).toHaveTextContent('20 × 20 × 10 mm')
-})
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `npx vitest run src/panels`
-Expected: FAIL, because the modules can't be resolved.
-
-- [ ] **Step 3: Implement**
-
-`src/panels/ConsolePanel.tsx`:
-
-```tsx
-import { useEffect, useRef } from 'react'
-import type { LogLine } from '../render/types'
-
-function lineClass({ stream, text }: LogLine): string {
-  if (text.startsWith('ERROR')) return 'text-red-400'
-  if (text.startsWith('WARNING')) return 'text-amber-400'
-  return stream === 'stderr' ? 'text-neutral-400' : 'text-neutral-200'
-}
-
-export function ConsolePanel({ logs, error }: { logs: LogLine[]; error: string | null }) {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight
-  }, [logs, error])
-
-  return (
-    <div
-      ref={ref}
-      data-testid="console"
-      aria-label="Console"
-      className="h-full overflow-auto whitespace-pre-wrap bg-neutral-900 p-2 font-mono text-xs"
-    >
-      {error && <div className="text-red-400">{error}</div>}
-      {logs.map((line, i) => (
-        <div key={i} className={lineClass(line)}>
-          {line.text}
+      {mesh && (
+        <div className="pc-caption pc-mono absolute bottom-3 left-3">
+          {mesh.triangleCount.toLocaleString('en-US')} triangles
         </div>
-      ))}
-    </div>
-  )
-}
-```
-
-`src/panels/StatusBar.tsx`:
-
-```tsx
-import { formatDims } from '../render/dims'
-import type { Bounds } from '../render/types'
-import type { RenderStatus } from '../state/store'
-
-interface Props {
-  status: RenderStatus
-  renderMs: number | null
-  error: string | null
-  bounds: Bounds | null
-}
-
-function label(status: RenderStatus, renderMs: number | null): string {
-  switch (status) {
-    case 'idle':
-      return 'Loading OpenSCAD…'
-    case 'rendering':
-      return 'Rendering…'
-    case 'ok':
-      return `Rendered in ${Math.round(renderMs ?? 0)} ms`
-    case 'error':
-      return 'Render failed'
-  }
-}
-
-export function StatusBar({ status, renderMs, error, bounds }: Props) {
-  return (
-    <div className="flex items-center gap-3 text-sm" role="status">
-      <span
-        data-testid="render-status"
-        title={status === 'error' ? (error ?? undefined) : undefined}
-        className={status === 'error' ? 'text-red-400' : 'text-neutral-400'}
-      >
-        {label(status, renderMs)}
-      </span>
-      {bounds && (
-        <span data-testid="dims" className="tabular-nums text-neutral-200">
-          {formatDims(bounds)}
-        </span>
       )}
     </div>
   )
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [ ] **Step 7: Typecheck and run all tests**
 
-Run: `npx vitest run src/panels && npm run typecheck`
-Expected: PASS (7 tests), no type errors.
-
-- [ ] **Step 5: Commit**
+Run: `npm run typecheck && npm test`
+Expected: no type errors, all tests pass, no-hard-coded-colours scan still green (the only literals in `Viewer.tsx` are numbers).
 
 ```bash
-git add src/panels
-git commit -m "feat(panels): console panel (text-only output) and render status bar with dims"
+git add package.json package-lock.json src/viewer
+git commit -m "feat(viewer): Z-up three.js viewer in token colours with stale state, overlays, gizmo and Fit view"
 ```
 
 ---
 
-### Task 11: STL and .scad export (Web Share with download fallback)
+### Task 12: STL and .scad export (Web Share with download fallback)
 
 **Files:**
 - Create: `src/export/saveFile.ts`, `src/export/ExportButtons.tsx`
 - Test: `src/export/saveFile.test.ts`, `src/export/ExportButtons.test.tsx`
 
 **Interfaces:**
-- Consumes: nothing from earlier tasks (presentational plus browser APIs).
+- Consumes: `RenderStatus` (Task 8); `IconDownload` and the `pc-btn` classes (Task 2).
 - Produces:
   - `type SaveOutcome = 'shared' | 'downloaded' | 'cancelled'`
   - `saveFile(blob: Blob, filename: string, opts?: { preferShare?: boolean }): Promise<SaveOutcome>`, where `preferShare` defaults to `true` on coarse-pointer (touch) devices
   - `exportStl(stl: ArrayBuffer): Promise<SaveOutcome>` saves `model.stl` (`model/stl`), and `exportScad(code: string): Promise<SaveOutcome>` saves `model.scad` (`text/plain`)
-  - `<ExportButtons canExportStl={boolean} onExportStl={() => void} onExportScad={() => void} />`, with buttons named "Export STL" and "Export .scad"
+  - `exportDisabledReason(status: RenderStatus): string | null` (`null` when STL export is allowed)
+  - `<ExportButtons canExportStl={boolean} disabledReason={string | null} onExportStl={() => void} onExportScad={() => void} />`, with buttons named "Export STL" (`pc-btn is-sm is-primary`, the one primary action in the header) and "Export .scad" (`pc-btn is-sm`)
+
+Button doc: "Disable Export STL while a render is running or the current code failed, so the file always matches the code. Leave Export .scad enabled." The Compile error screen gives the disabled button the tooltip "Fix the error first, so the file matches the code".
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2547,22 +3631,43 @@ it('falls back to download when sharing fails or files cannot be shared', async 
 ```tsx
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ExportButtons } from './ExportButtons'
+import { ExportButtons, exportDisabledReason } from './ExportButtons'
 
-it('disables STL export when there is no matching render, but keeps .scad export available', () => {
-  render(<ExportButtons canExportStl={false} onExportStl={() => {}} onExportScad={() => {}} />)
-  expect(screen.getByRole('button', { name: 'Export STL' })).toBeDisabled()
+it('disables STL export with the reason as a tooltip, but keeps .scad export available', () => {
+  render(
+    <ExportButtons
+      canExportStl={false}
+      disabledReason="Fix the error first, so the file matches the code"
+      onExportStl={() => {}}
+      onExportScad={() => {}}
+    />,
+  )
+  const stl = screen.getByRole('button', { name: 'Export STL' })
+  expect(stl).toBeDisabled()
+  expect(stl).toHaveAttribute('title', 'Fix the error first, so the file matches the code')
+  expect(stl).toHaveClass('pc-btn', 'is-primary')
   expect(screen.getByRole('button', { name: 'Export .scad' })).toBeEnabled()
 })
 
 it('calls the handlers', async () => {
   const onExportStl = vi.fn()
   const onExportScad = vi.fn()
-  render(<ExportButtons canExportStl onExportStl={onExportStl} onExportScad={onExportScad} />)
-  await userEvent.click(screen.getByRole('button', { name: 'Export STL' }))
+  render(<ExportButtons canExportStl disabledReason={null} onExportStl={onExportStl} onExportScad={onExportScad} />)
+  const stl = screen.getByRole('button', { name: 'Export STL' })
+  expect(stl).not.toHaveAttribute('title')
+  await userEvent.click(stl)
   await userEvent.click(screen.getByRole('button', { name: 'Export .scad' }))
   expect(onExportStl).toHaveBeenCalledOnce()
   expect(onExportScad).toHaveBeenCalledOnce()
+})
+
+describe('exportDisabledReason', () => {
+  it('explains each blocked state in plain words', () => {
+    expect(exportDisabledReason('idle')).toBe('Wait for the first render to finish')
+    expect(exportDisabledReason('rendering')).toBe('Wait for the render to finish')
+    expect(exportDisabledReason('error')).toBe('Fix the error first, so the file matches the code')
+    expect(exportDisabledReason('ok')).toBeNull()
+  })
 })
 ```
 
@@ -2620,22 +3725,45 @@ export const exportScad = (code: string) => saveFile(new Blob([code], { type: 't
 `src/export/ExportButtons.tsx`:
 
 ```tsx
+import type { RenderStatus } from '../state/store'
+import { IconDownload } from '../ui/icons'
+
+/** Why Export STL is disabled, or null when the file would match the code. */
+export function exportDisabledReason(status: RenderStatus): string | null {
+  switch (status) {
+    case 'idle':
+      return 'Wait for the first render to finish'
+    case 'rendering':
+      return 'Wait for the render to finish'
+    case 'error':
+      return 'Fix the error first, so the file matches the code'
+    case 'ok':
+      return null
+  }
+}
+
 interface Props {
   canExportStl: boolean
+  disabledReason: string | null
   onExportStl(): void
   onExportScad(): void
 }
 
-const button = 'rounded bg-neutral-800 px-3 py-1 text-sm hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40'
-
-export function ExportButtons({ canExportStl, onExportStl, onExportScad }: Props) {
+export function ExportButtons({ canExportStl, disabledReason, onExportStl, onExportScad }: Props) {
   return (
-    <div className="flex gap-2">
-      <button type="button" className={button} disabled={!canExportStl} onClick={onExportStl}>
-        Export STL
-      </button>
-      <button type="button" className={button} onClick={onExportScad}>
+    <div className="flex items-center gap-2">
+      <button type="button" className="pc-btn is-sm" onClick={onExportScad}>
         Export .scad
+      </button>
+      <button
+        type="button"
+        className="pc-btn is-sm is-primary"
+        disabled={!canExportStl}
+        title={canExportStl ? undefined : (disabledReason ?? undefined)}
+        onClick={onExportStl}
+      >
+        <IconDownload className="pc-i" aria-hidden="true" />
+        Export STL
       </button>
     </div>
   )
@@ -2645,18 +3773,18 @@ export function ExportButtons({ canExportStl, onExportStl, onExportScad }: Props
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run src/export && npm run typecheck`
-Expected: PASS (6 tests), no type errors.
+Expected: PASS (7 tests), no type errors.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/export
-git commit -m "feat(export): STL and .scad export with Web Share on touch devices and download fallback"
+git commit -m "feat(export): STL and .scad export with Web Share on touch devices, design-system buttons"
 ```
 
 ---
 
-### Task 12: App wiring, production CSP, and end-to-end smoke test
+### Task 13: App shell, production CSP, and end-to-end smoke test
 
 **Files:**
 - Create: `build/csp.ts`, `playwright.config.ts`, `e2e/smoke.spec.ts`
@@ -2664,11 +3792,13 @@ git commit -m "feat(export): STL and .scad export with Web Share on touch device
 - Test: `build/csp.test.ts`, `src/App.test.tsx`, `e2e/smoke.spec.ts`
 
 **Interfaces:**
-- Consumes: every earlier module: `useAppStore`, `selectCanExport`, `useRenderLoop`, `WorkerFactory`, `createRenderWorker`, `CodeEditor`, `Viewer`, `ConsolePanel`, `StatusBar`, `ExportButtons`, `exportStl`, `exportScad`.
+- Consumes: every earlier module: `useAppStore`, `selectCanExport`, `useRenderLoop`, `WorkerFactory`, `createRenderWorker`, `CodeEditor`, `Viewer`, `ConsolePanel`, `StatusPill`, `DimsReadout`, `ExportButtons`, `exportDisabledReason`, `exportStl`, `exportScad`.
 - Produces:
   - `<App createWorker?={WorkerFactory} />`, where the default is the real worker and tests inject a fake
   - `CSP: string` and `cspPlugin(): Plugin` (build only: Vite dev needs inline scripts for React Refresh)
   - npm script `e2e`
+
+Layout, from the Workbench screen: a 48px `panel` header with the wordmark, a 1px `line` separator, the status pill, the dimensions, and Export on the right; below it the workbench grid. M1 has two of the three columns: the 3D view (centre, flexible) and the code column (440px) with a 40px pane head holding a `pc-tabs` "main.scad" tab, the editor, and a 176px console. The chat column (360px) arrives in M2. Under `md` the two sections stack, viewer on top. Nothing in M1 opens a dialog.
 
 - [ ] **Step 1: Write the failing tests (CSP plugin and App)**
 
@@ -2678,8 +3808,9 @@ git commit -m "feat(export): STL and .scad export with Web Share on touch device
 import type { Plugin } from 'vite'
 import { CSP, cspPlugin } from './csp'
 
-it('allows only self-hosted scripts plus WASM compilation', () => {
+it('allows only self-hosted scripts plus WASM compilation, and self-hosted fonts', () => {
   expect(CSP).toContain("script-src 'self' 'wasm-unsafe-eval'")
+  expect(CSP).toContain("font-src 'self'")
   expect(CSP).toContain("object-src 'none'")
   expect(CSP).not.toMatch(/script-src[^;]*unsafe-inline/)
 })
@@ -2699,13 +3830,16 @@ Replace `src/App.test.tsx`:
 ```tsx
 import { render, screen, waitFor } from '@testing-library/react'
 import { EditorView } from '@codemirror/view'
+import userEvent from '@testing-library/user-event'
 import type { RenderWorkerHandle } from './render/createRenderWorker'
 import type { RenderRequest, RenderResult } from './render/types'
 import { useAppStore } from './state/store'
 import { errorResult, okResult } from './test/results'
 import { App } from './App'
 
-vi.mock('./viewer/Viewer', () => ({ Viewer: () => <div data-testid="viewer" /> }))
+vi.mock('./viewer/Viewer', () => ({
+  Viewer: ({ stale }: { stale: boolean }) => <div data-testid="viewer" data-stale={String(stale)} />,
+}))
 
 beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true))
 
@@ -2714,15 +3848,18 @@ function scriptedWorker(respond: (req: RenderRequest) => RenderResult) {
   return () => handle
 }
 
-it('renders the default model and enables STL export', async () => {
+it('renders the default model, shows dims in the header, and enables STL export', async () => {
   render(<App createWorker={scriptedWorker(() => okResult())} />)
   expect(screen.getByRole('heading', { name: 'PromptCAD' })).toBeInTheDocument()
   expect(screen.getByTestId('viewer')).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'main.scad' })).toHaveAttribute('aria-selected', 'true')
   await waitFor(() => expect(screen.getByTestId('dims')).toHaveTextContent('20 × 20 × 10 mm'))
+  expect(screen.getByTestId('render-status')).toHaveTextContent('Rendered 12 ms')
   expect(screen.getByRole('button', { name: 'Export STL' })).toBeEnabled()
+  expect(screen.getByTestId('viewer')).toHaveAttribute('data-stale', 'false')
 })
 
-it('keeps the last mesh but disables STL export after a failed edit', async () => {
+it('keeps the last mesh (dimmed) but disables STL export after a failed edit, without a dialog', async () => {
   const { container } = render(
     <App createWorker={scriptedWorker((req) => (req.code.includes('broken') ? errorResult() : okResult()))} />,
   )
@@ -2731,11 +3868,30 @@ it('keeps the last mesh but disables STL export after a failed edit', async () =
   const view = EditorView.findFromDOM(container.querySelector('.cm-editor') as HTMLElement)!
   view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: 'broken(' } })
 
-  await waitFor(() => expect(screen.getByTestId('render-status')).toHaveTextContent('Render failed'), { timeout: 3_000 })
-  expect(screen.getByRole('button', { name: 'Export STL' })).toBeDisabled()
+  await waitFor(() => expect(screen.getByTestId('render-status')).toHaveTextContent('Failed · line 1'), { timeout: 3_000 })
+  const stl = screen.getByRole('button', { name: 'Export STL' })
+  expect(stl).toBeDisabled()
+  expect(stl).toHaveAttribute('title', 'Fix the error first, so the file matches the code')
   expect(screen.getByRole('button', { name: 'Export .scad' })).toBeEnabled()
   expect(screen.getByTestId('dims')).toHaveTextContent('20 × 20 × 10 mm')
+  expect(screen.getByTestId('viewer')).toHaveAttribute('data-stale', 'true')
   expect(screen.getByTestId('console')).toHaveTextContent('ERROR: Parser error')
+  expect(screen.getByTestId('console')).toHaveTextContent('OpenSCAD exited with code 1 · 5 ms')
+  expect(container.querySelector('.cm-diag-callout')).toHaveTextContent('Line 1: Parser error: syntax error')
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+it('clicking the failed status pill selects the error line in the editor', async () => {
+  const { container } = render(
+    <App createWorker={scriptedWorker((req) => (req.code.includes('broken') ? errorResult() : okResult()))} />,
+  )
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Export STL' })).toBeEnabled())
+  const view = EditorView.findFromDOM(container.querySelector('.cm-editor') as HTMLElement)!
+  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: 'cube(1);\nbroken(' }, selection: { anchor: 0 } })
+  const pill = await screen.findByRole('button', { name: 'Failed · line 1' }, { timeout: 3_000 })
+  view.dispatch({ selection: { anchor: view.state.doc.length } })
+  await userEvent.click(pill)
+  expect(view.state.selection.main.head).toBe(0)
 })
 ```
 
@@ -2757,6 +3913,8 @@ export const CSP = [
   "worker-src 'self' blob:",
   // CodeMirror injects <style> elements at runtime.
   "style-src 'self' 'unsafe-inline'",
+  // Archivo and JetBrains Mono are bundled from fontsource; no font CDN.
+  "font-src 'self'",
   "img-src 'self' data: blob:",
   // AI providers (M2) are arbitrary https endpoints; local model servers run on localhost.
   "connect-src 'self' https: http://localhost:* http://127.0.0.1:*",
@@ -2786,19 +3944,22 @@ Replace `src/App.tsx`:
 
 ```tsx
 import { CodeEditor } from './editor/CodeEditor'
-import { ExportButtons } from './export/ExportButtons'
+import { ExportButtons, exportDisabledReason } from './export/ExportButtons'
 import { exportScad, exportStl } from './export/saveFile'
 import { ConsolePanel } from './panels/ConsolePanel'
-import { StatusBar } from './panels/StatusBar'
 import { createRenderWorker, type WorkerFactory } from './render/createRenderWorker'
 import { useRenderLoop } from './render/useRenderLoop'
 import { selectCanExport, useAppStore } from './state/store'
+import { DimsReadout } from './ui/DimsReadout'
+import { StatusPill } from './ui/StatusPill'
 import { Viewer } from './viewer/Viewer'
 
 export function App({ createWorker = createRenderWorker }: { createWorker?: WorkerFactory }) {
   useRenderLoop(createWorker)
   const code = useAppStore((s) => s.code)
   const setCode = useAppStore((s) => s.setCode)
+  const goToLine = useAppStore((s) => s.goToLine)
+  const reveal = useAppStore((s) => s.reveal)
   const status = useAppStore((s) => s.status)
   const mesh = useAppStore((s) => s.mesh)
   const logs = useAppStore((s) => s.logs)
@@ -2807,33 +3968,51 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
   const renderMs = useAppStore((s) => s.renderMs)
   const canExportStl = useAppStore(selectCanExport)
 
+  const bounds = mesh?.bounds ?? null
+  const stale = status === 'error' && mesh !== null
+
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex flex-wrap items-center gap-3 border-b border-neutral-800 px-3 py-2">
-        <h1 className="font-semibold">PromptCAD</h1>
-        <StatusBar status={status} renderMs={renderMs} error={error} bounds={mesh?.bounds ?? null} />
-        <div className="ml-auto">
-          <ExportButtons
-            canExportStl={canExportStl}
-            onExportStl={() => {
-              const { stl } = useAppStore.getState()
-              if (stl) void exportStl(stl)
-            }}
-            onExportScad={() => void exportScad(useAppStore.getState().code)}
-          />
-        </div>
+    <div className="pc-root flex h-full flex-col bg-bg text-ink">
+      <header className="flex h-(--header-height) shrink-0 items-center gap-3 border-b border-line bg-panel pl-4 pr-3">
+        <h1 className="text-[15px] font-bold tracking-tight">PromptCAD</h1>
+        <span aria-hidden="true" className="h-5 w-px bg-line" />
+        <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} />
+        {bounds && <DimsReadout bounds={bounds} />}
+        {stale && <span className="pc-caption">last model that compiled</span>}
+        <span className="flex-1" />
+        <ExportButtons
+          canExportStl={canExportStl}
+          disabledReason={exportDisabledReason(status)}
+          onExportStl={() => {
+            const { stl } = useAppStore.getState()
+            if (stl) void exportStl(stl)
+          }}
+          onExportScad={() => void exportScad(useAppStore.getState().code)}
+        />
       </header>
-      <main className="grid min-h-0 flex-1 grid-cols-1 grid-rows-2 md:grid-cols-2 md:grid-rows-1">
-        <section className="flex min-h-0 flex-col border-neutral-800 md:border-r">
-          <div className="min-h-0 flex-1">
-            <CodeEditor value={code} onChange={setCode} diagnostics={diagnostics} />
-          </div>
-          <div className="h-40 border-t border-neutral-800">
-            <ConsolePanel logs={logs} error={error} />
-          </div>
+
+      <main className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_440px] md:grid-rows-1">
+        <section aria-label="3D view" className="min-h-0 min-w-0">
+          <Viewer mesh={mesh} stale={stale} />
         </section>
-        <section className="min-h-0">
-          <Viewer mesh={mesh} />
+
+        <section
+          aria-label="Code"
+          className="flex min-h-0 min-w-0 flex-col border-t border-line bg-panel md:border-t-0 md:border-l"
+        >
+          <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
+            <div className="pc-tabs" role="tablist">
+              <button type="button" role="tab" aria-selected="true" className="pc-tab">
+                main.scad
+              </button>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1">
+            <CodeEditor value={code} onChange={setCode} diagnostics={diagnostics} reveal={reveal} />
+          </div>
+          <div className="h-44 shrink-0 border-t border-line">
+            <ConsolePanel status={status} logs={logs} error={error} renderMs={renderMs} onGoToLine={goToLine} />
+          </div>
         </section>
       </main>
     </div>
@@ -2902,7 +4081,8 @@ test('renders the default model in the real OpenSCAD WASM and exports binary STL
   const csp = watchCspViolations(page)
   await page.goto('/')
   await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm', { timeout: RENDER_TIMEOUT })
-  await expect(page.getByTestId('render-status')).toHaveText(/Rendered in \d+ ms/)
+  await expect(page.getByTestId('render-status')).toHaveText(/^Rendered \d+ ms$/)
+  await expect(page.getByTestId('dims-axes')).toHaveAttribute('aria-label', '20 × 20 × 10 mm')
   await expect(page.locator('canvas')).toBeVisible()
 
   const downloadPromise = page.waitForEvent('download')
@@ -2922,50 +4102,76 @@ test('pasted code re-renders with new dimensions', async ({ page }) => {
   await expect(page.getByTestId('dims')).toHaveText('30 × 10 × 5 mm', { timeout: RENDER_TIMEOUT })
 })
 
-test('a compile error shows a diagnostic, keeps the last mesh, and blocks STL export', async ({ page }) => {
+test('a compile error shows the pill, gutter and inline callout, keeps the last mesh, and blocks STL export', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm', { timeout: RENDER_TIMEOUT })
   await replaceCode(page, 'cube([10, 10, 10]')
-  await expect(page.getByTestId('render-status')).toHaveText('Render failed', { timeout: RENDER_TIMEOUT })
+  await expect(page.getByTestId('render-status')).toHaveText(/^Failed · line \d+$/, { timeout: RENDER_TIMEOUT })
   await expect(page.getByTestId('console')).toContainText('ERROR')
   await expect(page.locator('.cm-lintRange-error').first()).toBeVisible()
+  await expect(page.locator('.cm-diag-callout')).toContainText(/^Line \d+: /)
+  await expect(page.getByText('Showing the last model that compiled')).toBeVisible()
   await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm')
   await expect(page.getByRole('button', { name: 'Export STL' })).toBeDisabled()
+  await expect(page.locator('[role="dialog"]')).toHaveCount(0)
+})
+
+test('follows the system colour scheme with the light theme as a full peer', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' })
+  await page.goto('/')
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(238, 241, 244)') // bg (light)
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(13, 16, 21)') // bg (dark)
 })
 ```
 
 - [ ] **Step 6: Run the end-to-end tests**
 
 Run: `npm run e2e`
-Expected: 3 tests pass. If they fail:
-- **CSP violation in the console**: report the exact directive and do not loosen `script-src` silently. The spec fixes it at `'self' 'wasm-unsafe-eval'`.
+Expected: 4 tests pass. If they fail:
+- **CSP violation in the console**: report the exact directive and do not loosen `script-src` silently. The spec fixes it at `'self' 'wasm-unsafe-eval'`. A `font-src` violation means a font is being loaded from a URL instead of the bundle; check that `main.tsx` imports the fontsource packages and nothing imports the Google Fonts URL (the design system's `bundle.css` had one; `design/components.css` must not).
 - **`Unknown option --backend`** in the console: the downloaded snapshot predates Manifold-as-backend. Re-run `npm run fetch:openscad` (without `--if-missing`) to get a newer one, or pin `OPENSCAD_WASM_URL`.
-- **Worker fails to import `/openscad/openscad.js`**: confirm Task 2 Step 5's ES module check.
+- **Worker fails to import `/openscad/openscad.js`**: confirm Task 3 Step 5's ES module check.
+- **Light theme colour mismatch**: `src/styles/tokens.css` is stale; run `npm run tokens` (the unit test for this would also be failing).
 
 - [ ] **Step 7: Manual check in dev**
 
 Run: `npm run dev` and open the printed URL.
-Check that the model appears and is framed. Orbit the camera and edit `width = 40;`. The model should update after about 0.6 s **without the camera jumping**, and "Fit view" should re-frame it. Then `Export .scad` should download `model.scad`.
+Check against the Workbench and Compile error screens:
+- Header: wordmark, separator, pill "Rendered N ms" in the `ok` tone with a check icon, dims "20 × 20 × 10 mm" in mono, "Export .scad" and the single primary "Export STL" on the right.
+- Viewer: dark `viewport` ground, grid with 10 mm sections, RGB axes, the model in filament orange, the axis dims top-left, "Fit view" top-right, "N triangles" bottom-left, gizmo bottom-right.
+- Orbit, then edit `width = 40;`: the model updates after about 0.6 s **without the camera jumping**, and "Fit view" re-frames it.
+- Delete a `)`: the pill becomes "Failed · line N" in the `error` tone, that editor line gets the `error-soft` ground, red line number and callout under it, the console shows the ERROR line in red and a muted "OpenSCAD exited with code 1 · N ms", the model dims under "Showing the last model that compiled", Export STL is disabled with its tooltip. Clicking the pill or the console ERROR line moves the cursor to that line.
+- Switch the OS to light mode (or add `data-theme="light"` on `<html>` in devtools): every surface, the editor colours, the grid and the model follow.
+- Keyboard: Tab through the header; each control shows the 2px accent focus ring with a gap.
 
 - [ ] **Step 8: Commit**
 
 ```bash
 git add build vite.config.ts src/App.tsx src/App.test.tsx playwright.config.ts e2e package.json package-lock.json .gitignore
-git commit -m "feat: wire M1 app (editor, viewer, console, export), production CSP, Playwright smoke tests"
+git commit -m "feat: wire M1 workbench (header, viewer, editor, console, export), production CSP, Playwright smoke tests"
 ```
 
 ---
 
 ## Deferred from M1 (tracked for later plans)
 
-Each item is part of the spec but belongs to a later milestone. M1's interfaces already leave room for it:
+Each item is part of the spec or the screens but belongs to a later milestone. M1's interfaces already leave room for it:
 
 | Item | Milestone | Hook left in M1 |
 | --- | --- | --- |
-| Provider profiles, chat, auto-fix, cost tracking | M2 | `RenderController` is the single render path the chat will call |
-| Customizer sliders (`-D` overrides), presets, Dexie history, gallery | M3 | `RenderRequest.params` → `buildArgs` already emits `-D`; tree-sitter decision for the editor grammar |
+| Chat column (360px, left), composer, messages, cost caption | M2 | The workbench grid gains a first column; `StatusPill`, `DimsReadout`, `pc-*` classes are shared |
+| Provider profiles, settings button, auto-fix, cost tracking | M2 | `RenderController` is the single render path the chat will call; "Failed · line N" pill text feeds the auto-fix callout |
+| Project name button in the header, "v3 · edited by slider" caption, History button, "from v3" next to dims | M3 | Header is a flex row with a spacer; `stale` already marks "last model that compiled" |
+| Customizer dock under the viewer (`pc-param`, presets, Bake), `-D` overrides | M3 | `RenderRequest.params` → `buildArgs` already emits `-D`; tree-sitter decision for the editor grammar |
+| "Problems N" tab next to "main.scad" | M3 | `diagnostics` are in the store; the pane head is already a `pc-tabs` tablist |
+| Theme setting (dark / light / system) | M3 | `tokens.css` honours `data-theme` on `<html>`; `useTokens` already observes it |
 | Configurable debounce/timeout in `settings` | M3 | `useRenderLoop(createWorker, debounceMs, timeoutMs)` |
 | Bundled libraries (BOSL2, MCAD) and fonts for `text()` | M3 | `runOpenSCAD` is the one place that writes the virtual FS |
-| Variants, URL share, PNG/GIF, PWA offline, phone tab layout, voice | M4 | `saveFile` is shared by every export |
-| Per-face colour preview format, tag-colour picking, scoped edits | M5 | `parseStl` sits behind `MeshData`; a coloured-mesh parser can replace it |
-| Low-`$fn` preview pass, triangle-count warning | M4 (mobile perf) | `MeshData.triangleCount` |
+| Export dialog (Model file / Image / Turntable / Timelapse / Link), Share button, PNG and GIF | M4 | `saveFile` is shared by every export; `ExportButtons` becomes the dialog's trigger |
+| OpenSCAD download progress ("Loading OpenSCAD 5.2 / 8.4 MB"), offline caching, update prompt | M4 (PWA) | `StatusPill` idle state and the console's idle line are the two places that show it |
+| Phone layout: Chat / Code / 3D `pc-tabbar`, 44px viewer buttons, symbol key row, parameter sheet | M4 | Under `md` the viewer and code already stack; `components.css` has `pc-tabbar` and the coarse-pointer sizes |
+| Voice prompts, variants, URL share | M4 | `saveFile`; the `pc-variant` card exists in `components.css` |
+| Per-face colour preview format, tag-colour picking (`pick` token), scoped edits | M5 | `parseStl` sits behind `MeshData`; a coloured-mesh parser can replace it |
+| Low-`$fn` preview pass, triangle-count warning callout | M4 (mobile perf) | `MeshData.triangleCount` is already shown bottom-left in the viewer |
+| OpenSCAD version in the console head ("OpenSCAD 2025.03 · manifold") | M3 | The console head caption is one string; the worker can report the version alongside the result |
