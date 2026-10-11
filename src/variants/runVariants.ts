@@ -42,7 +42,8 @@ export async function runVariants(
           signal: opts.signal,
           render: async (code, signal) => {
             update({ status: 'queued', renderSeq: ++renderSeq })
-            const result = await deps.queue.render({ code }, signal)
+            const libraries = req.ctx.libraries ?? []
+            const result = await deps.queue.render({ code, ...(libraries.length > 0 ? { libraries } : {}) }, signal)
             update({ status: result.ok ? 'ok' : 'error', result, resultCode: code, renderSeq: null })
             return result
           },

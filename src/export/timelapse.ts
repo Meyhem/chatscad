@@ -112,6 +112,8 @@ export async function renderTimelapse(
     holdMs: number
     caption: boolean
     turntable: boolean
+    /** The project's enabled libraries, so versions that include BOSL2 or MCAD still compile. */
+    libraries?: string[]
     signal: AbortSignal
     onProgress(p: TimelapseProgress): void
     onFrame?(frame: ImageData, index: number): void
@@ -126,7 +128,8 @@ export async function renderTimelapse(
   for (const [i, version] of versions.entries()) {
     signal.throwIfAborted()
     opts.onProgress({ phase: 'compile', done: i, total: versions.length, label: version.label })
-    const result = await deps.queue.render({ code: version.code, params: version.params }, signal)
+    const libraries = opts.libraries ?? []
+    const result = await deps.queue.render({ code: version.code, params: version.params, ...(libraries.length > 0 ? { libraries } : {}) }, signal)
     if (result.ok) {
       previous = result.mesh
       shots.push({ version, mesh: result.mesh, failed: false })

@@ -145,6 +145,12 @@ describe('renderTimelapse', () => {
     onProgress: () => {},
   }
 
+  it('compiles every version with the project libraries', async () => {
+    const f = fakes({ A: meshResult(10) })
+    await renderTimelapse({ ...base, versions: [version({ label: 'v1', code: 'A' })], libraries: ['MCAD'] }, f.deps)
+    expect(f.queue.render.mock.calls[0][0]).toMatchObject({ code: 'A', libraries: ['MCAD'] })
+  })
+
   it('compiles each version in the queue, fixes the camera to the union of all models, and holds the last frame', async () => {
     const a = version({ label: 'v1', code: 'A', params: { w: 1 }, message: 'first' })
     const b = version({ label: 'v2', code: 'B' })

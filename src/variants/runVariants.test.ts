@@ -153,3 +153,13 @@ it('asks B and C for a different approach and the simplest printable design, so 
   expect(asked[2]).toMatch(/^A hook for a 30 mm broom handle\n\n.*simplest/)
   expect(new Set(asked).size).toBe(3)
 })
+
+it('renders each variant with the project libraries the model was told about', async () => {
+  const h = harness([success('cube(10);'), success('cube(20);'), success('cube(30);')])
+  await runVariants({ ...request, ctx: { code: 'cube(1);', libraries: ['BOSL2'] } }, h.slots, { signal: new AbortController().signal, onSlot: h.onSlot }, h.deps)
+  expect(h.queue.render.mock.calls.map(([req]) => req)).toEqual([
+    { code: 'cube(10);', libraries: ['BOSL2'] },
+    { code: 'cube(20);', libraries: ['BOSL2'] },
+    { code: 'cube(30);', libraries: ['BOSL2'] },
+  ])
+})

@@ -1,3 +1,4 @@
+import { currentLibraries } from '../../history/projectStore'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Version } from '../../db/db'
 import { useProjectStore } from '../../history/projectStore'
@@ -104,6 +105,7 @@ export function TimelapseTab() {
           holdMs: Math.round(parseSeconds(hold, { min: 0, max: 10, fallback: 2 }) * 1000),
           caption,
           turntable,
+          libraries: currentLibraries(),
           signal: controller.signal,
           onProgress: setProgress,
           onFrame: (image, index) => setFrame({ image, index }),
