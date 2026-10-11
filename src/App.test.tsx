@@ -305,6 +305,7 @@ it('opens an empty project without rendering anything', async () => {
   await waitFor(() => expect(screen.getByTestId('render-status')).toHaveTextContent('Nothing to render'))
   expect(screen.getByTestId('viewer')).toHaveAttribute('data-empty', 'true')
   expect(screen.getByRole('button', { name: 'Export STL' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Share' })).toBeDisabled()
   await new Promise((r) => setTimeout(r, 50))
   expect(render$).not.toHaveBeenCalled()
 })

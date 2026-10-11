@@ -83,7 +83,13 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
           <ProjectMenu />
         </div>
         <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
-        <button type="button" className="pc-btn is-icon is-ghost" aria-label="Share" onClick={() => useExportStore.getState().openAt('link')}>
+        <button
+          type="button"
+          className="pc-btn is-icon is-ghost"
+          aria-label="Share"
+          disabled={status === 'empty'}
+          onClick={() => useExportStore.getState().openAt('link')}
+        >
           <IconShare className="pc-i" aria-hidden="true" />
         </button>
         <button type="button" className="pc-btn is-icon is-ghost" aria-label="Export STL" onClick={() => useExportStore.getState().openAt('model')}>
@@ -160,6 +166,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
         )}
         <ExportButtons
           canExportStl={canExportStl}
+          canShare={status !== 'empty'}
           disabledReason={exportDisabledReason(canExportStl ? 'ok' : status === 'ok' ? 'rendering' : status)}
           onExportStl={() => {
             const { stl } = useAppStore.getState()

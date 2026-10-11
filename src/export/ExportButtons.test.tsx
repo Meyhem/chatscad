@@ -43,3 +43,10 @@ describe('exportDisabledReason', () => {
 it('explains that an empty model cannot be exported', () => {
   expect(exportDisabledReason('empty')).toBe('Write or generate a model first')
 })
+
+it('disables Share too when there is nothing to share', () => {
+  render(<ExportButtons canExportStl={false} canShare={false} disabledReason="Write or generate a model first" onExportStl={() => {}} onShare={() => {}} />)
+  const share = screen.getByRole('button', { name: 'Share' })
+  expect(share).toBeDisabled()
+  expect(share).toHaveAttribute('title', 'Write or generate a model first')
+})
