@@ -46,6 +46,8 @@ export function ChatPanel() {
   const hasProfile = useProvidersStore((s) => s.profiles.length > 0)
   const setView = useAppStore((s) => s.setView)
   const goToLine = useAppStore((s) => s.goToLine)
+  const appStatus = useAppStore((s) => s.status)
+  const codeSource = useAppStore((s) => s.codeSource)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -55,7 +57,10 @@ export function ChatPanel() {
 
   // findLast needs lib ES2023; tsconfig targets ES2022.
   const lastReply = [...messages].reverse().find((m) => m.role === 'assistant')
-  const showBack = backTo !== null && (fixing !== null || (!busy && lastReply?.compileStatus === 'error'))
+  // After Stop auto-fix or a failed fix request the last bubble has no compile status, but the editor
+  // still holds the AI's failing code, so "Back to" must stay.
+  const aiCodeFails = appStatus === 'error' && (codeSource === 'ai' || codeSource === 'autofix')
+  const showBack = backTo !== null && (fixing !== null || (!busy && (lastReply?.compileStatus === 'error' || aiCodeFails)))
 
   return (
     <section aria-label="Chat" className="flex min-h-0 min-w-0 flex-col border-b border-line bg-panel md:border-b-0">

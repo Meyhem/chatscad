@@ -111,3 +111,17 @@ it('hides "Back to" once the last reply compiled', () => {
   render(<ChatPanel />)
   expect(screen.queryByRole('button', { name: /^Back to/ })).toBeNull()
 })
+
+it('keeps "Back to" after Stop auto-fix, while the failing AI code is still in the editor', () => {
+  useAppStore.setState({ status: 'error', codeSource: 'ai' })
+  useChatStore.setState({
+    backTo: { label: 'v1', code: 'cube(1);' },
+    messages: [
+      msg({ id: 'a', role: 'assistant', text: 'x', compileStatus: 'error' }),
+      msg({ id: 'b', role: 'assistant', text: '' }),
+      msg({ id: 'c', role: 'note', text: 'Stopped.' }),
+    ],
+  })
+  render(<ChatPanel />)
+  expect(screen.getByRole('button', { name: 'Back to v1' })).toBeInTheDocument()
+})
