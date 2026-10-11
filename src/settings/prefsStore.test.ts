@@ -25,3 +25,20 @@ it('applies an update at once and persists it', async () => {
   expect(writePrefs).toHaveBeenCalledWith({ variantCount: 3 })
   expect(usePrefs.getState().variantCount).toBe(3)
 })
+
+it('keeps the newest change when an older write finishes later', async () => {
+  const pending: Array<() => void> = []
+  vi.mocked(writePrefs).mockImplementation(
+    (patch) =>
+      new Promise((resolve) =>
+        pending.push(() => resolve({ variantCount: 1, lowQualityPreview: false, transcriptionModel: 'whisper-1', ...patch } as never)),
+      ),
+  )
+  const a = usePrefs.getState().update({ variantCount: 3 })
+  const b = usePrefs.getState().update({ variantCount: 1 })
+  pending[1]()
+  await b
+  pending[0]()
+  await a
+  expect(usePrefs.getState().variantCount).toBe(1)
+})

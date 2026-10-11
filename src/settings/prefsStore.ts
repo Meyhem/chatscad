@@ -9,6 +9,8 @@ export interface PrefsState extends Prefs {
   update(patch: Partial<Prefs>): Promise<void>
 }
 
+let writes = 0
+
 /** In-memory mirror of the M4 settings, so render code can read them synchronously. */
 export const usePrefs = create<PrefsState>()((set) => ({
   variantCount: DEFAULT_SETTINGS.variantCount,
@@ -18,7 +20,10 @@ export const usePrefs = create<PrefsState>()((set) => ({
   loaded: false,
   load: async () => set({ ...(await readPrefs()), loaded: true }),
   update: async (patch) => {
+    const seq = ++writes
     set(patch)
-    set(await writePrefs(patch))
+    const stored = await writePrefs(patch)
+    // A newer change was made while this one was being written; its own write will settle the state.
+    if (seq === writes) set(stored)
   },
 }))
