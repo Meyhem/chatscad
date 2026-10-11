@@ -47,10 +47,10 @@ export function EffortPicker() {
   }
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative shrink-0">
       <button
         type="button"
-        className="pc-model"
+        className="pc-model whitespace-nowrap"
         aria-label={`Reasoning effort: ${label}`}
         aria-haspopup="menu"
         aria-expanded={open}

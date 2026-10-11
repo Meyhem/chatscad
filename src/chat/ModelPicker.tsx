@@ -49,20 +49,21 @@ export function ModelPicker() {
   return (
     <div
       ref={rootRef}
-      className="relative"
+      className="relative min-w-0"
       onKeyDown={(e) => {
         if (e.key === 'Escape') setOpen(false)
       }}
     >
       <button
         type="button"
-        className="pc-model"
+        className="pc-model max-w-full"
         aria-label={`Model: ${model ?? 'none'}`}
+        title={model ?? undefined}
         aria-haspopup="true"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
-        {model ?? 'Choose a model'}
+        <span className="min-w-0 truncate">{model ?? 'Choose a model'}</span>
         <IconChevron className="pc-i" aria-hidden="true" />
       </button>
       {open && (
