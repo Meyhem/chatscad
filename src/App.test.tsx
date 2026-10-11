@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { EditorView } from '@codemirror/view'
 import userEvent from '@testing-library/user-event'
 import { useChatStore } from './chat/chatStore'
@@ -89,8 +89,8 @@ it('disables STL export as soon as the code is edited, until the new code has re
 it('lays out chat, 3D view and code as the three workbench columns', () => {
   render(<App createWorker={scriptedWorker(() => okResult())} />)
   const regions = screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))
-  // The console is a region inside the code column (M1).
-  expect(regions).toEqual(['Chat', '3D view', 'Code', 'Console'])
+  // The Customizer dock is a region under the viewer (M3); the console is a region inside the code column (M1).
+  expect(regions).toEqual(['Chat', '3D view', 'Parameters', 'Code', 'Console'])
 })
 
 it('opens the settings page from the header and comes back to the same workbench', async () => {
@@ -145,4 +145,52 @@ it('sends a prompt: the code of the reply reaches the editor, renders, and the c
   expect(screen.getByTestId('project-cost')).toHaveTextContent('$0.011 this project')
   expect(screen.queryByTestId('chat-note')).toBeNull()
   expect(screen.getByRole('button', { name: 'Export STL' })).toBeEnabled()
+})
+
+vi.mock('./history/HistoryView', () => ({ HistoryView: () => <div data-testid="history-view" /> }))
+vi.mock('./gallery/GalleryView', () => ({ GalleryView: () => <div data-testid="gallery-view" /> }))
+
+describe('M3', () => {
+  it('blocks STL export from a slider change until the render with those values finishes', async () => {
+    const requests: RenderRequest[] = []
+    const pending: Array<() => void> = []
+    const handle = {
+      render: (req: RenderRequest) =>
+        new Promise<RenderResult>((resolve) => {
+          requests.push(req)
+          if (requests.length === 1) resolve(okResult())
+          else pending.push(() => resolve(okResult()))
+        }),
+      terminate: () => {},
+    }
+    render(<App createWorker={() => handle} />)
+    const exportStl = () => screen.getByRole('button', { name: 'Export STL' })
+    await waitFor(() => expect(exportStl()).toBeEnabled())
+
+    fireEvent.change(screen.getByRole('slider', { name: 'width' }), { target: { value: '30' } })
+    expect(exportStl()).toBeDisabled()
+    expect(exportStl()).toHaveAttribute('title', 'Wait for the render to finish')
+    await waitFor(() => expect(requests.at(-1)).toEqual(expect.objectContaining({ params: { width: 30 } })), { timeout: 3_000 })
+    expect(exportStl()).toBeDisabled()
+    act(() => pending.shift()!())
+    await waitFor(() => expect(exportStl()).toBeEnabled())
+  })
+
+  it('shows the Customizer dock under the viewer and the Problems tab in the code pane', async () => {
+    render(<App createWorker={scriptedWorker(() => okResult())} />)
+    expect(screen.getByRole('region', { name: 'Parameters' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Dimensions' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Problems/ })).toBeInTheDocument()
+  })
+
+  it('switches to the History and Examples views', () => {
+    render(<App createWorker={scriptedWorker(() => okResult())} />)
+    act(() => useAppStore.getState().setView('history'))
+    expect(screen.getByTestId('history-view')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '3D view' })).toBeNull()
+    act(() => useAppStore.getState().setView('gallery'))
+    expect(screen.getByTestId('gallery-view')).toBeInTheDocument()
+    act(() => useAppStore.getState().setView('workbench'))
+    expect(screen.getByRole('region', { name: '3D view' })).toBeInTheDocument()
+  })
 })
