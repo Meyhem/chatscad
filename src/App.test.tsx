@@ -12,6 +12,7 @@ import { resetDb } from './test/db'
 import { errorResult, okResult } from './test/results'
 import { App } from './App'
 import { emitLoadProgress } from './render/loadProgress'
+import { usePrefs } from './settings/prefsStore'
 
 vi.mock('./viewer/Viewer', () => ({
   Viewer: ({ stale }: { stale: boolean }) => <div data-testid="viewer" data-stale={String(stale)} />,
@@ -24,6 +25,7 @@ beforeEach(async () => {
   useProvidersStore.setState(useProvidersStore.getInitialState(), true)
 })
 afterEach(() => vi.unstubAllGlobals())
+afterEach(() => usePrefs.setState(usePrefs.getInitialState(), true))
 
 function scriptedWorker(respond: (req: RenderRequest) => RenderResult) {
   const handle: RenderWorkerHandle = { render: async (req) => respond(req), terminate: () => {} }
@@ -200,4 +202,20 @@ it('shows the OpenSCAD download progress in the pill before the first render', (
   render(<App createWorker={() => ({ render: () => new Promise<RenderResult>(() => {}), terminate: () => {} })} />)
   act(() => emitLoadProgress({ loaded: 5_200_000, total: 8_400_000 }))
   expect(screen.getByTestId('render-status')).toHaveTextContent('Loading OpenSCAD 5.2 / 8.4 MB')
+})
+
+it('renders a quick $fn = 12 pass before the full render when the setting is on', async () => {
+  usePrefs.setState({ lowQualityPreview: true })
+  const seen: RenderRequest[] = []
+  render(
+    <App
+      createWorker={scriptedWorker((req) => {
+        seen.push(req)
+        return okResult()
+      })}
+    />,
+  )
+  await waitFor(() => expect(screen.getByTestId('render-status')).toHaveTextContent(/^Rendered/))
+  expect(seen[0].params).toMatchObject({ $fn: 12 })
+  expect(seen[1].params ?? {}).not.toHaveProperty('$fn')
 })

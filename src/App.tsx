@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { GlobalOverlays } from './app/GlobalOverlays'
 import { ChatPanel } from './chat/ChatPanel'
 import { ComposerBridge } from './chat/promptRequest'
@@ -10,11 +10,13 @@ import { HistoryView } from './history/HistoryView'
 import { useRenderedVersionLabel } from './history/renderedVersion'
 import { createRenderWorker, type WorkerFactory } from './render/createRenderWorker'
 import { onLoadProgress } from './render/loadProgress'
+import { withPreviewPass } from './render/previewPass'
 import { useRenderLoop } from './render/useRenderLoop'
 import { SettingsPage } from './settings/SettingsPage'
 import { useProvidersStore } from './settings/providersStore'
+import { usePrefs } from './settings/prefsStore'
 import { useSettingsStore } from './settings/settingsStore'
-import { selectCanExport, useAppStore } from './state/store'
+import { selectCanExport, selectDisplayMesh, selectShowingPreview, useAppStore } from './state/store'
 import { DimsReadout } from './ui/DimsReadout'
 import { IconSettings } from './ui/icons'
 import { StatusPill } from './ui/StatusPill'
@@ -28,7 +30,17 @@ import { useUndoShortcuts } from './workbench/useUndoShortcuts'
 export function App({ createWorker = createRenderWorker }: { createWorker?: WorkerFactory }) {
   const debounceMs = useSettingsStore((s) => s.settings.debounceMs)
   const timeoutMs = useSettingsStore((s) => s.settings.timeoutMs)
-  useRenderLoop(createWorker, debounceMs, timeoutMs)
+  const renderWorker = useMemo(
+    () =>
+      withPreviewPass(createWorker, {
+        enabled: () => usePrefs.getState().lowQualityPreview,
+        onPreview: (result, req) => useAppStore.getState().showPreview({ code: req.code, params: req.params ?? {}, mesh: result.mesh }),
+      }),
+    [createWorker],
+  )
+  useRenderLoop(renderWorker, debounceMs, timeoutMs)
+  const displayMesh = useAppStore(selectDisplayMesh)
+  const previewing = useAppStore(selectShowingPreview)
   useUndoShortcuts()
   useEffect(() => {
     void useProvidersStore.getState().load()
@@ -96,7 +108,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
 
           <section aria-label="3D view" className="flex min-h-0 min-w-0 flex-col md:border-l md:border-line">
             <div className="min-h-0 flex-1">
-              <Viewer mesh={mesh} stale={stale} thumbnails staleLabel={staleLabel} />
+              <Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} />
             </div>
             <CustomizerDock />
           </section>

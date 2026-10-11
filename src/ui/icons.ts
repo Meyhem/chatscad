@@ -1,6 +1,7 @@
 export {
   ArrowRight as IconSend,
   Check as IconCheck,
+  Clock as IconClock,
   ChevronDown as IconChevronDown,
   ChevronDown as IconChevron,
   Download as IconDownload,

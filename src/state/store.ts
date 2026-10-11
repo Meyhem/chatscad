@@ -1,7 +1,13 @@
 import { create } from 'zustand'
 import type { LoadProgress } from '../render/loadProgress'
 import { paramsEqual, type Params } from '../render/params'
-import type { Diagnostic, LogLine, MeshData, RenderResult } from '../render/types'
+import type { Diagnostic, LogLine, MeshData, ParamValue, RenderResult } from '../render/types'
+
+export interface PreviewMesh {
+  code: string
+  params: Record<string, ParamValue>
+  mesh: MeshData
+}
 
 export type RenderStatus = 'idle' | 'rendering' | 'ok' | 'error'
 
@@ -55,6 +61,9 @@ export interface AppState {
   /** OpenSCAD WASM download progress, shown while the first render waits for it. */
   loadProgress: LoadProgress | null
   setLoadProgress(progress: LoadProgress | null): void
+  /** The quick `$fn = 12` mesh for the code being rendered; never exported. */
+  preview: PreviewMesh | null
+  showPreview(preview: PreviewMesh): void
   setLibraries(libraries: string[]): void
   setCode(code: string, source?: CodeSource): void // source defaults to 'manual'
   renderStarted(): void
@@ -91,6 +100,8 @@ export const useAppStore = create<AppState>()((set) => ({
   setParams: (params) => set({ params }),
   loadProgress: null,
   setLoadProgress: (loadProgress) => set({ loadProgress }),
+  preview: null,
+  showPreview: (preview) => set({ preview }),
   setLibraries: (libraries) => set({ libraries }),
   renderStarted: () => set({ status: 'rendering' }),
   renderFinished: (r, code, params = {}) =>
@@ -117,3 +128,16 @@ export const useAppStore = create<AppState>()((set) => ({
 /** STL export is allowed only when the file on hand was rendered from exactly the code and parameters in the editor. */
 export const selectCanExport = (s: AppState): boolean =>
   s.status === 'ok' && s.stl !== null && s.renderedCode === s.code && paramsEqual(s.renderedParams, s.params)
+
+function sameParams(a: Record<string, ParamValue>, b: Record<string, ParamValue>): boolean {
+  const keys = Object.keys(a)
+  return keys.length === Object.keys(b).length && keys.every((k) => k in b && JSON.stringify(a[k]) === JSON.stringify(b[k]))
+}
+
+/** The mesh to draw: the quick preview while the full render of that exact code and parameters runs, else the last good mesh. */
+export const selectDisplayMesh = (s: AppState): MeshData | null =>
+  s.status === 'rendering' && s.preview !== null && s.preview.code === s.code && sameParams(s.preview.params, s.params)
+    ? s.preview.mesh
+    : s.mesh
+
+export const selectShowingPreview = (s: AppState): boolean => selectDisplayMesh(s) !== s.mesh

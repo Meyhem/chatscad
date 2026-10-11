@@ -5,7 +5,8 @@ import { AxesHelper, Color, Object3D, type PerspectiveCamera, type Vector3 } fro
 import type { Bounds, MeshData } from '../render/types'
 import { useTokens } from '../theme/tokens'
 import { DimsReadout } from '../ui/DimsReadout'
-import { IconFit, IconWarning } from '../ui/icons'
+import { IconFit, IconSpinner, IconWarning } from '../ui/icons'
+import { TriangleWarning } from './TriangleWarning'
 import { computeCameraFit } from './cameraFit'
 import { meshToGeometry } from './geometry'
 import { staleText } from './staleText'
@@ -88,11 +89,13 @@ export function Viewer({
   stale,
   thumbnails = false,
   staleLabel = null,
+  previewing = false,
 }: {
   mesh: MeshData | null
   stale: boolean
   thumbnails?: boolean
   staleLabel?: string | null
+  previewing?: boolean
 }) {
   const t = useTokens(TOKENS)
   const [fitToken, setFitToken] = useState(0)
@@ -130,6 +133,11 @@ export function Viewer({
             <IconWarning className="pc-i" aria-hidden="true" />
             {staleText(staleLabel)}
           </span>
+        ) : previewing ? (
+          <span className="pc-status is-busy">
+            <IconSpinner className="pc-i" aria-hidden="true" />
+            Quick preview · full render running
+          </span>
         ) : (
           mesh && <DimsReadout bounds={mesh.bounds} axes />
         )}
@@ -149,8 +157,9 @@ export function Viewer({
       </div>
 
       {mesh && (
-        <div className="pc-caption pc-mono absolute bottom-3 left-3">
-          {mesh.triangleCount.toLocaleString('en-US')} triangles
+        <div className="absolute bottom-3 left-3 flex flex-col items-start gap-2">
+          <TriangleWarning count={mesh.triangleCount} />
+          <div className="pc-caption pc-mono">{mesh.triangleCount.toLocaleString('en-US')} triangles</div>
         </div>
       )}
     </div>

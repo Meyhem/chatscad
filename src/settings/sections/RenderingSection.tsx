@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
+import { LowQualityPreviewSwitch } from '../LowQualityPreviewSwitch'
 import type { Settings } from '../../db/db'
 import { useSettingsStore } from '../settingsStore'
 
@@ -52,7 +53,10 @@ export function RenderingSection() {
         Rendering
       </h2>
       {FIELDS.map((f) => (
-        <Field key={f.id} spec={f} settings={settings} />
+        <Fragment key={f.id}>
+          <Field spec={f} settings={settings} />
+          {f.id === 'timeout' && <LowQualityPreviewSwitch />}
+        </Fragment>
       ))}
     </section>
   )
