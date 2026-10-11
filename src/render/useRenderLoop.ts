@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { paramOverrides } from '../scad/customizer'
+import { useProjectStore } from '../history/projectStore'
 import { useRefineStore } from '../refine/refineStore'
 import { isEmptyCode, useAppStore } from '../state/store'
 import { DEFAULT_DEBOUNCE_MS, DEFAULT_TIMEOUT_MS, RenderController } from './controller'
@@ -56,7 +57,8 @@ export function useRenderLoop(
       useRefineStore.getState().cancelPending()
       if (isEmptyCode(code)) {
         controller.cancel()
-        useAppStore.getState().renderEmpty()
+        // Until the last project is restored the code is only the store's blank start, not an empty project.
+        if (useProjectStore.getState().project !== null) useAppStore.getState().renderEmpty()
         return
       }
       const req = buildRenderRequest(code, params, libraries)
@@ -68,7 +70,11 @@ export function useRenderLoop(
       if (state.code !== prev.code || state.params !== prev.params) send(false)
       else if (state.libraries !== prev.libraries) send(true)
     })
+    const unsubscribeProject = useProjectStore.subscribe((state, prev) => {
+      if (prev.project === null && state.project !== null && isEmptyCode(useAppStore.getState().code)) send(true)
+    })
     return () => {
+      unsubscribeProject()
       unsubscribe()
       controller.dispose()
       previews.dispose()

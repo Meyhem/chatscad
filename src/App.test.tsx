@@ -9,7 +9,8 @@ import type { RenderRequest, RenderResult } from './render/types'
 import { useProvidersStore } from './settings/providersStore'
 import { useAppStore } from './state/store'
 import { resetDb } from './test/db'
-import { STARTER_CODE } from './test/fixtures'
+import { makeProject, STARTER_CODE } from './test/fixtures'
+import { useProjectStore } from './history/projectStore'
 import { errorResult, okResult } from './test/results'
 import { App } from './App'
 import { useRefineStore } from './refine/refineStore'
@@ -30,6 +31,7 @@ beforeEach(async () => {
   useChatStore.setState(useChatStore.getInitialState(), true)
   useProvidersStore.setState(useProvidersStore.getInitialState(), true)
   useExportStore.setState(useExportStore.getInitialState(), true)
+  useProjectStore.setState(useProjectStore.getInitialState(), true)
 })
 afterEach(() => vi.unstubAllGlobals())
 afterEach(() => Reflect.deleteProperty(window, 'matchMedia'))
@@ -294,6 +296,7 @@ it('highlights the picked part in the editor and clears it when the code changes
 
 it('opens an empty project without rendering anything', async () => {
   useAppStore.setState({ code: '' })
+  useProjectStore.setState({ project: makeProject() })
   const render$ = vi.fn(async () => okResult())
   render(<App createWorker={() => ({ render: render$, terminate: () => {} })} />)
   await waitFor(() => expect(screen.getByTestId('render-status')).toHaveTextContent('Nothing to render'))
@@ -342,4 +345,17 @@ it('narrows the columns to fit a small window without changing the saved layout'
   expect(screen.getByRole('separator', { name: 'Resize code' })).toHaveAttribute('aria-valuenow', '320')
   expect(screen.getByRole('separator', { name: 'Resize chat' })).toHaveAttribute('aria-valuenow', '342')
   expect(usePrefs.getState().panelLayout.chatWidth).toBe(560)
+})
+
+it('lets the code divider take room from a chat column stored wider than shown', async () => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1100 })
+  usePrefs.setState({ panelLayout: { chatWidth: 560, codeWidth: 320, dockHeight: null, consoleHeight: 176 } })
+  render(<App createWorker={scriptedWorker(() => okResult())} />)
+  const code = screen.getByRole('separator', { name: 'Resize code' })
+  expect(code).toHaveAttribute('aria-valuemax', '458')
+  expect(screen.getByRole('separator', { name: 'Resize chat' })).toHaveAttribute('aria-valuemax', '418')
+  fireEvent.keyDown(code, { key: 'ArrowLeft' })
+  expect(code).toHaveAttribute('aria-valuenow', '336')
+  expect(screen.getByRole('separator', { name: 'Resize chat' })).toHaveAttribute('aria-valuenow', '402')
+  await waitFor(() => expect(usePrefs.getState().panelLayout).toMatchObject({ chatWidth: 402, codeWidth: 336 }))
 })

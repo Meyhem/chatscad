@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { useAppStore } from '../state/store'
-import { STARTER_CODE as DEFAULT_CODE } from '../test/fixtures'
+import { useProjectStore } from '../history/projectStore'
+import { makeProject, STARTER_CODE as DEFAULT_CODE } from '../test/fixtures'
 import { okResult } from '../test/results'
 import type { RenderWorkerHandle } from './createRenderWorker'
 import type { RenderRequest } from './types'
@@ -12,7 +13,10 @@ beforeEach(() => {
   useAppStore.setState({ ...useAppStore.getInitialState(), code: DEFAULT_CODE }, true)
   vi.useFakeTimers()
 })
-afterEach(() => vi.useRealTimers())
+afterEach(() => {
+  vi.useRealTimers()
+  useProjectStore.setState(useProjectStore.getInitialState(), true)
+})
 
 function instantWorker() {
   const requests: RenderRequest[] = []
@@ -80,7 +84,20 @@ it('builds requests without empty params or libraries', () => {
   })
 })
 
+it('stays loading, not empty, until a project is open', async () => {
+  useProjectStore.setState({ project: null })
+  useAppStore.setState({ code: '' })
+  const { requests, createWorker } = instantWorker()
+  renderHook(() => useRenderLoop(createWorker, 600, 60_000))
+  await act(() => vi.advanceTimersByTimeAsync(1_000))
+  expect(useAppStore.getState().status).toBe('idle')
+  act(() => useProjectStore.setState({ project: makeProject() }))
+  expect(useAppStore.getState().status).toBe('empty')
+  expect(normal(requests)).toEqual([])
+})
+
 it('sends nothing to the worker while the code is empty, then renders once code is typed', async () => {
+  useProjectStore.setState({ project: makeProject() })
   useAppStore.setState({ code: '' })
   const { requests, createWorker } = instantWorker()
   renderHook(() => useRenderLoop(createWorker, 600, 60_000))
