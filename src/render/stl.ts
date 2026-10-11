@@ -17,17 +17,17 @@ function parseBinary(view: DataView, count: number): MeshData {
     const base = 84 + t * 50 + 12
     for (let k = 0; k < 9; k++) positions[t * 9 + k] = view.getFloat32(base + k * 4, true)
   }
-  return finalize(positions)
+  return meshFromPositions(positions)
 }
 
 function parseAscii(text: string): MeshData {
   const nums: number[] = []
   for (const m of text.matchAll(/vertex\s+(\S+)\s+(\S+)\s+(\S+)/g)) nums.push(Number(m[1]), Number(m[2]), Number(m[3]))
   if (nums.length % 9 !== 0 || nums.some((n) => !Number.isFinite(n))) throw new Error('Malformed ASCII STL')
-  return finalize(new Float32Array(nums))
+  return meshFromPositions(new Float32Array(nums))
 }
 
-function finalize(positions: Float32Array): MeshData {
+export function meshFromPositions(positions: Float32Array): MeshData {
   const triangleCount = positions.length / 9
   const normals = new Float32Array(positions.length)
   const min: Vec3 = [Infinity, Infinity, Infinity]

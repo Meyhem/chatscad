@@ -5,6 +5,8 @@ export interface RenderRequest {
   params?: Record<string, ParamValue>
   /** Enabled library names (BOSL2, MCAD), written into the FS before compiling (M3). */
   libraries?: string[]
+  /** M5: render the click-to-refine preview: tagged code, coloured OFF export, `mesh.faceTags`, no STL. */
+  preview?: { tagged: true }
 }
 
 export type Vec3 = [number, number, number]
@@ -21,6 +23,8 @@ export interface MeshData {
   normals: Float32Array
   triangleCount: number
   bounds: Bounds
+  /** M5: one tag id per triangle, 0 = untagged. Only on tagged previews. */
+  faceTags?: Uint32Array
 }
 
 export interface LogLine {
