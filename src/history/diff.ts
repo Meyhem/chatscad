@@ -90,3 +90,33 @@ export function sideBySide(oldCode: string, newCode: string, context = 3): SideB
   }
   return { rows, added, removed }
 }
+
+export type UnifiedLine =
+  | { kind: 'same' | 'del' | 'add'; oldLine: number | null; newLine: number | null; text: string }
+  | { kind: 'skip'; count: number }
+
+/** One column for narrow screens: each changed block lists its removed lines, then its added lines. */
+export function unifiedLines(rows: DiffRow[]): UnifiedLine[] {
+  const out: UnifiedLine[] = []
+  let dels: UnifiedLine[] = []
+  let adds: UnifiedLine[] = []
+  const flush = () => {
+    out.push(...dels, ...adds)
+    dels = []
+    adds = []
+  }
+  for (const row of rows) {
+    if (row.kind === 'skip') {
+      flush()
+      out.push(row)
+    } else if (row.left?.kind === 'same' && row.right) {
+      flush()
+      out.push({ kind: 'same', oldLine: row.left.line, newLine: row.right.line, text: row.right.text })
+    } else {
+      if (row.left) dels.push({ kind: 'del', oldLine: row.left.line, newLine: null, text: row.left.text })
+      if (row.right) adds.push({ kind: 'add', oldLine: null, newLine: row.right.line, text: row.right.text })
+    }
+  }
+  flush()
+  return out
+}

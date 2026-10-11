@@ -187,7 +187,7 @@ export function HistoryView({ createWorker }: { createWorker: WorkerFactory }) {
           Parameters: {paramChange}
         </p>
       )}
-      {diff && <DiffView rows={diff.rows} />}
+      {diff && <DiffView rows={diff.rows} layout={isPhone ? 'unified' : 'split'} />}
     </section>
   )
 

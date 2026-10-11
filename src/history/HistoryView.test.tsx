@@ -160,6 +160,18 @@ describe('on a phone', () => {
     expect(screen.queryByRole('region', { name: 'Compare' })).toBeNull()
   })
 
+  it('shows the diff as one column that wraps long lines', () => {
+    const { container } = render(<HistoryView createWorker={createWorker} />)
+    fireEvent.click(rows(container)[3]!)
+    fireEvent.click(screen.getByRole('button', { name: 'Compare with v6' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'From version' }), { target: { value: 'v1' } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'To version' }), { target: { value: 'v2' } })
+    const diff = screen.getByTestId('diff')
+    expect(diff).toHaveAttribute('data-layout', 'unified')
+    expect([...diff.querySelectorAll('[data-kind]')].map((l) => l.getAttribute('data-kind'))).toEqual(['same', 'add'])
+    expect(diff.querySelector('[data-kind="add"]')).toHaveTextContent('wall = 2.4;')
+  })
+
   it('compares the current version with its parent', () => {
     render(<HistoryView createWorker={createWorker} />)
     fireEvent.click(screen.getByRole('button', { name: 'Compare with v5' }))

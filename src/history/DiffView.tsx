@@ -1,5 +1,5 @@
 import { Fragment } from 'react'
-import type { DiffCell, DiffRow } from './diff'
+import { unifiedLines, type DiffCell, type DiffRow } from './diff'
 
 function Cell({ cell, divider = false }: { cell: DiffCell | null; divider?: boolean }) {
   const tone = cell?.kind === 'add' ? 'bg-ok-soft' : cell?.kind === 'del' ? 'bg-error-soft' : ''
@@ -13,9 +13,36 @@ function Cell({ cell, divider = false }: { cell: DiffCell | null; divider?: bool
   )
 }
 
-export function DiffView({ rows }: { rows: DiffRow[] }) {
+/** Phones: one column, old and new line numbers, long lines wrap instead of being cut off. */
+function UnifiedDiff({ rows }: { rows: DiffRow[] }) {
   return (
-    <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 overflow-auto bg-inset py-2 font-mono text-[13px] leading-5" data-testid="diff">
+    <div className="min-h-0 flex-1 overflow-auto bg-inset py-2 font-mono text-[13px] leading-5" data-testid="diff" data-layout="unified">
+      {unifiedLines(rows).map((l, i) =>
+        l.kind === 'skip' ? (
+          <div key={i} className="pc-caption py-0.5 pl-[80px] font-sans">
+            ⋯ {l.count} unchanged line{l.count === 1 ? '' : 's'}
+          </div>
+        ) : (
+          <div
+            key={i}
+            className={`grid grid-cols-[32px_32px_14px_minmax(0,1fr)] ${l.kind === 'add' ? 'bg-ok-soft' : l.kind === 'del' ? 'bg-error-soft' : ''}`}
+            data-kind={l.kind}
+          >
+            <span className="pr-1 text-right text-syn-comment">{l.oldLine ?? ''}</span>
+            <span className="pr-1 text-right text-syn-comment">{l.newLine ?? ''}</span>
+            <span className="grid place-items-start justify-center">{l.kind === 'add' ? '+' : l.kind === 'del' ? '−' : ''}</span>
+            <span className="break-all whitespace-pre-wrap text-ink">{l.text}</span>
+          </div>
+        ),
+      )}
+    </div>
+  )
+}
+
+export function DiffView({ rows, layout = 'split' }: { rows: DiffRow[]; layout?: 'split' | 'unified' }) {
+  if (layout === 'unified') return <UnifiedDiff rows={rows} />
+  return (
+    <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 overflow-auto bg-inset py-2 font-mono text-[13px] leading-5" data-testid="diff" data-layout="split">
       {rows.map((r, i) =>
         r.kind === 'skip' ? (
           <div key={i} className="pc-caption col-span-2 py-0.5 pl-[58px] font-sans">

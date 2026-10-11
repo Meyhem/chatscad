@@ -1,4 +1,4 @@
-import { countLineChanges, sideBySide, type DiffRow } from './diff'
+import { countLineChanges, sideBySide, unifiedLines, type DiffRow } from './diff'
 import { bakeMessage, describeParamChanges, formatValue, manualMessage, truncate } from './messages'
 
 const lines = (n: number, prefix = 'l') => Array.from({ length: n }, (_, i) => `${prefix}${i + 1}`).join('\n') + '\n'
@@ -71,5 +71,31 @@ describe('version messages', () => {
     expect(truncate('  first line\nsecond')).toBe('first line')
     expect(truncate('x'.repeat(130))).toBe(`${'x'.repeat(119)}…`)
     expect(formatValue([1, 2.5])).toBe('[1, 2.5]')
+  })
+})
+
+describe('unifiedLines', () => {
+  it('lists each changed block as its removals then its additions, with old and new line numbers', () => {
+    const { rows } = sideBySide('a\nb\nc\nd\n', 'a\nB\nC\nd\nE\n')
+    expect(unifiedLines(rows)).toEqual([
+      { kind: 'same', oldLine: 1, newLine: 1, text: 'a' },
+      { kind: 'del', oldLine: 2, newLine: null, text: 'b' },
+      { kind: 'del', oldLine: 3, newLine: null, text: 'c' },
+      { kind: 'add', oldLine: null, newLine: 2, text: 'B' },
+      { kind: 'add', oldLine: null, newLine: 3, text: 'C' },
+      { kind: 'same', oldLine: 4, newLine: 4, text: 'd' },
+      { kind: 'add', oldLine: null, newLine: 5, text: 'E' },
+    ])
+  })
+
+  it('keeps the skipped stretches', () => {
+    const old = Array.from({ length: 20 }, (_, i) => `l${i}`).join('\n')
+    const { rows } = sideBySide(old, old.replace('l10', 'X'))
+    const lines = unifiedLines(rows)
+    expect(lines.filter((l) => l.kind === 'skip')).toEqual([
+      { kind: 'skip', count: 7 },
+      { kind: 'skip', count: 6 },
+    ])
+    expect(lines.filter((l) => l.kind === 'del' || l.kind === 'add').map((l) => l.kind === 'skip' ? '' : l.text)).toEqual(['l10', 'X'])
   })
 })
