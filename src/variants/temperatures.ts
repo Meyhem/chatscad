@@ -16,3 +16,15 @@ export function withTemperature(provider: LlmProvider, temperature: number | und
     streamChat: (req, signal) => provider.streamChat({ ...req, temperature: req.temperature ?? temperature }, signal),
   }
 }
+
+/** Per-variant steer (design doc amendment): adapters that ignore temperature (Anthropic) still get three distinct designs. */
+export const VARIANT_INSTRUCTIONS = [
+  '',
+  'Take a different approach from the most obvious design.',
+  'Make the simplest design that prints well without supports.',
+] as const
+
+export function variantPrompt(userText: string, index: number): string {
+  const steer = VARIANT_INSTRUCTIONS[index] ?? ''
+  return steer ? `${userText}\n\n${steer}` : userText
+}

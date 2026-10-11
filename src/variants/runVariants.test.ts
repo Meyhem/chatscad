@@ -142,3 +142,13 @@ it('numbers renders in the order they entered the queue', async () => {
   )
   expect(seqs).toEqual([1, 2, 3])
 })
+
+it('asks B and C for a different approach and the simplest printable design, so variants differ even where temperature is ignored', async () => {
+  const h = harness([async () => {}, async () => {}, async () => {}])
+  await runVariants(request, h.slots, { signal: new AbortController().signal, onSlot: h.onSlot }, h.deps)
+  const asked = h.turns.mock.calls.map(([o]) => o.userText as string)
+  expect(asked[0]).toBe('A hook for a 30 mm broom handle')
+  expect(asked[1]).toMatch(/^A hook for a 30 mm broom handle\n\n.*different approach/)
+  expect(asked[2]).toMatch(/^A hook for a 30 mm broom handle\n\n.*simplest/)
+  expect(new Set(asked).size).toBe(3)
+})

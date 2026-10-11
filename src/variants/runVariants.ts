@@ -3,7 +3,7 @@ import { describeProviderError } from '../ai/errors'
 import type { runTurn } from '../ai/runTurn'
 import type { UsageRecord } from '../db/db'
 import type { RenderQueue } from '../render/queue'
-import { withTemperature } from './temperatures'
+import { variantPrompt, withTemperature } from './temperatures'
 import type { SlotStatus, SlotUsage, VariantRequest, VariantSlot } from './types'
 
 export interface RunVariantsDeps {
@@ -36,7 +36,7 @@ export async function runVariants(
           provider: withTemperature(req.provider, slot.temperature),
           model: slot.model,
           history: req.history,
-          userText: req.userText,
+          userText: variantPrompt(req.userText, i),
           ctx: req.ctx,
           maxFixAttempts: req.maxFixAttempts,
           signal: opts.signal,
