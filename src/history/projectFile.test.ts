@@ -130,3 +130,39 @@ it('opens a share link saved as .json from the same import', async () => {
   expect(useProjectStore.getState().project?.name).toBe('Shared hook')
   expect(useProjectStore.getState().head?.code).toBe('cube(4);')
 })
+
+it('exports and imports the reasoning, and imports files that predate it', async () => {
+  const project = await store().newProject({ name: 'R', code: 'cube(1);', origin: 'blank' })
+  await putMessage({
+    id: 'r1', projectId: project.id, versionId: null, role: 'assistant', content: 'Done.', imageBlobIds: [], audioTranscript: null,
+    model: 'm', usageId: null, createdAt: 1, reasoning: '<b>Wall</b> is 1.6 mm.', reasoningMs: 7_500, reasoningTokens: 12,
+  })
+  const file = await exportProject(project.id)
+  expect(file.messages[0]).toMatchObject({ reasoning: '<b>Wall</b> is 1.6 mm.', reasoningMs: 7_500, reasoningTokens: 12 })
+
+  const result = await importFromText(JSON.stringify(file))
+  if (!result.ok) throw new Error(result.error)
+  const imported = await db.messages.where('projectId').equals(result.projects[0]!.id).toArray()
+  expect(imported[0]).toMatchObject({ reasoning: '<b>Wall</b> is 1.6 mm.', reasoningMs: 7_500, reasoningTokens: 12 })
+
+  const legacy = JSON.parse(JSON.stringify(file)) as ProjectFile
+  for (const m of legacy.messages as unknown as Array<Record<string, unknown>>) {
+    delete m.reasoning
+    delete m.reasoningMs
+    delete m.reasoningTokens
+  }
+  const parsed = parseImport(legacy)
+  expect(parsed.ok).toBe(true)
+  if (parsed.ok) expect(parsed.files[0]!.messages[0]).toMatchObject({ reasoning: null, reasoningMs: null, reasoningTokens: null })
+})
+
+it('rejects a reasoning that is not text', async () => {
+  const project = await store().newProject({ name: 'R', code: 'cube(1);', origin: 'blank' })
+  await putMessage({
+    id: 'r2', projectId: project.id, versionId: null, role: 'assistant', content: 'Done.', imageBlobIds: [], audioTranscript: null,
+    model: 'm', usageId: null, createdAt: 1,
+  })
+  const file = JSON.parse(JSON.stringify(await exportProject(project.id))) as ProjectFile
+  ;(file.messages[0] as unknown as Record<string, unknown>).reasoning = 42
+  expect(parseImport(file).ok).toBe(false)
+})

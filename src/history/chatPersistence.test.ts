@@ -114,3 +114,31 @@ it('stores and restores the transcript of a dictated message', async () => {
   expect(toStored(msg({}), { projectId: 'p', versionId: null, usageId: null, createdAt: 1 }).audioTranscript).toBeNull()
   expect(fromStored({ ...row, audioTranscript: null }, undefined, undefined)).not.toHaveProperty('audioTranscript')
 })
+
+it('stores and restores the reasoning, and loads rows saved before reasoning existed', async () => {
+  const { toStored, fromStored } = await import('./chatPersistence')
+  const meta = { projectId: 'p', versionId: null, usageId: null, createdAt: 1 }
+  const row = toStored(
+    msg({ role: 'assistant', text: 'Done.', reasoning: 'Wall is 1.6 mm.', reasoningMs: 7_500, reasoningTokens: 12, reasoningStartedAt: 99 }),
+    meta,
+  )
+  expect(row).toMatchObject({ reasoning: 'Wall is 1.6 mm.', reasoningMs: 7_500, reasoningTokens: 12 })
+  expect(row).not.toHaveProperty('reasoningStartedAt')
+  expect(fromStored(row, undefined, undefined)).toMatchObject({ reasoning: 'Wall is 1.6 mm.', reasoningMs: 7_500, reasoningTokens: 12 })
+  expect(toStored(msg({}), meta)).toMatchObject({ reasoning: null, reasoningMs: null, reasoningTokens: null })
+  const old = { ...row }
+  delete old.reasoning
+  delete old.reasoningMs
+  delete old.reasoningTokens
+  const restored = fromStored(old, undefined, undefined)
+  expect(restored).not.toHaveProperty('reasoning')
+  expect(restored).not.toHaveProperty('reasoningMs')
+})
+
+it('saves the partial reasoning of a stopped reply', async () => {
+  const id = crypto.randomUUID()
+  useChatStore.setState({ messages: [msg({ id, role: 'assistant', text: '', status: 'streaming', reasoning: 'Half' })] })
+  useChatStore.getState().patchMessage(id, { status: 'done', text: 'Stopped before the reply finished.' })
+  await chat.settled()
+  expect(await db.messages.get(id)).toMatchObject({ reasoning: 'Half' })
+})

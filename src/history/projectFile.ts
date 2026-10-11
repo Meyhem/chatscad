@@ -167,6 +167,9 @@ function parseProject(v: unknown, at: string): ProjectFile {
       role: oneOf(x, 'role', path, ROLES),
       content: str(x, 'content', path, 200_000),
       audioTranscript: strOrNull(x, 'audioTranscript', path, 20_000),
+      reasoning: x.reasoning === undefined ? null : strOrNull(x, 'reasoning', path, 400_000),
+      reasoningMs: x.reasoningMs === undefined || x.reasoningMs === null ? null : num(x, 'reasoningMs', path),
+      reasoningTokens: x.reasoningTokens === undefined || x.reasoningTokens === null ? null : num(x, 'reasoningTokens', path),
       model: strOrNull(x, 'model', path, 200),
       createdAt: num(x, 'createdAt', path),
     }
@@ -221,6 +224,7 @@ export async function exportProject(projectId: string): Promise<ProjectFile> {
     })),
     messages: messages.map((m) => ({
       id: m.id, versionId: m.versionId, role: m.role, content: m.content, audioTranscript: m.audioTranscript, model: m.model, createdAt: m.createdAt,
+      reasoning: m.reasoning ?? null, reasoningMs: m.reasoningMs ?? null, reasoningTokens: m.reasoningTokens ?? null,
     })),
     presets: presets.map((p) => ({ id: p.id, name: p.name, params: p.params })),
   }

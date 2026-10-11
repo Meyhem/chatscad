@@ -113,6 +113,9 @@ export interface StoredMessage {
   model: string | null
   usageId: string | null
   createdAt: number
+  reasoning?: string | null // the model's reasoning; absent on rows saved before it was kept
+  reasoningMs?: number | null
+  reasoningTokens?: number | null
 }
 
 export interface Preset { id: string; projectId: string; name: string; params: Record<string, ParamValue> }

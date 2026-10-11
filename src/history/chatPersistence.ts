@@ -23,6 +23,9 @@ export function toStored(
     content: m.text,
     imageBlobIds: m.imageBlobIds ?? [],
     audioTranscript: m.audioTranscript ?? null,
+    reasoning: m.reasoning ?? null,
+    reasoningMs: m.reasoningMs ?? null,
+    reasoningTokens: m.reasoningTokens ?? null,
     model: m.model,
     usageId: meta.usageId,
     createdAt: meta.createdAt,
@@ -42,6 +45,9 @@ export function fromStored(m: StoredMessage, version: Version | undefined, usage
     ...(version && version.compileStatus !== 'pending' ? { compileStatus: version.compileStatus } : {}),
     ...(m.imageBlobIds.length > 0 ? { imageBlobIds: m.imageBlobIds } : {}),
     ...(m.audioTranscript !== null ? { audioTranscript: m.audioTranscript } : {}),
+    ...(m.reasoning ? { reasoning: m.reasoning } : {}),
+    ...(typeof m.reasoningMs === 'number' ? { reasoningMs: m.reasoningMs } : {}),
+    ...(typeof m.reasoningTokens === 'number' ? { reasoningTokens: m.reasoningTokens } : {}),
   }
 }
 
