@@ -122,3 +122,11 @@ it('names export files after the project', () => {
   expect(projectFileName('Box with lid')).toBe('box-with-lid.promptcad.json')
   expect(projectFileName('  ***  ')).toBe('project.promptcad.json')
 })
+
+it('opens a share link saved as .json from the same import', async () => {
+  const { useProjectStore } = await import('./projectStore')
+  const result = await importFromText(JSON.stringify({ v: 1, name: 'Shared hook', code: 'cube(4);', params: {} }))
+  expect(result.ok).toBe(true)
+  expect(useProjectStore.getState().project?.name).toBe('Shared hook')
+  expect(useProjectStore.getState().head?.code).toBe('cube(4);')
+})

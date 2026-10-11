@@ -1,4 +1,5 @@
 import { getProject, listRecentProjects } from '../db/projects'
+import { openSharedOrLast } from '../share/importShared'
 import { installUsageHook } from '../db/usageLinks'
 import { startChatPersistence } from '../history/chatPersistence'
 import { onBeforeLeaveHead, useProjectStore } from '../history/projectStore'
@@ -30,12 +31,16 @@ export async function startApp(deps: { capture?(): Promise<Blob | null> } = {}):
     if (s.project && s.project.id !== prev.project?.id) void chat.load(s.project.id)
   })
 
-  const store = useProjectStore.getState()
-  const { lastProjectId } = useSettingsStore.getState().settings
-  const last = lastProjectId ? await getProject(lastProjectId) : undefined
-  const fallback = last ?? (await listRecentProjects(1))[0]
-  if (fallback) await store.openProject(fallback.id)
-  else await store.newProject({ code: useAppStore.getState().code, origin: 'blank' })
+  const restoreLastProject = async () => {
+    const store = useProjectStore.getState()
+    const { lastProjectId } = useSettingsStore.getState().settings
+    const last = lastProjectId ? await getProject(lastProjectId) : undefined
+    const fallback = last ?? (await listRecentProjects(1))[0]
+    if (fallback) await store.openProject(fallback.id)
+    else await store.newProject({ code: useAppStore.getState().code, origin: 'blank' })
+  }
+  // A #s= link opens as a new project instead of the last one.
+  await openSharedOrLast(restoreLastProject)
 
   return {
     stop() {

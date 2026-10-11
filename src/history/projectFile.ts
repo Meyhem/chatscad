@@ -1,4 +1,7 @@
 import { db, type Preset, type Project, type StoredMessage, type Version, type VersionSource } from '../db/db'
+import { useProjectStore } from './projectStore'
+import { importSharedPayload } from '../share/importShared'
+import { parseSharePayload } from '../share/link'
 import { listMessages } from '../db/messages'
 import { listPresets } from '../db/presets'
 import { getProject, listAllProjects } from '../db/projects'
@@ -274,6 +277,13 @@ export async function importFromText(text: string): Promise<{ ok: true; projects
     data = JSON.parse(text)
   } catch {
     return { ok: false, error: 'The file is not valid JSON' }
+  }
+  // A share link saved as .json ("Save .json instead") opens from the same import.
+  const shared = parseSharePayload(data)
+  if (shared.ok) {
+    await importSharedPayload(shared.payload)
+    const opened = useProjectStore.getState().project
+    return { ok: true, projects: opened ? [opened] : [] }
   }
   const parsed = parseImport(data)
   if (!parsed.ok) return parsed
