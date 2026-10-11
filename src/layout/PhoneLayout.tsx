@@ -71,7 +71,7 @@ export function PhoneLayout({ header, chat, code, keyRow, viewer, params, overla
           {params && <ParamSheet>{params}</ParamSheet>}
         </section>
       </div>
-      <nav role="tablist" aria-label="Views" className="pc-tabbar box-content shrink-0 pb-[env(safe-area-inset-bottom)]" onKeyDown={onKeyDown}>
+      <nav role="tablist" aria-label="Panels" className="pc-tabbar box-content shrink-0 pb-[env(safe-area-inset-bottom)]" onKeyDown={onKeyDown}>
         {TABS.map((t, i) => (
           <button
             key={t.id}

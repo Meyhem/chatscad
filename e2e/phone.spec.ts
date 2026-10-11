@@ -4,7 +4,7 @@ import { waitForFirstRender } from './support'
 test('switches between Chat, Code and 3D, with the symbol key row in Code', async ({ page }) => {
   await page.goto('./')
   await waitForFirstRender(page)
-  const tabs = page.getByRole('tablist', { name: 'Views' })
+  const tabs = page.getByRole('tablist', { name: 'Panels' })
   await expect(tabs).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Prompt' })).toBeVisible()
 
@@ -23,5 +23,12 @@ test('switches between Chat, Code and 3D, with the symbol key row in Code', asyn
   await expect(page.locator('.cm-line').last()).toHaveText(';')
 
   await tabs.getByRole('tab', { name: 'Chat' }).click()
+  await expect(page.getByRole('textbox', { name: 'Prompt' })).toBeVisible()
+
+  const views = page.getByRole('tablist', { name: 'Views' })
+  await views.getByRole('tab', { name: 'Settings' }).click()
+  await expect(page.getByRole('navigation', { name: 'Settings sections' })).toBeVisible()
+  await expect(tabs).toHaveCount(0)
+  await views.getByRole('tab', { name: 'Project' }).click()
   await expect(page.getByRole('textbox', { name: 'Prompt' })).toBeVisible()
 })

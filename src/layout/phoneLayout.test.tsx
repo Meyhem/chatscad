@@ -61,7 +61,7 @@ function layout() {
 
 it('shows Chat first with the 3D view paused', () => {
   layout()
-  const tabs = screen.getByRole('tablist', { name: 'Views' })
+  const tabs = screen.getByRole('tablist', { name: 'Panels' })
   expect(tabs).toHaveClass('pc-tabbar')
   expect(screen.getByRole('tab', { name: 'Chat' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.getByRole('textbox', { name: 'Prompt' })).toBeVisible()

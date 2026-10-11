@@ -242,31 +242,36 @@ it('opens the export dialog on the Link tab from Share', async () => {
   expect(within(dialog).getByRole('tab', { name: 'Link' })).toHaveAttribute('aria-selected', 'true')
 })
 
-it('uses the Chat / Code / 3D tab layout on a phone', () => {
+function mockPhone() {
   window.matchMedia = vi.fn((query: string) => ({
     matches: query === '(max-width: 767.98px)',
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
   })) as unknown as typeof window.matchMedia
+}
+
+it('uses the Chat / Code / 3D panels under the Project, History and Settings tabs on a phone', () => {
+  mockPhone()
   render(<App createWorker={scriptedWorker(() => okResult())} />)
   expect(screen.getByRole('tablist', { name: 'Views' })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument()
+  expect(screen.getByRole('tablist', { name: 'Panels' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Export STL' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull()
   // The key row sits in the Code tab, which is hidden while Chat is shown.
   expect(screen.getByRole('toolbar', { name: 'Code symbols', hidden: true })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument()
 })
 
-it('shows the settings page on a phone too, so a provider can be added', () => {
-  window.matchMedia = vi.fn((query: string) => ({
-    matches: query === '(max-width: 767.98px)',
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  })) as unknown as typeof window.matchMedia
+it('shows the settings tab on a phone too, so a provider can be added', async () => {
+  mockPhone()
   render(<App createWorker={scriptedWorker(() => okResult())} />)
-  act(() => useAppStore.getState().setView('settings'))
+  await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
   expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.queryByRole('tablist', { name: 'Panels' })).toBeNull()
+  await userEvent.click(screen.getByRole('tab', { name: 'Project' }))
+  expect(screen.getByRole('tablist', { name: 'Panels' })).toBeInTheDocument()
 })
 
 it('highlights the picked part in the editor and clears it when the code changes', async () => {

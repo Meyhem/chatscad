@@ -24,7 +24,7 @@ import { usePrefs } from './settings/prefsStore'
 import { useSettingsStore } from './settings/settingsStore'
 import { selectCanExport, selectDisplayMesh, selectShowingPreview, useAppStore } from './state/store'
 import { DimsReadout } from './ui/DimsReadout'
-import { IconDownload, IconSettings } from './ui/icons'
+import { IconDownload, IconShare } from './ui/icons'
 import { StatusPill } from './ui/StatusPill'
 import { VariantProgressPill } from './variants/VariantProgressPill'
 import { Viewer } from './viewer/Viewer'
@@ -57,7 +57,6 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
   useEffect(() => onLoadProgress(useAppStore.getState().setLoadProgress), [])
   const loadProgress = useAppStore((s) => s.loadProgress)
   const view = useAppStore((s) => s.view)
-  const setView = useAppStore((s) => s.setView)
   const goToLine = useAppStore((s) => s.goToLine)
   const status = useAppStore((s) => s.status)
   const mesh = useAppStore((s) => s.mesh)
@@ -74,23 +73,41 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
   const bounds = mesh?.bounds ?? null
   const stale = status === 'error' && mesh !== null
 
-  // Phones get the Chat / Code / 3D tabs for the workbench; settings and history keep their full pages.
-  if (isPhone && view === 'workbench') {
+  // Phones put the Project / History / Settings tabs under the header; the Project tab adds the Chat / Code / 3D panels.
+  const phoneHeader = isPhone && (
+    <>
+      <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-line bg-panel pr-2 pl-4">
+        <ProjectMenu />
+        <span className="flex-1" />
+        <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
+        <button type="button" className="pc-btn is-icon is-ghost" aria-label="Share" onClick={() => useExportStore.getState().openAt('link')}>
+          <IconShare className="pc-i" aria-hidden="true" />
+        </button>
+        <button type="button" className="pc-btn is-icon is-ghost" aria-label="Export STL" onClick={() => useExportStore.getState().openAt('model')}>
+          <IconDownload className="pc-i" aria-hidden="true" />
+        </button>
+      </header>
+      <div className="shrink-0 border-b border-line bg-panel px-3 py-2">
+        <ViewTabs fill />
+      </div>
+    </>
+  )
+
+  if (isPhone && view !== 'workbench') {
+    return (
+      <div className="pc-root flex h-full flex-col bg-bg text-ink">
+        {phoneHeader}
+        {view === 'settings' ? <SettingsPage /> : <HistoryView createWorker={createWorker} />}
+        <ComposerBridge />
+        <GlobalOverlays />
+      </div>
+    )
+  }
+
+  if (isPhone) {
     return (
       <PhoneLayout
-        header={
-          <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-line bg-panel pr-2 pl-4">
-            <ProjectMenu />
-            <span className="flex-1" />
-            <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
-            <button type="button" className="pc-btn is-icon is-ghost" aria-label="Settings" title="Settings" onClick={() => setView('settings')}>
-              <IconSettings className="pc-i" aria-hidden="true" />
-            </button>
-            <button type="button" className="pc-btn is-icon is-ghost" aria-label="Export" onClick={() => useExportStore.getState().openAt('model')}>
-              <IconDownload className="pc-i" aria-hidden="true" />
-            </button>
-          </header>
-        }
+        header={phoneHeader}
         chat={<ChatPanel />}
         code={<CodePane />}
         keyRow={<KeyRow onInsert={insertText} />}
