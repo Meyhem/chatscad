@@ -4,7 +4,7 @@ import { EditorView } from '@codemirror/view'
 import { basicSetup } from 'codemirror'
 import { useEffect, useRef } from 'react'
 import type { Diagnostic } from '../render/types'
-import type { RevealRequest } from '../state/store'
+import type { InsertRequest, RevealRequest } from '../state/store'
 import { calloutHeadline, diagnosticsByLine, diagnosticsExtension, setAppDiagnostics } from './diagnosticsExtension'
 import { openscad } from './openscadLanguage'
 import { tokenTheme } from './theme'
@@ -25,9 +25,11 @@ interface Props {
   diagnostics: Diagnostic[]
   reveal?: RevealRequest | null
   onBlur?(): void
+  /** From the phone key row; each new id inserts once at the cursor. */
+  insert?: InsertRequest | null
 }
 
-export function CodeEditor({ value, onChange, diagnostics, reveal = null, onBlur }: Props) {
+export function CodeEditor({ value, onChange, diagnostics, reveal = null, onBlur, insert = null }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
@@ -92,6 +94,16 @@ export function CodeEditor({ value, onChange, diagnostics, reveal = null, onBlur
     view.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: 'center' }) })
     view.focus()
   }, [reveal])
+
+  // Keyed on the id, so re-rendering with an equal request never inserts twice.
+  const insertId = insert?.id
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view || !insert) return
+    view.dispatch({ ...view.state.replaceSelection(insert.text), scrollIntoView: true, userEvent: 'input.type' })
+    view.focus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insertId])
 
   return <div ref={hostRef} className="h-full min-h-0 bg-inset" data-testid="code-editor" />
 }

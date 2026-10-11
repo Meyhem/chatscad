@@ -27,6 +27,7 @@ beforeEach(async () => {
   useExportStore.setState(useExportStore.getInitialState(), true)
 })
 afterEach(() => vi.unstubAllGlobals())
+afterEach(() => Reflect.deleteProperty(window, 'matchMedia'))
 afterEach(() => usePrefs.setState(usePrefs.getInitialState(), true))
 
 function scriptedWorker(respond: (req: RenderRequest) => RenderResult) {
@@ -227,4 +228,31 @@ it('opens the export dialog on the Link tab from Share', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Share' }))
   const dialog = screen.getByRole('dialog', { name: 'Export and share' })
   expect(within(dialog).getByRole('tab', { name: 'Link' })).toHaveAttribute('aria-selected', 'true')
+})
+
+it('uses the Chat / Code / 3D tab layout on a phone', () => {
+  window.matchMedia = vi.fn((query: string) => ({
+    matches: query === '(max-width: 767.98px)',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia
+  render(<App createWorker={scriptedWorker(() => okResult())} />)
+  expect(screen.getByRole('tablist', { name: 'Views' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument()
+  // The key row sits in the Code tab, which is hidden while Chat is shown.
+  expect(screen.getByRole('toolbar', { name: 'Code symbols', hidden: true })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument()
+})
+
+it('shows the settings page on a phone too, so a provider can be added', () => {
+  window.matchMedia = vi.fn((query: string) => ({
+    matches: query === '(max-width: 767.98px)',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia
+  render(<App createWorker={scriptedWorker(() => okResult())} />)
+  act(() => useAppStore.getState().setView('settings'))
+  expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
 })

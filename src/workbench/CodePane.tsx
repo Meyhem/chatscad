@@ -11,6 +11,7 @@ import { problemItems, ProblemsPanel } from './ProblemsPanel'
 
 export function CodePane({ actions }: { actions?: React.ReactNode }) {
   const loadProgress = useAppStore((s) => s.loadProgress)
+  const insert = useAppStore((s) => s.insert)
   const code = useAppStore((s) => s.code)
   const params = useAppStore((s) => s.params)
   const setCode = useAppStore((s) => s.setCode)
@@ -59,7 +60,7 @@ export function CodePane({ actions }: { actions?: React.ReactNode }) {
       </div>
       <div className="relative min-h-0 flex-1">
         <div className={tab === 'code' ? 'h-full' : 'hidden'}>
-          <CodeEditor value={code} onChange={setCode} diagnostics={diagnostics} reveal={reveal} onBlur={flushRecorder} />
+          <CodeEditor value={code} onChange={setCode} diagnostics={diagnostics} reveal={reveal} onBlur={flushRecorder} insert={insert} />
         </div>
         {tab === 'problems' && (
           <ProblemsPanel

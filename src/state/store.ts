@@ -3,6 +3,11 @@ import type { LoadProgress } from '../render/loadProgress'
 import { paramsEqual, type Params } from '../render/params'
 import type { Diagnostic, LogLine, MeshData, ParamValue, RenderResult } from '../render/types'
 
+export interface InsertRequest {
+  text: string
+  id: number
+}
+
 export interface PreviewMesh {
   code: string
   params: Record<string, ParamValue>
@@ -64,6 +69,9 @@ export interface AppState {
   /** The quick `$fn = 12` mesh for the code being rendered; never exported. */
   preview: PreviewMesh | null
   showPreview(preview: PreviewMesh): void
+  /** Text the phone key row asks the editor to insert at the cursor. */
+  insert: InsertRequest | null
+  insertText(text: string): void
   setLibraries(libraries: string[]): void
   setCode(code: string, source?: CodeSource): void // source defaults to 'manual'
   renderStarted(): void
@@ -73,6 +81,7 @@ export interface AppState {
 }
 
 let revealId = 0
+let insertId = 0
 
 export const useAppStore = create<AppState>()((set) => ({
   code: DEFAULT_CODE,
@@ -102,6 +111,8 @@ export const useAppStore = create<AppState>()((set) => ({
   setLoadProgress: (loadProgress) => set({ loadProgress }),
   preview: null,
   showPreview: (preview) => set({ preview }),
+  insert: null,
+  insertText: (text) => set({ insert: { text, id: ++insertId } }),
   setLibraries: (libraries) => set({ libraries }),
   renderStarted: () => set({ status: 'rendering' }),
   renderFinished: (r, code, params = {}) =>

@@ -92,3 +92,15 @@ it('keeps a value it was given out of its own undo history, so undo never brings
   undo(view)
   expect(view.state.doc.toString()).toBe('project B')
 })
+
+it('inserts key-row text at the cursor and keeps focus in the editor', () => {
+  const onChange = vi.fn()
+  const { container, rerender } = render(<CodeEditor value="cube(1)" onChange={onChange} diagnostics={[]} />)
+  const view = EditorView.findFromDOM(container.querySelector('.cm-editor') as HTMLElement)!
+  view.dispatch({ selection: { anchor: 7 } })
+  rerender(<CodeEditor value="cube(1)" onChange={onChange} diagnostics={[]} insert={{ text: ';', id: 1 }} />)
+  expect(onChange).toHaveBeenLastCalledWith('cube(1);')
+  expect(document.activeElement).toBe(view.contentDOM)
+  rerender(<CodeEditor value="cube(1)" onChange={onChange} diagnostics={[]} insert={{ text: ';', id: 1 }} />)
+  expect(view.state.doc.toString()).toBe('cube(1);')
+})

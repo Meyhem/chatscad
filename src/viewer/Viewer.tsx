@@ -93,6 +93,15 @@ function PoseReporter() {
   return null
 }
 
+/** Redraws once when the hidden 3D tab is shown again. */
+function ResumeOnShow({ paused }: { paused: boolean }) {
+  const invalidate = useThree((s) => s.invalidate)
+  useEffect(() => {
+    if (!paused) invalidate()
+  }, [paused, invalidate])
+  return null
+}
+
 /** Lets captureThumbnail() render this scene on demand and read the canvas in the same task. */
 function ThumbnailRegistrar() {
   const gl = useThree((s) => s.gl)
@@ -114,12 +123,14 @@ export function Viewer({
   thumbnails = false,
   staleLabel = null,
   previewing = false,
+  paused = false,
 }: {
   mesh: MeshData | null
   stale: boolean
   thumbnails?: boolean
   staleLabel?: string | null
   previewing?: boolean
+  paused?: boolean
 }) {
   const t = useTokens(TOKENS)
   const [fitToken, setFitToken] = useState(0)
@@ -127,7 +138,7 @@ export function Viewer({
 
   return (
     <div className="relative h-full w-full bg-viewport" data-testid="viewer">
-      <Canvas frameloop="demand" dpr={[1, 2]} camera={{ fov: 45, near: 0.1, far: 10_000, position: [60, -80, 60] }}>
+      <Canvas frameloop={paused ? 'never' : 'demand'} dpr={[1, 2]} camera={{ fov: 45, near: 0.1, far: 10_000, position: [60, -80, 60] }}>
         <color attach="background" args={[t.viewport]} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[50, -80, 100]} intensity={1.4} />
@@ -150,6 +161,7 @@ export function Viewer({
         <CameraFitter bounds={mesh?.bounds ?? null} fitToken={fitToken} />
         <PoseReporter />
         {thumbnails && <ThumbnailRegistrar />}
+        <ResumeOnShow paused={paused} />
       </Canvas>
 
       <div className="absolute top-3 left-3">
@@ -173,7 +185,7 @@ export function Viewer({
           type="button"
           aria-label="Fit view"
           title="Fit view"
-          className="grid size-(--control-sm) place-items-center rounded-sm border border-line bg-panel text-ink-muted hover:text-ink disabled:text-ink-disabled"
+          className="grid size-(--control-sm) place-items-center rounded-sm border border-line bg-panel text-ink-muted hover:text-ink disabled:text-ink-disabled pointer-coarse:size-(--touch-target)"
           onClick={() => setFitToken((n) => n + 1)}
           disabled={!mesh}
         >

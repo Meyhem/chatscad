@@ -40,3 +40,11 @@ it('never makes the quick preview exportable or visible to awaitRender', () => {
   expect(useAppStore.getState().lastRender).toBeNull()
   expect(useAppStore.getState().renderedCode).toBe('cube(0);')
 })
+
+it('queues key-row insertions with fresh ids', () => {
+  useAppStore.getState().insertText(';')
+  const first = useAppStore.getState().insert
+  useAppStore.getState().insertText(';')
+  expect(first?.text).toBe(';')
+  expect(useAppStore.getState().insert?.id).not.toBe(first?.id)
+})

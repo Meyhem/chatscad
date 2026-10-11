@@ -3,12 +3,15 @@ import { GlobalOverlays } from './app/GlobalOverlays'
 import { ChatPanel } from './chat/ChatPanel'
 import { ComposerBridge } from './chat/promptRequest'
 import { CustomizerDock } from './customizer/CustomizerDock'
+import { KeyRow } from './editor/KeyRow'
 import { ExportButtons, exportDisabledReason } from './export/ExportButtons'
 import { useExportStore } from './export/exportStore'
 import { exportStl } from './export/saveFile'
 import { GalleryView } from './gallery/GalleryView'
 import { HistoryView } from './history/HistoryView'
 import { useRenderedVersionLabel } from './history/renderedVersion'
+import { PhoneLayout } from './layout/PhoneLayout'
+import { useIsPhone } from './layout/useIsPhone'
 import { createRenderWorker, type WorkerFactory } from './render/createRenderWorker'
 import { onLoadProgress } from './render/loadProgress'
 import { withPreviewPass } from './render/previewPass'
@@ -19,7 +22,7 @@ import { usePrefs } from './settings/prefsStore'
 import { useSettingsStore } from './settings/settingsStore'
 import { selectCanExport, selectDisplayMesh, selectShowingPreview, useAppStore } from './state/store'
 import { DimsReadout } from './ui/DimsReadout'
-import { IconSettings } from './ui/icons'
+import { IconDownload, IconSettings } from './ui/icons'
 import { StatusPill } from './ui/StatusPill'
 import { VariantProgressPill } from './variants/VariantProgressPill'
 import { Viewer } from './viewer/Viewer'
@@ -59,11 +62,45 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
   const renderMs = useAppStore((s) => s.renderMs)
   const canExportStl = useAppStore(selectCanExport)
   const staleLabel = useRenderedVersionLabel()
+  const isPhone = useIsPhone()
+  const insertText = useAppStore((s) => s.insertText)
 
   if (view === 'gallery') return <GalleryView />
 
   const bounds = mesh?.bounds ?? null
   const stale = status === 'error' && mesh !== null
+
+  // Phones get the Chat / Code / 3D tabs for the workbench; settings and history keep their full pages.
+  if (isPhone && view === 'workbench') {
+    return (
+      <PhoneLayout
+        header={
+          <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-line bg-panel pr-2 pl-4">
+            <ProjectMenu />
+            <span className="flex-1" />
+            <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
+            <button type="button" className="pc-btn is-icon is-ghost" aria-label="Settings" title="Settings" onClick={() => setView('settings')}>
+              <IconSettings className="pc-i" aria-hidden="true" />
+            </button>
+            <button type="button" className="pc-btn is-icon is-ghost" aria-label="Export" onClick={() => useExportStore.getState().openAt('model')}>
+              <IconDownload className="pc-i" aria-hidden="true" />
+            </button>
+          </header>
+        }
+        chat={<ChatPanel />}
+        code={<CodePane />}
+        keyRow={<KeyRow onInsert={insertText} />}
+        viewer={(paused) => <Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} paused={paused} />}
+        params={<CustomizerDock />}
+        overlays={
+          <>
+            <ComposerBridge />
+            <GlobalOverlays />
+          </>
+        }
+      />
+    )
+  }
 
   return (
     <div className="pc-root flex h-full flex-col bg-bg text-ink">
