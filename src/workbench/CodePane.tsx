@@ -10,6 +10,7 @@ import { useAppStore } from '../state/store'
 import { problemItems, ProblemsPanel } from './ProblemsPanel'
 
 export function CodePane({ actions }: { actions?: React.ReactNode }) {
+  const loadProgress = useAppStore((s) => s.loadProgress)
   const code = useAppStore((s) => s.code)
   const params = useAppStore((s) => s.params)
   const setCode = useAppStore((s) => s.setCode)
@@ -71,7 +72,7 @@ export function CodePane({ actions }: { actions?: React.ReactNode }) {
         )}
       </div>
       <div className="h-44 shrink-0 border-t border-line">
-        <ConsolePanel status={status} logs={logs} error={error} renderMs={renderMs} onGoToLine={goToLine} engineLabel={engineLabel(engine)} />
+        <ConsolePanel status={status} logs={logs} error={error} renderMs={renderMs} onGoToLine={goToLine} engineLabel={engineLabel(engine)} loadProgress={loadProgress} />
       </div>
     </section>
   )

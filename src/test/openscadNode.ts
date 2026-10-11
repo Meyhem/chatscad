@@ -4,13 +4,14 @@ import type { OpenSCADFactory, OpenSCADFactoryOptions, OpenSCADInstance } from '
 
 const PUBLIC = new URL('../../public/', import.meta.url)
 
-type RealFactory = (opts: OpenSCADFactoryOptions & { wasmBinary: Uint8Array }) => Promise<OpenSCADInstance>
+type RealFactory = (opts: OpenSCADFactoryOptions) => Promise<OpenSCADInstance>
 
 /** The pinned OpenSCAD WASM from public/openscad/, run in Node. The web build runs there when it is handed the binary. */
 export async function nodeOpenSCADFactory(): Promise<OpenSCADFactory> {
-  let wasmBinary: Uint8Array
+  let wasmBinary: ArrayBuffer
   try {
-    wasmBinary = await readFile(new URL('openscad/openscad.wasm', PUBLIC))
+    const bytes = await readFile(new URL('openscad/openscad.wasm', PUBLIC))
+    wasmBinary = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
   } catch {
     throw new Error('public/openscad/openscad.wasm is missing; run `npm run fetch:openscad`')
   }

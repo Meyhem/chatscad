@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { LogLine } from '../render/types'
-import { ConsolePanel } from './ConsolePanel'
+import { ConsolePanel, summaryLine } from './ConsolePanel'
 
 const out = (text: string): LogLine => ({ stream: 'stdout', text })
 const err = (text: string): LogLine => ({ stream: 'stderr', text })
@@ -84,4 +84,16 @@ it('names the engine in the console head', () => {
   expect(screen.getByText('OpenSCAD · manifold')).toBeInTheDocument()
   rerender(<ConsolePanel status="ok" renderMs={1} error={null} logs={[]} engineLabel="OpenSCAD 2026.10.08 · manifold" />)
   expect(screen.getByText('OpenSCAD 2026.10.08 · manifold')).toBeInTheDocument()
+})
+
+it('names the download size in the idle line, as the first-run screen does', () => {
+  expect(summaryLine('idle', null, null, [], { loaded: 1_000, total: 11_000_303 })).toEqual({
+    text: 'Downloading OpenSCAD (11.0 MB, cached for offline use after this)…',
+    tone: 'is-muted',
+  })
+  expect(summaryLine('idle', null, null, [], { loaded: 5_200_000, total: null })).toEqual({
+    text: 'Downloading OpenSCAD (5.2 MB so far, cached for offline use after this)…',
+    tone: 'is-muted',
+  })
+  expect(summaryLine('idle', null, null, [])).toEqual({ text: 'Loading OpenSCAD…', tone: 'is-muted' })
 })

@@ -9,6 +9,7 @@ import { GalleryView } from './gallery/GalleryView'
 import { HistoryView } from './history/HistoryView'
 import { useRenderedVersionLabel } from './history/renderedVersion'
 import { createRenderWorker, type WorkerFactory } from './render/createRenderWorker'
+import { onLoadProgress } from './render/loadProgress'
 import { useRenderLoop } from './render/useRenderLoop'
 import { SettingsPage } from './settings/SettingsPage'
 import { useProvidersStore } from './settings/providersStore'
@@ -32,6 +33,8 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
   useEffect(() => {
     void useProvidersStore.getState().load()
   }, [])
+  useEffect(() => onLoadProgress(useAppStore.getState().setLoadProgress), [])
+  const loadProgress = useAppStore((s) => s.loadProgress)
   const view = useAppStore((s) => s.view)
   const setView = useAppStore((s) => s.setView)
   const goToLine = useAppStore((s) => s.goToLine)
@@ -58,7 +61,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
           <h1 className="text-[15px] font-bold tracking-tight">PromptCAD</h1>
           <span aria-hidden="true" className="h-5 w-px bg-line" />
           <ProjectMenu />
-          <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} />
+          <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
           {bounds && <DimsReadout bounds={bounds} />}
           {stale && <RenderedFromCaption />}
           <span className="flex-1" />

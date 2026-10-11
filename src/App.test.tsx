@@ -11,6 +11,7 @@ import { useAppStore } from './state/store'
 import { resetDb } from './test/db'
 import { errorResult, okResult } from './test/results'
 import { App } from './App'
+import { emitLoadProgress } from './render/loadProgress'
 
 vi.mock('./viewer/Viewer', () => ({
   Viewer: ({ stale }: { stale: boolean }) => <div data-testid="viewer" data-stale={String(stale)} />,
@@ -193,4 +194,10 @@ describe('M3', () => {
     act(() => useAppStore.getState().setView('workbench'))
     expect(screen.getByRole('region', { name: '3D view' })).toBeInTheDocument()
   })
+})
+
+it('shows the OpenSCAD download progress in the pill before the first render', () => {
+  render(<App createWorker={() => ({ render: () => new Promise<RenderResult>(() => {}), terminate: () => {} })} />)
+  act(() => emitLoadProgress({ loaded: 5_200_000, total: 8_400_000 }))
+  expect(screen.getByTestId('render-status')).toHaveTextContent('Loading OpenSCAD 5.2 / 8.4 MB')
 })

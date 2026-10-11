@@ -21,6 +21,8 @@ export interface OpenSCADFactoryOptions {
   print(text: string): void
   printErr(text: string): void
   locateFile?(path: string): string
+  /** Pre-fetched openscad.wasm; Emscripten instantiates it instead of fetching the file itself. */
+  wasmBinary?: ArrayBuffer
 }
 
 export type OpenSCADFactory = (opts: OpenSCADFactoryOptions) => Promise<OpenSCADInstance>

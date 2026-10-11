@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { parseDiagnosticLine } from '../render/diagnostics'
 import type { LogLine } from '../render/types'
+import type { LoadProgress } from '../render/loadProgress'
 import type { RenderStatus } from '../state/store'
+import { formatMegabytes } from '../ui/bytes'
 
 export type LogTone = '' | 'is-muted' | 'is-ok' | 'is-warn' | 'is-error'
 
@@ -18,11 +20,17 @@ export function summaryLine(
   error: string | null,
   renderMs: number | null,
   logs: LogLine[],
+  loadProgress: LoadProgress | null = null,
 ): { text: string; tone: LogTone } | null {
   const ms = `${Math.round(renderMs ?? 0)} ms`
   switch (status) {
-    case 'idle':
-      return { text: 'Loading OpenSCAD…', tone: 'is-muted' }
+    case 'idle': {
+      if (!loadProgress) return { text: 'Loading OpenSCAD…', tone: 'is-muted' }
+      const size = loadProgress.total
+        ? `${formatMegabytes(loadProgress.total)} MB`
+        : `${formatMegabytes(loadProgress.loaded)} MB so far`
+      return { text: `Downloading OpenSCAD (${size}, cached for offline use after this)…`, tone: 'is-muted' }
+    }
     case 'rendering':
       return { text: 'Compiling main.scad…', tone: 'is-muted' }
     case 'ok':
@@ -41,15 +49,16 @@ interface Props {
   renderMs: number | null
   onGoToLine?(line: number): void
   engineLabel?: string
+  loadProgress?: LoadProgress | null
 }
 
-export function ConsolePanel({ status, logs, error, renderMs, onGoToLine, engineLabel = 'OpenSCAD · manifold' }: Props) {
+export function ConsolePanel({ status, logs, error, renderMs, onGoToLine, engineLabel = 'OpenSCAD · manifold', loadProgress }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight
   }, [logs, error, status])
 
-  const summary = summaryLine(status, error, renderMs, logs)
+  const summary = summaryLine(status, error, renderMs, logs, loadProgress ?? null)
 
   return (
     <section className="pc-console flex h-full flex-col rounded-none border-0" aria-label="Console">

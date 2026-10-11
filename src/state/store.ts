@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { LoadProgress } from '../render/loadProgress'
 import { paramsEqual, type Params } from '../render/params'
 import type { Diagnostic, LogLine, MeshData, RenderResult } from '../render/types'
 
@@ -51,6 +52,9 @@ export interface AppState {
   /** The open project's enabled libraries (M3). */
   libraries: string[]
   setParams(params: Params): void
+  /** OpenSCAD WASM download progress, shown while the first render waits for it. */
+  loadProgress: LoadProgress | null
+  setLoadProgress(progress: LoadProgress | null): void
   setLibraries(libraries: string[]): void
   setCode(code: string, source?: CodeSource): void // source defaults to 'manual'
   renderStarted(): void
@@ -85,6 +89,8 @@ export const useAppStore = create<AppState>()((set) => ({
       s.code === code ? s : source === 'ai' || source === 'autofix' ? { code, codeSource: source, params: {} } : { code, codeSource: source },
     ),
   setParams: (params) => set({ params }),
+  loadProgress: null,
+  setLoadProgress: (loadProgress) => set({ loadProgress }),
   setLibraries: (libraries) => set({ libraries }),
   renderStarted: () => set({ status: 'rendering' }),
   renderFinished: (r, code, params = {}) =>

@@ -1,3 +1,4 @@
+import { formatLoadProgress, type LoadProgress } from '../render/loadProgress'
 import type { Diagnostic } from '../render/types'
 import type { RenderStatus } from '../state/store'
 import { IconCheck, IconSpinner, IconWarning, IconX } from './icons'
@@ -24,11 +25,14 @@ export function describeStatus(
   renderMs: number | null,
   error: string | null,
   diagnostics: Diagnostic[],
+  loadProgress: LoadProgress | null = null,
 ): StatusDescription {
   const base = { ms: null, suffix: '', line: null, title: null }
   switch (status) {
     case 'idle':
-      return { ...base, tone: 'busy', label: 'Loading OpenSCAD…' }
+      return loadProgress
+        ? { ...base, tone: 'busy', label: 'Loading OpenSCAD', ms: formatLoadProgress(loadProgress) }
+        : { ...base, tone: 'busy', label: 'Loading OpenSCAD…' }
     case 'rendering':
       return { ...base, tone: 'busy', label: 'Rendering…' }
     case 'ok': {
@@ -58,10 +62,11 @@ interface Props {
   error: string | null
   diagnostics: Diagnostic[]
   onGoToLine?(line: number): void
+  loadProgress?: LoadProgress | null
 }
 
-export function StatusPill({ status, renderMs, error, diagnostics, onGoToLine }: Props) {
-  const d = describeStatus(status, renderMs, error, diagnostics)
+export function StatusPill({ status, renderMs, error, diagnostics, onGoToLine, loadProgress }: Props) {
+  const d = describeStatus(status, renderMs, error, diagnostics, loadProgress ?? null)
   const Icon = ICONS[d.tone]
   const className = `pc-status is-${d.tone}`
   const content = (

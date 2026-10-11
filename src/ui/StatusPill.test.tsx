@@ -57,3 +57,14 @@ it('falls back to "Failed" with the reason as a tooltip', () => {
   expect(pill).toHaveTextContent(/^Failed$/)
   expect(pill).toHaveAttribute('title', 'Render worker crashed: worker died')
 })
+
+it('shows the OpenSCAD download in mono while it loads', () => {
+  render(
+    <StatusPill status="idle" renderMs={null} error={null} diagnostics={[]} loadProgress={{ loaded: 5_200_000, total: 8_400_000 }} />,
+  )
+  const pill = screen.getByTestId('render-status')
+  expect(pill).toHaveTextContent('Loading OpenSCAD 5.2 / 8.4 MB')
+  expect(pill.querySelector('.pc-mono')).toHaveTextContent('5.2 / 8.4 MB')
+  expect(pill).toHaveClass('pc-status', 'is-busy')
+  expect(pill.querySelector('svg.pc-i')).not.toBeNull()
+})

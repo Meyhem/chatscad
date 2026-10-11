@@ -1,4 +1,6 @@
 import * as Comlink from 'comlink'
+import { fetchWithProgress } from './fetchWithProgress'
+import { loadProgressMessage, throttleProgress } from './loadProgress'
 import { libraryUrl, type LibraryBundle, type LibraryName } from './libraries'
 import { runOpenSCAD, type OpenSCADFactory, type OpenSCADFactoryOptions } from './runOpenSCAD'
 import type { RenderRequest, RenderResult } from './types'
@@ -6,13 +8,22 @@ import type { RenderRequest, RenderResult } from './types'
 const BASE = import.meta.env.BASE_URL
 const OPENSCAD_DIR = `${BASE}openscad/`
 
+/** A worker's postMessage takes one argument; the DOM lib types the global as Window's. */
+const post = (message: unknown) => (globalThis as unknown as { postMessage(m: unknown): void }).postMessage(message)
+
 let factoryPromise: Promise<OpenSCADFactory> | null = null
 
 function loadFactory(): Promise<OpenSCADFactory> {
-  factoryPromise ??= import(/* @vite-ignore */ `${OPENSCAD_DIR}openscad.js`)
-    .then((mod: { default: (opts: OpenSCADFactoryOptions) => ReturnType<OpenSCADFactory> }) => {
+  factoryPromise ??= Promise.all([
+    import(/* @vite-ignore */ `${OPENSCAD_DIR}openscad.js`) as Promise<{
+      default: (opts: OpenSCADFactoryOptions) => ReturnType<OpenSCADFactory>
+    }>,
+    // Fetched here rather than by Emscripten so the page can show download progress; reused by every fresh instance.
+    fetchWithProgress(`${OPENSCAD_DIR}openscad.wasm`, throttleProgress((p) => post(loadProgressMessage(p)))),
+  ])
+    .then(([mod, wasmBinary]) => {
       const create = mod.default
-      return (opts: OpenSCADFactoryOptions) => create({ ...opts, locateFile: (path) => OPENSCAD_DIR + path })
+      return (opts: OpenSCADFactoryOptions) => create({ ...opts, locateFile: (path) => OPENSCAD_DIR + path, wasmBinary })
     })
     .catch((e: unknown) => {
       factoryPromise = null
