@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { newProfile } from '../db/profiles'
+import { LOCKED_MESSAGE } from '../security/lock'
 import { createProvider } from './createProvider'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -41,3 +42,12 @@ it.each(['', 'api.openai.com/v1', '/v1', 'ftp://llm.test/v1'])(
     expect(fetch).not.toHaveBeenCalled()
   },
 )
+
+it('fails on use, not on creation, while an encrypted key is locked, and sends nothing', async () => {
+  const fetch = stubFetch({ data: [] })
+  const provider = createProvider(
+    newProfile({ name: 'x', adapter: 'openai-compatible', baseUrl: 'https://llm.test/v1', apiKey: 'ciphertext', keyEncrypted: true }),
+  )
+  await expect(provider.listModels()).rejects.toMatchObject({ kind: 'auth', message: LOCKED_MESSAGE })
+  expect(fetch).not.toHaveBeenCalled()
+})
