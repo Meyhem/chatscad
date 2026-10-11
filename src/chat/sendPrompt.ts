@@ -7,8 +7,10 @@ import type { LlmProvider } from '../ai/types'
 import type { ProviderProfile } from '../db/db'
 import { addUsage } from '../db/usage'
 import { calloutHeadline } from '../editor/diagnosticsExtension'
+import { getVisualCheck, recordVisualCheckUsage } from '../db/visualCheck'
 import { useAttachments } from '../images/attachments'
 import { useRefineStore } from '../refine/refineStore'
+import { maybeVisualCheck, type renderIsoImage } from '../refine/visualCheck'
 import { prepareTurnInput, type TurnInput, type TurnInputDeps } from '../refine/turnInput'
 import { awaitRender } from '../render/awaitRender'
 import { errorMessage } from '../render/result'
@@ -25,6 +27,8 @@ export interface SendDeps {
   audioTranscript?: string | null
   /** M5: how images are stored, encoded and captured; the browser's by default. */
   turnInput?: TurnInputDeps
+  /** M5: the image the visual check sends; one offscreen iso frame by default. */
+  visualCheckImage?: typeof renderIsoImage
 }
 
 let inFlight: AbortController | null = null
@@ -64,6 +68,10 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
     return
   }
   useAttachments.getState().clear()
+  // M5: read the setting once per turn, and create the provider once, for the turn and its visual check.
+  const visualCheck = await getVisualCheck()
+  const provider = (deps.createProvider ?? defaultCreateProvider)(profile)
+  let checked = false
 
   const startCode = useAppStore.getState().code
   const controller = new AbortController()
@@ -130,6 +138,22 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
       }
       case 'rendered':
         store.patchMessage(current, { compileStatus: e.result.ok ? 'ok' : 'error', error: compileErrorCallout(e.result) })
+        if (e.result.ok && !checked) {
+          checked = true
+          void maybeVisualCheck({
+            enabled: visualCheck,
+            vision: profile.capabilities.vision,
+            provider,
+            model,
+            request: userText,
+            mesh: e.result.mesh,
+            price: profile.priceTable[model],
+            signal: controller.signal,
+            renderImage: deps.visualCheckImage,
+            addNote: (n) => useChatStore.getState().addMessage(n),
+            onUsage: (usage) => void recordVisualCheckUsage({ profile, model, usage }).catch(() => {}),
+          })
+        }
         return
       case 'fixing':
         useChatStore.setState({ fixing: { attempt: e.attempt, of: e.of, model } })
@@ -146,7 +170,7 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
 
   try {
     await runTurn({
-      provider: (deps.createProvider ?? defaultCreateProvider)(profile),
+      provider,
       model,
       history: chat.history,
       userText: input.userText,

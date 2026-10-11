@@ -102,3 +102,12 @@ it('shows storage use and persistence, asks to keep data, and exports everything
   fireEvent.click(screen.getByRole('button', { name: 'Export all projects (.json)' }))
   expect(saveBackupFile).toHaveBeenCalled()
 })
+
+it('offers the visual check after the auto-fix attempts, off by default', async () => {
+  render(<RenderingSection />)
+  const toggle = await screen.findByRole('checkbox', { name: /Visual check after each AI change/ })
+  expect(toggle).not.toBeChecked()
+  const fields = screen.getAllByRole('textbox').map((el) => el.id)
+  expect(fields.at(-1)).toBe('autofix')
+  expect(screen.getByLabelText('Auto-fix attempts').compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})

@@ -52,6 +52,8 @@ export interface Settings {
   lowQualityPreview: boolean
   /** Model for `POST {baseUrl}/audio/transcriptions` when dictation falls back to recording. */
   transcriptionModel: string
+  /** M5: after a successful AI render, ask a vision model whether the result matches the request. */
+  visualCheck: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -69,6 +71,7 @@ export const DEFAULT_SETTINGS: Settings = {
   variantCount: 1,
   lowQualityPreview: false,
   transcriptionModel: 'whisper-1',
+  visualCheck: false,
 }
 
 export type VersionSource = 'ai' | 'manual' | 'slider' | 'autofix' | 'restore' | 'gallery' | 'import'

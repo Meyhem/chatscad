@@ -213,3 +213,33 @@ describe('M5: images and the picked part', () => {
     expect(useAttachments.getState().error).toMatch(/image/i)
   })
 })
+
+describe('M5: visual check', () => {
+  const visionProfile = { ...profile, capabilities: { ...profile.capabilities, vision: true } }
+  const checkImage = vi.fn(async () => ({ type: 'image' as const, mediaType: 'image/png' as const, data: 'QUJD' }))
+
+  beforeEach(async () => {
+    const { useAttachments } = await import('../images/attachments')
+    const { useRefineStore } = await import('../refine/refineStore')
+    useAttachments.setState({ items: [], error: null })
+    useRefineStore.setState({ pick: null })
+    useProvidersStore.setState({ profiles: [visionProfile] })
+  })
+
+  it('asks the vision model once after the first good render and shows its answer as a note', async () => {
+    const { setVisualCheck } = await import('../db/visualCheck')
+    await setVisualCheck(true)
+    const { provider, requests } = scriptedProvider({ text: FULL }, { text: 'Yes, it is a block.' })
+    await sendPrompt('A block', { createProvider: () => provider, render: async () => okResult(), visualCheckImage: checkImage })
+    await vi.waitFor(() => expect(chat().messages.at(-1)).toMatchObject({ role: 'note', text: 'Visual check: Yes, it is a block.' }))
+    expect(requests).toHaveLength(2)
+    expect(checkImage).toHaveBeenCalledOnce()
+  })
+
+  it('stays silent while the setting is off', async () => {
+    const { provider, requests } = scriptedProvider({ text: FULL })
+    await sendPrompt('A block', { createProvider: () => provider, render: async () => okResult(), visualCheckImage: checkImage })
+    expect(requests).toHaveLength(1)
+    expect(chat().messages.some((m) => m.text.startsWith('Visual check'))).toBe(false)
+  })
+})
