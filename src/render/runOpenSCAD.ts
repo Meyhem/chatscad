@@ -1,8 +1,10 @@
-import { buildArgs, INPUT_PATH, OUTPUT_PATH } from './args'
+import { buildArgs, INPUT_PATH, OUTPUT_PATH, PREVIEW_OUTPUT_PATH, toPreviewArgs } from './args'
 import { parseDiagnostics } from './diagnostics'
 import { isLibraryName, LIBRARY_NAMES, LIBRARY_ROOT, writeLibraries, type LibraryBundle, type LibraryName } from './libraries'
+import { parseOff } from './off'
 import { errorMessage, failedResult } from './result'
 import { parseStl } from './stl'
+import { prepareTaggedSource } from './taggedPreview'
 import type { LogLine, MeshData, RenderRequest, RenderResult } from './types'
 
 export interface OpenSCADInstance {
@@ -62,10 +64,12 @@ export async function runOpenSCAD(factory: OpenSCADFactory, req: RenderRequest, 
   const startedAt = performance.now()
   const logs: LogLine[] = []
   const fail = (error: string) => failedResult(error, { logs, renderMs: performance.now() - startedAt })
+  const tagged = req.preview?.tagged ? prepareTaggedSource(req.code) : null
 
   let args: string[]
   try {
     args = buildArgs(req.params)
+    if (tagged) args = toPreviewArgs(args)
   } catch (e) {
     return fail(errorMessage(e))
   }
@@ -88,7 +92,7 @@ export async function runOpenSCAD(factory: OpenSCADFactory, req: RenderRequest, 
     return fail(`Failed to load OpenSCAD: ${errorMessage(e)}`)
   }
 
-  instance.FS.writeFile(INPUT_PATH, req.code)
+  instance.FS.writeFile(INPUT_PATH, tagged ? tagged.code : req.code)
   if (bundles.length > 0) {
     writeLibraries(instance.FS, bundles)
     instance.ENV.OPENSCADPATH = LIBRARY_ROOT
@@ -105,19 +109,21 @@ export async function runOpenSCAD(factory: OpenSCADFactory, req: RenderRequest, 
 
   let bytes: Uint8Array
   try {
-    bytes = instance.FS.readFile(OUTPUT_PATH)
+    bytes = instance.FS.readFile(tagged ? PREVIEW_OUTPUT_PATH : OUTPUT_PATH)
   } catch {
     return fail('OpenSCAD produced no output (is the model empty?)')
   }
 
-  const stl = new Uint8Array(bytes).buffer
+  const output = new Uint8Array(bytes).buffer
   let mesh: MeshData
   try {
-    mesh = parseStl(stl)
+    mesh = tagged ? parseOff(output, tagged.maxTag) : parseStl(output)
   } catch (e) {
     return fail(errorMessage(e))
   }
   if (mesh.triangleCount === 0) return fail('Model is empty')
 
+  // A tagged preview never carries an STL: Export STL always uses the untagged render.
+  const stl = tagged ? new ArrayBuffer(0) : output
   return { ok: true, mesh, stl, logs, diagnostics: parseDiagnostics(logs), renderMs: performance.now() - startedAt }
 }

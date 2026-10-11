@@ -25,3 +25,14 @@ export function buildArgs(params: Record<string, ParamValue> = {}): string[] {
   }
   return args
 }
+
+/** M5: the click-to-refine preview is exported as coloured OFF (decision D12, Task 1). */
+export const PREVIEW_OUTPUT_PATH = '/out.off'
+
+export function toPreviewArgs(args: string[]): string[] {
+  return args.map((arg, i) => {
+    if (args[i - 1] === '-o') return PREVIEW_OUTPUT_PATH
+    if (arg.startsWith('--export-format=')) return '--export-format=off'
+    return arg
+  })
+}

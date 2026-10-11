@@ -51,7 +51,9 @@ const api = {
   async render(req: RenderRequest): Promise<RenderResult> {
     const result = await runOpenSCAD(await loadFactory(), req, loadLibrary)
     if (!result.ok) return result
-    return Comlink.transfer(result, [result.mesh.positions.buffer, result.mesh.normals.buffer, result.stl])
+    const transfer: Transferable[] = [result.mesh.positions.buffer, result.mesh.normals.buffer, result.stl]
+    if (result.mesh.faceTags) transfer.push(result.mesh.faceTags.buffer)
+    return Comlink.transfer(result, transfer)
   },
 }
 

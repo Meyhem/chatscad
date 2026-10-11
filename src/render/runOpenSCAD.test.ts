@@ -1,5 +1,5 @@
 import { binaryStl, BOX_TRI } from '../test/stl'
-import { INPUT_PATH, OUTPUT_PATH } from './args'
+import { INPUT_PATH, OUTPUT_PATH, PREVIEW_OUTPUT_PATH, toPreviewArgs } from './args'
 import { runOpenSCAD, type OpenSCADFactory, type OpenSCADFactoryOptions, type OpenSCADInstance } from './runOpenSCAD'
 import type { LibraryBundle } from './libraries'
 
@@ -185,5 +185,57 @@ describe('libraries', () => {
       ok: false,
       error: "Couldn't load the MCAD library: GET /libraries/MCAD.json failed with 404",
     })
+  })
+})
+
+describe('tagged preview', () => {
+  const TWO_PARTS = 'cube(10);\ntranslate([20, 0, 0]) cube(5);\n'
+  const OFF_TWO = ['OFF', '4 2 0', '0 0 0', '10 0 0', '0 10 0', '20 0 0', '3 0 1 2 0 0 1', '3 1 3 2 0 0 2'].join('\n')
+
+  it('renders tagged code to OFF and returns one tag per triangle and no STL', async () => {
+    let seenArgs: string[] = []
+    const { factory, created } = fakeFactory((inst, args) => {
+      seenArgs = args
+      inst.files.set(PREVIEW_OUTPUT_PATH, OFF_TWO)
+      return 0
+    })
+    const result = await runOpenSCAD(factory, { code: TWO_PARTS, params: { w: 5 }, preview: { tagged: true } })
+
+    expect(created[0].files.get(INPUT_PATH)).toBe(
+      'color([0 / 255, 0 / 255, 1 / 255]) cube(10);\ncolor([0 / 255, 0 / 255, 2 / 255]) translate([20, 0, 0]) cube(5);\n',
+    )
+    expect(seenArgs).toEqual(expect.arrayContaining(['-o', PREVIEW_OUTPUT_PATH, '--export-format=off', '--backend=manifold', 'w=5']))
+    expect(seenArgs).not.toContain('--export-format=binstl')
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(Array.from(result.mesh.faceTags ?? [])).toEqual([1, 2])
+    expect(result.stl.byteLength).toBe(0)
+  })
+
+  it('reports unreadable preview output as a failed render', async () => {
+    const { factory } = fakeFactory((inst) => {
+      inst.files.set(PREVIEW_OUTPUT_PATH, 'ply')
+      return 0
+    })
+    expect(await runOpenSCAD(factory, { code: TWO_PARTS, preview: { tagged: true } })).toMatchObject({
+      ok: false,
+      error: 'Unrecognised OFF data',
+    })
+  })
+
+  it('leaves normal renders untouched: untagged code, binary STL, no tags', async () => {
+    const { factory, created } = fakeFactory(writesBox)
+    const result = await runOpenSCAD(factory, { code: TWO_PARTS })
+    expect(created[0].files.get(INPUT_PATH)).toBe(TWO_PARTS)
+    expect(result.ok && result.mesh.faceTags).toBeUndefined()
+    expect(result.ok && result.stl.byteLength).toBe(134)
+  })
+})
+
+describe('toPreviewArgs', () => {
+  it('swaps only the output path and the export format', () => {
+    expect(toPreviewArgs(['/main.scad', '-o', '/out.stl', '--backend=manifold', '--export-format=binstl', '-D', 'w=5'])).toEqual([
+      '/main.scad', '-o', PREVIEW_OUTPUT_PATH, '--backend=manifold', '--export-format=off', '-D', 'w=5',
+    ])
   })
 })
