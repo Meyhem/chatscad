@@ -11,3 +11,7 @@ Copies of the PromptCAD design system that the app builds from. The originals li
 | `components.css` | The `pc-*` component classes (buttons, inputs, tabs, status pill, console, dims readout, callout, dialog, …) | The Google Fonts `@import` line is removed: the app's CSP forbids font CDNs, so Archivo and JetBrains Mono are self-hosted through fontsource. |
 
 To update: copy the files again from the artifact, keep the one change above, run `npm run tokens`, then `npm test`.
+
+## Screens
+
+`screens/` holds the screen designs (`*.dc.html` plus `screens.css`) from the screens artifact, version `1791700959-9a31`, copied 2026-10-11. They are reference mockups for the plans, not app code: open them to see layout, copy and states. They load Google Fonts and use hex colours in `screens.css`; neither rule applies to `design/`, only to `src/`.

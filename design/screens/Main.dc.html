@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Workbench</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/promptcad/components/bundle.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6e9bff}a:hover{color:#8db1ff}
+</style>
+</helmet>
+<div class="app pc-root" data-theme="{{theme}}" style="width: 1440px; height: 900px;">
+
+<header class="topbar">
+  <span class="brand"><span class="brand-dot"></span>PromptCAD</span>
+  <span class="sep"></span>
+  <button class="project" type="button">18650 holder<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"></path></svg></button>
+  <span class="pc-status is-ok"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><polyline points="3,8.5 6.5,12 13,4.5"></polyline></svg>Rendered <span class="pc-mono">412 ms</span></span>
+  <span class="pc-dims">88.8 × 25.4 × 22 mm</span>
+  <span class="grow"></span>
+  <button class="pc-btn is-ghost is-sm" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11z M8 5v3.5l2.5 1.5"></path></svg>History</button>
+  <button class="pc-btn is-ghost is-sm is-icon" type="button" aria-label="Settings"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z M8 1.5v2 M8 12.5v2 M1.5 8h2 M12.5 8h2 M3.4 3.4l1.4 1.4 M11.2 11.2l1.4 1.4 M3.4 12.6l1.4-1.4 M11.2 4.8l1.4-1.4"></path></svg></button>
+  <button class="pc-btn is-sm" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8 M4.5 6L8 2.5 11.5 6 M3 9.5v4h10v-4"></path></svg>Share</button>
+  <button class="pc-btn is-sm is-primary" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8 M4.5 7L8 10.5 11.5 7 M3 13.5h10"></path></svg>Export STL</button>
+</header>
+
+<main class="workbench">
+
+  <section class="col" aria-label="Chat">
+    <div class="pane-head"><span class="pc-label">Chat</span><span class="grow"></span><span class="pc-caption pc-mono">$0.026 this project</span></div>
+    <div class="chat-scroll">
+      <div class="pc-msg is-user"><div class="pc-msg-body">A holder for four 18650 cells in a row, with a sliding lid.</div></div>
+      <div class="pc-msg is-assistant">
+        <div class="pc-msg-body">Made a 4-slot holder: 19 mm bores at 21 mm pitch, 2 mm walls, and a 1.6 mm rail for the lid. Slot count, bore, pitch and wall are parameters.</div>
+        <div class="pc-msg-meta"><span class="pc-chip is-accent"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2c.6 3.2 2.8 5.4 6 6-3.2.6-5.4 2.8-6 6-.6-3.2-2.8-5.4-6-6 3.2-.6 5.4-2.8 6-6z"></path></svg>v1</span><span>claude-sonnet-5-5</span><span class="pc-mono">2,310 tok · $0.011</span></div>
+      </div>
+      <div class="pc-msg is-user"><div class="pc-msg-body">Walls 2.4 mm please, and chamfer the top edge a little.</div></div>
+      <div class="pc-msg is-assistant">
+        <div class="pc-msg-body">Set <code>wall = 2.4</code> and added a 0.6 mm chamfer on the top edge. Everything else is unchanged.</div>
+        <div class="pc-msg-meta"><span class="pc-chip is-accent"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2c.6 3.2 2.8 5.4 6 6-3.2.6-5.4 2.8-6 6-.6-3.2-2.8-5.4-6-6 3.2-.6 5.4-2.8 6-6z"></path></svg>v2</span><span>claude-sonnet-5-5</span><span class="pc-mono">1,180 tok · $0.006</span></div>
+      </div>
+      <div class="pc-row pc-caption" style="justify-content: center;"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M3 11.5h10 M6 3v3 M10 10v3"></path></svg>You set height 18 → 22 · v3</div>
+    </div>
+    <div class="chat-foot">
+      <div class="pc-composer">
+        <textarea rows="2" placeholder="Describe a part, or tap one in 3D to change it" aria-label="Prompt"></textarea>
+        <div class="pc-composer-bar">
+          <button class="pc-btn is-icon is-sm is-ghost" type="button" aria-label="Attach image or sketch"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z M2.5 10.5l3.5-3 3 2.5 2-1.5 2.5 2"></path></svg></button>
+          <button class="pc-btn is-icon is-sm is-ghost" type="button" aria-label="Dictate"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5a2 2 0 0 1 4 0v4a2 2 0 0 1-4 0z M3.5 7.5a4.5 4.5 0 0 0 9 0 M8 12v2"></path></svg></button>
+          <button class="pc-model" type="button">claude-sonnet-5-5<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"></path></svg></button>
+          <span class="pc-spacer"></span>
+          <button class="pc-btn is-sm is-ghost" type="button" aria-label="Variants per prompt"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5l5.5 3L8 8.5 2.5 5.5z M2.5 8.5L8 11.5l5.5-3 M2.5 11.5L8 14.5l5.5-3"></path></svg>1</button>
+          <button class="pc-btn is-icon is-sm is-primary" type="button" aria-label="Send"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8h10 M8.5 4l4 4-4 4"></path></svg></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="col" aria-label="3D view">
+    <div class="viewer">
+      <svg class="scene" viewBox="96 100 480 330" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <line class="g-min" x1="250.0" y1="87.0" x2="-110.3" y2="295.0"></line><line class="g-min" x1="277.7" y1="103.0" x2="-82.5" y2="311.0"></line><line class="g-min" x1="305.4" y1="119.0" x2="-54.8" y2="327.0"></line><line class="g-min" x1="333.1" y1="135.0" x2="-27.1" y2="343.0"></line><line class="g-maj" x1="360.8" y1="151.0" x2="0.6" y2="359.0"></line><line class="g-min" x1="388.6" y1="167.0" x2="28.3" y2="375.0"></line><line class="g-min" x1="416.3" y1="183.0" x2="56.0" y2="391.0"></line><line class="g-min" x1="444.0" y1="199.0" x2="83.7" y2="407.0"></line><line class="g-min" x1="471.7" y1="215.0" x2="111.4" y2="423.0"></line><line class="g-maj" x1="499.4" y1="231.0" x2="139.2" y2="439.0"></line><line class="g-min" x1="527.1" y1="247.0" x2="166.9" y2="455.0"></line><line class="g-min" x1="554.8" y1="263.0" x2="194.6" y2="471.0"></line><line class="g-min" x1="582.5" y1="279.0" x2="222.3" y2="487.0"></line><line class="g-min" x1="610.3" y1="295.0" x2="250.0" y2="503.0"></line><line class="g-maj" x1="638.0" y1="311.0" x2="277.7" y2="519.0"></line><line class="g-min" x1="665.7" y1="327.0" x2="305.4" y2="535.0"></line><line class="g-min" x1="693.4" y1="343.0" x2="333.1" y2="551.0"></line>
+        <line class="g-min" x1="250.0" y1="87.0" x2="748.8" y2="375.0"></line><line class="g-min" x1="222.3" y1="103.0" x2="721.1" y2="391.0"></line><line class="g-min" x1="194.6" y1="119.0" x2="693.4" y2="407.0"></line><line class="g-min" x1="166.9" y1="135.0" x2="665.7" y2="423.0"></line><line class="g-maj" x1="139.2" y1="151.0" x2="638.0" y2="439.0"></line><line class="g-min" x1="111.4" y1="167.0" x2="610.3" y2="455.0"></line><line class="g-min" x1="83.7" y1="183.0" x2="582.5" y2="471.0"></line><line class="g-min" x1="56.0" y1="199.0" x2="554.8" y2="487.0"></line><line class="g-min" x1="28.3" y1="215.0" x2="527.1" y2="503.0"></line><line class="g-maj" x1="0.6" y1="231.0" x2="499.4" y2="519.0"></line><line class="g-min" x1="-27.1" y1="247.0" x2="471.7" y2="535.0"></line>
+        <line class="ax-x" x1="250.0" y1="215.0" x2="333.1" y2="263.0"></line><line class="ax-y" x1="250.0" y1="215.0" x2="166.9" y2="263.0"></line><line class="ax-z" x1="250.0" y1="215.0" x2="250.0" y2="119.0"></line>
+        <polygon class="m-l" points="177.9,256.6 421.8,397.4 421.8,327.0 177.9,186.2"></polygon>
+        <polygon class="m-r" points="493.9,355.8 421.8,397.4 421.8,327.0 493.9,285.4"></polygon>
+        <polygon class="m-top" points="250.0,144.6 493.9,285.4 421.8,327.0 177.9,186.2"></polygon>
+        <ellipse class="m-hole" cx="251.4" cy="187.0" rx="37.2" ry="21.5"></ellipse><ellipse class="m-hole" cx="309.6" cy="220.6" rx="37.2" ry="21.5"></ellipse><ellipse class="m-hole" cx="367.8" cy="254.2" rx="37.2" ry="21.5"></ellipse><ellipse class="m-hole" cx="426.0" cy="287.8" rx="37.2" ry="21.5"></ellipse>
+        <line class="m-edge" x1="250.0" y1="151.0" x2="482.8" y2="285.4"></line>
+      </svg>
+      <div class="viewer-tl"><span class="pc-dims"><span><span class="x">X</span> 88.8</span><span><span class="y">Y</span> 25.4</span><span><span class="z">Z</span> 22</span><span class="pc-muted">mm</span></span></div>
+      <div class="viewer-tr">
+        <button class="vbtn" type="button" aria-label="Fit view"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5v-3h3 M10.5 2.5h3v3 M13.5 10.5v3h-3 M5.5 13.5h-3v-3"></path></svg></button>
+        <button class="vbtn" type="button" aria-label="Camera presets"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l5.5 3v6L8 14l-5.5-3V5z M2.5 5L8 8l5.5-3 M8 8v6"></path></svg></button>
+        <button class="vbtn" type="button" aria-label="Save image"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z M2.5 10.5l3.5-3 3 2.5 2-1.5 2.5 2"></path></svg></button>
+      </div>
+      <div class="viewer-bl"><span class="pc-caption pc-mono">18,432 triangles · tap a part to edit it</span></div>
+      <div class="viewer-br">
+        <svg class="gizmo" viewBox="0 0 56 56" aria-hidden="true"><line class="gz-x" x1="28" y1="34" x2="44" y2="43"></line><line class="gz-y" x1="28" y1="34" x2="12" y2="43"></line><line class="gz-z" x1="28" y1="34" x2="28" y2="14"></line><text class="gz-tx" x="46" y="50">X</text><text class="gz-ty" x="3" y="50">Y</text><text class="gz-tz" x="24.5" y="11">Z</text></svg>
+      </div>
+    </div>
+    <div class="dock">
+      <div class="pc-row">
+        <div class="pc-tabs" role="tablist"><button class="pc-tab" role="tab" aria-selected="true" type="button">Dimensions</button><button class="pc-tab" role="tab" type="button">Lid</button></div>
+        <span class="grow"></span>
+        <select class="pc-select" aria-label="Preset" style="height: 28px; font-size: 13px;"><option>Preset: default</option><option>Preset: 21700 cells</option></select>
+        <button class="pc-btn is-sm is-ghost" type="button">Reset</button>
+        <button class="pc-btn is-sm" type="button">Bake into code</button>
+      </div>
+      <div class="pc-param"><div class="pc-param-name">slots<small>[1 : 1 : 8]</small></div><input class="pc-range" type="range" min="1" max="8" value="4" aria-label="slots"><div class="pc-input is-mono"><input value="4" aria-label="slots value"></div></div>
+      <div class="pc-param"><div class="pc-param-name">bore<small>[17 : 0.5 : 22]</small></div><input class="pc-range" type="range" min="17" max="22" step="0.5" value="19" aria-label="bore"><div class="pc-input is-mono"><input value="19" aria-label="bore value"><span class="pc-unit">mm</span></div></div>
+      <div class="pc-param is-changed"><div class="pc-param-name">height<small>[10 : 1 : 60]</small></div><input class="pc-range" type="range" min="10" max="60" value="22" aria-label="height"><div class="pc-input is-mono"><input value="22" aria-label="height value"><span class="pc-unit">mm</span></div></div>
+    </div>
+  </section>
+
+  <section class="col" aria-label="Code">
+    <div class="pane-head">
+      <div class="pc-tabs" role="tablist"><button class="pc-tab" role="tab" aria-selected="true" type="button">main.scad</button></div>
+      <span class="grow"></span>
+      <span class="pc-caption">v3 · edited by slider</span>
+      <button class="pc-btn is-ghost is-sm is-icon" type="button" aria-label="Ask Claude about the selection"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2c.6 3.2 2.8 5.4 6 6-3.2.6-5.4 2.8-6 6-.6-3.2-2.8-5.4-6-6 3.2-.6 5.4-2.8 6-6z"></path></svg></button>
+    </div>
+    <div class="editor" role="textbox" aria-label="main.scad" aria-multiline="true">
+      <div class="cl"><span class="n">1</span><span class="gm"></span><span class="c">// 18650 cell holder with a sliding lid</span></div>
+      <div class="cl"><span class="n">2</span><span class="gm"></span><span class="c">/* [Dimensions] */</span></div>
+      <div class="cl"><span class="n">3</span><span class="gm"></span><span>slots = <span class="num">4</span>;      <span class="c">// [1:1:8]</span></span></div>
+      <div class="cl"><span class="n">4</span><span class="gm"></span><span>bore = <span class="num">19</span>;      <span class="c">// [17:0.5:22]</span></span></div>
+      <div class="cl"><span class="n">5</span><span class="gm"></span><span>pitch = <span class="num">21</span>;     <span class="c">// [19:0.5:26]</span></span></div>
+      <div class="cl"><span class="n">6</span><span class="gm"></span><span>wall = <span class="num">2.4</span>;     <span class="c">// [1.2:0.2:4]</span></span></div>
+      <div class="cl"><span class="n">7</span><span class="gm"></span><span>height = <span class="num">22</span>;    <span class="c">// [10:1:60]</span></span></div>
+      <div class="cl"><span class="n">8</span><span class="gm"></span><span class="c">/* [Lid] */</span></div>
+      <div class="cl"><span class="n">9</span><span class="gm"></span><span>rail = <span class="num">1.6</span>;     <span class="c">// [1:0.1:3]</span></span></div>
+      <div class="cl"><span class="n">10</span><span class="gm"></span><span>chamfer = <span class="num">0.6</span>;  <span class="c">// [0:0.1:2]</span></span></div>
+      <div class="cl"><span class="n">11</span><span class="gm"></span><span> </span></div>
+      <div class="cl"><span class="n">12</span><span class="gm"></span><span><span class="k">module</span> body() {</span></div>
+      <div class="cl"><span class="n">13</span><span class="gm"></span><span>  <span class="b">difference</span>() {</span></div>
+      <div class="cl"><span class="n">14</span><span class="gm"></span><span>    <span class="b">cube</span>([slots * pitch + wall * <span class="num">2</span>, bore + wall * <span class="num">2</span>, height]);</span></div>
+      <div class="cl"><span class="n">15</span><span class="gm"></span><span>    <span class="k">for</span> (i = [<span class="num">0</span> : slots - <span class="num">1</span>])</span></div>
+      <div class="cl"><span class="n">16</span><span class="gm"></span><span>      <span class="b">translate</span>([wall + pitch / <span class="num">2</span> + i * pitch, wall + bore / <span class="num">2</span>, wall])</span></div>
+      <div class="cl"><span class="n">17</span><span class="gm"></span><span>        <span class="b">cylinder</span>(h = height, d = bore, $fn = <span class="num">64</span>);</span></div>
+      <div class="cl"><span class="n">18</span><span class="gm"></span><span>  }</span></div>
+      <div class="cl"><span class="n">19</span><span class="gm"></span><span>}</span></div>
+      <div class="cl"><span class="n">20</span><span class="gm"></span><span> </span></div>
+      <div class="cl"><span class="n">21</span><span class="gm"></span><span><span class="k">module</span> lid_rail() {</span></div>
+      <div class="cl"><span class="n">22</span><span class="gm"></span><span>  <span class="b">translate</span>([<span class="num">0</span>, -rail, height - rail])</span></div>
+      <div class="cl"><span class="n">23</span><span class="gm"></span><span>    <span class="b">cube</span>([slots * pitch + wall * <span class="num">2</span>, rail, rail]);</span></div>
+      <div class="cl"><span class="n">24</span><span class="gm"></span><span>}</span></div>
+      <div class="cl"><span class="n">25</span><span class="gm"></span><span> </span></div>
+      <div class="cl"><span class="n">26</span><span class="gm"></span><span>body();</span></div>
+      <div class="cl"><span class="n">27</span><span class="gm"></span><span>lid_rail();</span></div>
+    </div>
+    <div class="console-wrap">
+      <div class="pc-console" aria-label="Console">
+        <div class="pc-console-head"><span class="pc-label">Console</span><span class="pc-caption" style="margin-left: auto;">OpenSCAD 2025.03 · manifold</span></div>
+        <div class="pc-log is-muted">Parsing design (AST generation)...</div>
+        <div class="pc-log is-muted">Compiling design (CSG Tree generation)...</div>
+        <div class="pc-log is-muted">Rendering Polygon Mesh using Manifold...</div>
+        <div class="pc-log">Top level object is a 3D object (manifold): Vertices: 9218 Facets: 18432</div>
+        <div class="pc-log is-ok">Total rendering time: 0:00:00.412</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+<p style="margin: 0">0</p></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'dark' };
+  }
+}
+</script>
+</body>
+</html>

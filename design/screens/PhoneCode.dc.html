@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone code</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/promptcad/components/bundle.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6e9bff}a:hover{color:#8db1ff}
+</style>
+</helmet>
+<div class="app phone pc-root" data-theme="{{theme}}">
+  <header class="topbar">
+    <button class="project" type="button" style="padding-left: 0;">18650 holder<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button>
+    <span class="grow"></span>
+    <span class="pc-status is-error"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>Line 9</span>
+    <button class="pc-btn is-icon is-ghost" type="button" aria-label="Ask Claude about the selection"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2c.6 3.2 2.8 5.4 6 6-3.2.6-5.4 2.8-6 6-.6-3.2-2.8-5.4-6-6 3.2-.6 5.4-2.8 6-6z"/></svg></button>
+  </header>
+  <div class="phone-body">
+    <div class="editor" role="textbox" aria-label="main.scad" aria-multiline="true" style="font-size: 12px; line-height: 20px;">
+      <div class="cl" style="grid-template-columns: 30px 10px 1fr;"><span class="n">1</span><span class="gm"></span><span class="c">/* [Dimensions] */</span></div>
+      <div class="cl" style="grid-template-columns: 30px 10px 1fr;"><span class="n">2</span><span class="gm"></span><span>slots = <span class="num">5</span>; <span class="c">// [1:1:8]</span></span></div>
+      <div class="cl" style="grid-template-columns: 30px 10px 1fr;"><span class="n">3</span><span class="gm"></span><span>bore = <span class="num">19</span>;  <span class="c">// [17:0.5:22]</span></span></div>
+      <div class="cl" style="grid-template-columns: 30px 10px 1fr;"><span class="n">4</span><span class="gm"></span><span>pitch = <span class="num">21</span>;</span></div>
+      <div class="cl" style="grid-template-columns: 30px 10px 1fr;"><span class="n">5</span><span class="gm"></span><span>wall = <span class="num">2.4</span>;</span></div>
+      <div class="cl" style="grid-template-columns: 30px 10px 1fr;"><span class="n">6</span><span class="gm"></span><span> </span></div>
+      <div class="cl" style="grid-template-columns: 30px 10px 1fr;"><span class="n">7</span><span class="gm"></span><span><span class="k">module</span> notch() {</span></div>
+      <div class="cl" style="grid-template-columns: 30px 10px 1fr;"><span class="n">8</span><span class="gm"></span><span>  <span class="b">translate</span>([<span class="num">40</span>, <span class="num">-2</span>, <span class="num">20</span>])</span></div>
+      <div class="cl is-err" style="grid-template-columns: 30px 10px 1fr;"><span class="n">9</span><span class="gm"><span class="errdot"></span></span><span>    <span class="b">rotate</span>([<span class="num">-90</span>, <span class="num">0</span>, <span class="num">0</span>]</span></div>
+      <div class="cl" style="grid-template-columns: 30px 10px 1fr;"><span class="n">10</span><span class="gm"></span><span>      <span class="b">cylinder</span>(d = <span class="num">14</span>, h = <span class="num">4</span>);</span></div>
+      <div class="cl" style="grid-template-columns: 30px 10px 1fr;"><span class="n">11</span><span class="gm"></span><span>}</span></div>
+    </div>
+    <div class="pc-callout is-error" style="margin: 8px; border-radius: var(--radius-md);"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      <div class="pc-callout-body"><strong>Line 9: syntax error</strong>A <code class="pc-mono">)</code> is missing after <code class="pc-mono">rotate([…]</code>.
+        <div class="pc-row" style="margin-top: 8px;"><button class="pc-btn is-sm is-primary" type="button">Ask Claude to fix</button><button class="pc-btn is-sm is-ghost" type="button">Console</button></div>
+      </div>
+    </div>
+    <div class="keyrow" role="toolbar" aria-label="Code symbols">
+      <button class="key" type="button">;</button><button class="key" type="button">{</button><button class="key" type="button">}</button><button class="key" type="button">(</button><button class="key" type="button">)</button><button class="key" type="button">[</button><button class="key" type="button">]</button><button class="key" type="button" aria-label="Indent">⇥</button>
+    </div>
+    <div aria-hidden="true" style="height: 216px; background: var(--panel-raised); border-top: 1px solid var(--line); display: grid; place-items: center;"><span class="pc-caption">System keyboard</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'dark' };
+  }
+}
+</script>
+</body>
+</html>

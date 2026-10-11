@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Version history</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/promptcad/components/bundle.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6e9bff}a:hover{color:#8db1ff}
+</style>
+</helmet>
+<div class="app pc-root" data-theme="{{theme}}" style="width: 1440px; height: 900px;">
+
+<header class="topbar">
+  <span class="brand"><span class="brand-dot"></span>PromptCAD</span>
+  <span class="sep"></span>
+  <button class="project" type="button">18650 holder<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button>
+  <span class="pc-status is-ok"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>Rendered <span class="pc-mono">431 ms</span></span>
+  <span class="grow"></span>
+  <button class="pc-btn is-sm" type="button" aria-pressed="true" style="border-color: var(--accent);"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11z M8 5v3.5l2.5 1.5"/></svg>History</button>
+  <button class="pc-btn is-sm is-primary" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8 M4.5 7L8 10.5 11.5 7 M3 13.5h10"/></svg>Export STL</button>
+</header>
+
+<main style="flex: 1; min-height: 0; display: grid; grid-template-columns: 360px minmax(0, 1fr) 400px;">
+
+  <section class="col" aria-label="Versions">
+    <div class="pane-head"><span class="pc-label">Versions</span><span class="grow"></span><span class="pc-caption">7 versions · 1 branch</span></div>
+    <div style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 4px; padding: 8px;">
+      <button class="pc-version" type="button"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span><span class="pc-version-text"><span class="t"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M3 11.5h10 M6 3v3 M10 10v3"/></svg>v6 · current</span><span class="m">slots 4 → 5</span></span><span class="pc-caption">now</span></button>
+      <button class="pc-version" type="button" aria-current="true"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span><span class="pc-version-text"><span class="t"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5a3 3 0 0 0-2.8 4L2.5 11.7l1.8 1.8 5.2-5.2a3 3 0 0 0 4-2.8l-1.8 1.8-1.8-.5-.5-1.8z"/></svg>v5</span><span class="m">Auto-fix: closed translate() on line 16</span></span><span class="pc-caption">4 min</span></button>
+      <button class="pc-version is-failed" type="button"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/></svg></span><span class="pc-version-text"><span class="t"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2c.6 3.2 2.8 5.4 6 6-3.2.6-5.4 2.8-6 6-.6-3.2-2.8-5.4-6-6 3.2-.6 5.4-2.8 6-6z"/></svg>v4</span><span class="m">Failed · Make it hold 21700 cells</span></span><span class="pc-caption">5 min</span></button>
+      <button class="pc-version" type="button"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span><span class="pc-version-text"><span class="t"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M3 11.5h10 M6 3v3 M10 10v3"/></svg>v3</span><span class="m">height 18 → 22</span></span><span class="pc-caption">12 min</span></button>
+      <button class="pc-version is-branch" type="button"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="26,30 50,42 50,88 26,76"/><polygon class="f-r" points="50,42 74,30 74,76 50,88"/><polygon class="f-top" points="50,18 74,30 50,42 26,30"/><ellipse class="f-hole" cx="50" cy="30" rx="8" ry="4"/></svg></span><span class="pc-version-text"><span class="t"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13l1-3.5 7-7 2.5 2.5-7 7z"/></svg>v3.1</span><span class="m">Manual: single tall slot</span></span><span class="pc-caption">10 min</span></button>
+      <button class="pc-version" type="button"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span><span class="pc-version-text"><span class="t"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2c.6 3.2 2.8 5.4 6 6-3.2.6-5.4 2.8-6 6-.6-3.2-2.8-5.4-6-6 3.2-.6 5.4-2.8 6-6z"/></svg>v2</span><span class="m">Walls 2.4 mm, chamfer the top edge</span></span><span class="pc-caption">18 min</span></button>
+      <button class="pc-version" type="button"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span><span class="pc-version-text"><span class="t"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2c.6 3.2 2.8 5.4 6 6-3.2.6-5.4 2.8-6 6-.6-3.2-2.8-5.4-6-6 3.2-.6 5.4-2.8 6-6z"/></svg>v1</span><span class="m">A holder for four 18650 cells…</span></span><span class="pc-caption">21 min</span></button>
+      <span class="pc-caption" style="padding: 0 8px 0 68px;">+ 2 variants not picked</span>
+    </div>
+    <div class="chat-foot pc-row"><button class="pc-btn is-sm" type="button" style="flex: 1;">Export project (.json)</button><button class="pc-btn is-sm" type="button" style="flex: 1;">Timelapse GIF</button></div>
+  </section>
+
+  <section class="col" aria-label="Compare">
+    <div class="pane-head">
+      <span class="pc-label">Compare</span>
+      <select class="pc-select" aria-label="From version" style="height: 28px; font-size: 13px;"><option>v3</option></select>
+      <span class="pc-muted">→</span>
+      <select class="pc-select" aria-label="To version" style="height: 28px; font-size: 13px;"><option>v5</option></select>
+      <span class="grow"></span>
+      <span class="pc-caption pc-mono" style="color: var(--ok);">+2</span><span class="pc-caption pc-mono" style="color: var(--error);">−2</span>
+    </div>
+    <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));">
+      <div class="editor" style="border-right: 1px solid var(--line);">
+        <div class="cl"><span class="n">3</span><span class="gm"></span><span>slots = <span class="num">4</span>;</span></div>
+        <div class="cl is-del"><span class="n">4</span><span class="gm">−</span><span>bore = <span class="num">19</span>;</span></div>
+        <div class="cl is-del"><span class="n">5</span><span class="gm">−</span><span>pitch = <span class="num">21</span>;</span></div>
+        <div class="cl"><span class="n">6</span><span class="gm"></span><span>wall = <span class="num">2.4</span>;</span></div>
+        <div class="cl"><span class="n">7</span><span class="gm"></span><span>height = <span class="num">22</span>;</span></div>
+        <div class="cl pc-caption" style="padding-left: 58px; font-family: var(--font-sans);">⋯ 7 unchanged lines</div>
+        <div class="cl"><span class="n">15</span><span class="gm"></span><span>    <span class="k">for</span> (i = [<span class="num">0</span> : slots - <span class="num">1</span>])</span></div>
+        <div class="cl"><span class="n">16</span><span class="gm"></span><span>      <span class="b">translate</span>([wall + pitch/<span class="num">2</span> + i*pitch, wall + bore/<span class="num">2</span>, wall])</span></div>
+        <div class="cl"><span class="n">17</span><span class="gm"></span><span>        <span class="b">cylinder</span>(h = height, d = bore, $fn = <span class="num">64</span>);</span></div>
+      </div>
+      <div class="editor">
+        <div class="cl"><span class="n">3</span><span class="gm"></span><span>slots = <span class="num">4</span>;</span></div>
+        <div class="cl is-add"><span class="n">4</span><span class="gm">+</span><span>bore = <span class="num">21.5</span>;</span></div>
+        <div class="cl is-add"><span class="n">5</span><span class="gm">+</span><span>pitch = <span class="num">23.5</span>;</span></div>
+        <div class="cl"><span class="n">6</span><span class="gm"></span><span>wall = <span class="num">2.4</span>;</span></div>
+        <div class="cl"><span class="n">7</span><span class="gm"></span><span>height = <span class="num">22</span>;</span></div>
+        <div class="cl pc-caption" style="padding-left: 58px; font-family: var(--font-sans);">⋯ 7 unchanged lines</div>
+        <div class="cl"><span class="n">15</span><span class="gm"></span><span>    <span class="k">for</span> (i = [<span class="num">0</span> : slots - <span class="num">1</span>])</span></div>
+        <div class="cl"><span class="n">16</span><span class="gm"></span><span>      <span class="b">translate</span>([wall + pitch/<span class="num">2</span> + i*pitch, wall + bore/<span class="num">2</span>, wall])</span></div>
+        <div class="cl"><span class="n">17</span><span class="gm"></span><span>        <span class="b">cylinder</span>(h = height, d = bore, $fn = <span class="num">64</span>);</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="col" aria-label="Preview">
+    <div class="pane-head"><span class="pc-label">Preview · v5</span><span class="grow"></span><span class="pc-caption">not the current version</span></div>
+    <div class="viewer" style="flex: none; height: 320px;">
+      <svg class="scene" viewBox="150 130 380 280" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <line class="g-maj" x1="360.8" y1="151.0" x2="0.6" y2="359.0"/><line class="g-maj" x1="499.4" y1="231.0" x2="139.2" y2="439.0"/><line class="g-maj" x1="139.2" y1="151.0" x2="638.0" y2="439.0"/><line class="g-maj" x1="0.6" y1="231.0" x2="499.4" y2="519.0"/>
+        <polygon class="m-l" points="177.9,256.6 421.8,397.4 421.8,327.0 177.9,186.2"/>
+        <polygon class="m-r" points="493.9,355.8 421.8,397.4 421.8,327.0 493.9,285.4"/>
+        <polygon class="m-top" points="250.0,144.6 493.9,285.4 421.8,327.0 177.9,186.2"/>
+        <ellipse class="m-hole" cx="251.4" cy="187.0" rx="40" ry="23"/><ellipse class="m-hole" cx="309.6" cy="220.6" rx="40" ry="23"/><ellipse class="m-hole" cx="367.8" cy="254.2" rx="40" ry="23"/><ellipse class="m-hole" cx="426.0" cy="287.8" rx="40" ry="23"/>
+      </svg>
+      <div class="viewer-tl"><span class="pc-dims">99.0 × 27.9 × 22 mm</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px;">
+      <div class="pc-stack" style="gap: 4px;">
+        <span style="font-weight: 600;">v5 · Auto-fix</span>
+        <span class="pc-caption">claude-sonnet-5-5 · 4 min ago · rendered in 431 ms · 640 tok · $0.002</span>
+      </div>
+      <div class="pc-msg-body" style="padding: 8px 12px; border-radius: var(--radius-md); background: var(--inset); border: 1px solid var(--line);">Closed the <code class="pc-mono">translate()</code> call on line 16. No other changes.</div>
+      <div class="pc-row">
+        <button class="pc-btn is-primary" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3v3.5h3.5 M3.5 6.5A5 5 0 1 1 3 9"/></svg>Restore v5</button>
+        <button class="pc-btn" type="button">Branch from here</button>
+      </div>
+      <span class="pc-caption">Restoring makes a new version. Nothing is deleted.</span>
+    </div>
+  </section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'dark' };
+  }
+}
+</script>
+</body>
+</html>

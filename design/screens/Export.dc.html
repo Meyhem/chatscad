@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Export and share</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/promptcad/components/bundle.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6e9bff}a:hover{color:#8db1ff}
+</style>
+</helmet>
+<div class="app pc-root" data-theme="{{theme}}" style="width: 1440px; height: 900px; position: relative;">
+
+<header class="topbar">
+  <span class="brand"><span class="brand-dot"></span>PromptCAD</span>
+  <span class="sep"></span>
+  <button class="project" type="button">18650 holder<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button>
+  <span class="pc-status is-ok"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>Rendered <span class="pc-mono">412 ms</span></span>
+  <span class="grow"></span>
+  <button class="pc-btn is-sm is-primary" type="button">Export STL</button>
+</header>
+<main class="workbench"><section class="col"></section><section class="col"><div class="viewer"></div></section><section class="col"><div class="editor"></div></section></main>
+
+<div class="overlay" style="top: 48px;">
+  <div class="pc-dialog" role="dialog" aria-labelledby="et" style="max-width: 920px; padding: 0; gap: 0; overflow: hidden;">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 20px 24px 16px;">
+      <h2 id="et" style="flex: 1;">Export and share</h2>
+      <button class="pc-btn is-icon is-ghost" type="button" aria-label="Close"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+    </div>
+    <div style="padding: 0 24px;">
+      <div class="pc-tabs" role="tablist">
+        <button class="pc-tab" role="tab" type="button">Model file</button>
+        <button class="pc-tab" role="tab" type="button">Image</button>
+        <button class="pc-tab" role="tab" type="button">Turntable</button>
+        <button class="pc-tab" role="tab" aria-selected="true" type="button">Timelapse</button>
+        <button class="pc-tab" role="tab" type="button">Link</button>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; padding: 20px 24px;">
+      <div style="display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+        <div class="viewer" style="flex: none; height: 300px; border-radius: var(--radius-md); border: 1px solid var(--line);">
+          <svg class="scene" viewBox="150 120 380 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <line class="g-maj" x1="360.8" y1="151.0" x2="0.6" y2="359.0"/><line class="g-maj" x1="499.4" y1="231.0" x2="139.2" y2="439.0"/><line class="g-maj" x1="139.2" y1="151.0" x2="638.0" y2="439.0"/><line class="g-maj" x1="0.6" y1="231.0" x2="499.4" y2="519.0"/>
+            <polygon class="m-l" points="177.9,256.6 421.8,397.4 421.8,327.0 177.9,186.2"/>
+            <polygon class="m-r" points="493.9,355.8 421.8,397.4 421.8,327.0 493.9,285.4"/>
+            <polygon class="m-top" points="250.0,144.6 493.9,285.4 421.8,327.0 177.9,186.2"/>
+            <ellipse class="m-hole" cx="251.4" cy="187.0" rx="37.2" ry="21.5"/><ellipse class="m-hole" cx="309.6" cy="220.6" rx="37.2" ry="21.5"/>
+          </svg>
+          <div class="viewer-bl"><span class="pc-dims" style="font-size: 12px;">v2 · “Walls 2.4 mm, chamfer the top edge”</span></div>
+          <div class="viewer-tr"><span class="pc-caption pc-mono">frame 2 / 6</span></div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px;">
+          <span class="pc-thumb" style="width: auto; aspect-ratio: 1;"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/></svg></span>
+          <span class="pc-thumb" style="width: auto; aspect-ratio: 1; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent);"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span>
+          <span class="pc-thumb" style="width: auto; aspect-ratio: 1;"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span>
+          <span class="pc-thumb" style="width: auto; aspect-ratio: 1;"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span>
+          <span class="pc-thumb" style="width: auto; aspect-ratio: 1;"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span>
+          <span class="pc-thumb" style="width: auto; aspect-ratio: 1;"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span>
+        </div>
+        <span class="pc-caption">v1 → v6 along the current branch. The failed v4 and 2 unpicked variants are skipped.</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="pc-field"><label for="fd">Frame duration</label><div class="pc-input is-mono"><input id="fd" value="0.8"><span class="pc-unit">s</span></div></div>
+        <div class="pc-field"><label for="hl">Hold on last frame</label><div class="pc-input is-mono"><input id="hl" value="2"><span class="pc-unit">s</span></div></div>
+        <div class="pc-field"><label for="sz">Size</label><select id="sz" class="pc-select"><option>640 × 480</option><option>1080 × 1080</option><option>480 × 360</option></select></div>
+        <div class="pc-stack">
+          <label class="pc-switch"><input type="checkbox" checked><span class="pc-track"></span>Caption with version and prompt</label>
+          <label class="pc-switch"><input type="checkbox" checked><span class="pc-track"></span>Slow turntable</label>
+          <label class="pc-switch"><input type="checkbox"><span class="pc-track"></span>Include failed versions</label>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--line);">
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+        <span class="pc-caption pc-mono">Rendering frames · 4 of 6 · about 1.6 MB</span>
+        <div style="height: 4px; border-radius: var(--radius-pill); background: var(--inset);"><div style="width: 66%; height: 4px; border-radius: var(--radius-pill); background: var(--accent);"></div></div>
+      </div>
+      <button class="pc-btn is-ghost" type="button">Cancel</button>
+      <button class="pc-btn is-primary" type="button" disabled><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8 M4.5 7L8 10.5 11.5 7 M3 13.5h10"/></svg>Save GIF</button>
+    </div>
+  </div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'dark' };
+  }
+}
+</script>
+</body>
+</html>

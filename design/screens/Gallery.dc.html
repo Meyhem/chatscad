@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Example gallery</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/promptcad/components/bundle.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6e9bff}a:hover{color:#8db1ff}
+</style>
+</helmet>
+<div class="app pc-root" data-theme="{{theme}}" style="width: 1440px; height: 900px;">
+
+<header class="topbar">
+  <span class="brand"><span class="brand-dot"></span>PromptCAD</span>
+  <span class="sep"></span>
+  <span style="font-weight: 600;">Examples</span>
+  <span class="grow"></span>
+  <button class="pc-btn is-sm" type="button">Back to project</button>
+</header>
+
+<main style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 24px; padding: 32px 48px; background: var(--bg);">
+  <div style="display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap;">
+    <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 320px;">
+      <h1 style="font: 600 20px/26px var(--font-sans); letter-spacing: -0.01em;">Start from a working model</h1>
+      <p class="pc-muted">Every example is parametric and works offline. Starting from one copies it into a new project as version 1.</p>
+    </div>
+    <div class="pc-input" style="width: 320px;"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 2.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z M10.5 10.5l3 3"/></svg><input placeholder="Search examples" aria-label="Search examples"></div>
+  </div>
+  <div class="pc-tabs" role="tablist" style="align-self: flex-start;">
+    <button class="pc-tab" role="tab" aria-selected="true" type="button">All 8</button>
+    <button class="pc-tab" role="tab" type="button">Storage</button>
+    <button class="pc-tab" role="tab" type="button">Mounting</button>
+    <button class="pc-tab" role="tab" type="button">Mechanical</button>
+    <button class="pc-tab" role="tab" type="button">Desk</button>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;">
+    <div class="pc-variant"><span class="pc-variant-view"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/></svg></span><span class="pc-variant-meta"><span style="font-weight: 600;">Box with lid</span><span class="pc-caption pc-mono">6 params</span></span><span class="pc-row" style="padding: 0 4px;"><span class="tag">storage</span><span class="tag">snap-fit</span></span><button class="pc-btn is-sm" type="button">Start from this</button></div>
+    <div class="pc-variant"><span class="pc-variant-view"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="8,46 50,66 50,78 8,58"/><polygon class="f-r" points="50,66 92,46 92,58 50,78"/><polygon class="f-top" points="50,26 92,46 50,66 8,46"/><ellipse class="f-hole" cx="36" cy="46" rx="8" ry="4"/><ellipse class="f-hole" cx="64" cy="46" rx="8" ry="4"/></svg></span><span class="pc-variant-meta"><span style="font-weight: 600;">Enclosure</span><span class="pc-caption pc-mono">9 params</span></span><span class="pc-row" style="padding: 0 4px;"><span class="tag">electronics</span><span class="tag">screw bosses</span></span><button class="pc-btn is-sm" type="button">Start from this</button></div>
+    <div class="pc-variant"><span class="pc-variant-view"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="20,40 50,55 50,70 20,55"/><polygon class="f-r" points="50,55 80,40 80,55 50,70"/><polygon class="f-top" points="50,25 80,40 50,55 20,40"/><polygon class="f-r" points="56,30 74,21 74,6 56,15"/></svg></span><span class="pc-variant-meta"><span style="font-weight: 600;">L bracket</span><span class="pc-caption pc-mono">7 params</span></span><span class="pc-row" style="padding: 0 4px;"><span class="tag">mounting</span><span class="tag">M3 / M4</span></span><button class="pc-btn is-sm" type="button">Start from this</button></div>
+    <div class="pc-variant"><span class="pc-variant-view"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="26,30 50,42 50,88 26,76"/><polygon class="f-r" points="50,42 74,30 74,76 50,88"/><polygon class="f-top" points="50,18 74,30 50,42 26,30"/><ellipse class="f-hole" cx="50" cy="30" rx="8" ry="4"/></svg></span><span class="pc-variant-meta"><span style="font-weight: 600;">Knob</span><span class="pc-caption pc-mono">5 params</span></span><span class="pc-row" style="padding: 0 4px;"><span class="tag">D-shaft</span><span class="tag">knurled</span></span><button class="pc-btn is-sm" type="button">Start from this</button></div>
+    <div class="pc-variant"><span class="pc-variant-view"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="8,46 50,66 50,74 8,54"/><polygon class="f-r" points="50,66 92,46 92,54 50,74"/><polygon class="f-top" points="50,26 92,46 50,66 8,46"/><ellipse class="f-hole" cx="50" cy="46" rx="10" ry="5"/></svg></span><span class="pc-variant-meta"><span style="font-weight: 600;">Spur gear</span><span class="pc-caption pc-mono">6 params</span></span><span class="pc-row" style="padding: 0 4px;"><span class="tag">mechanical</span><span class="tag">module 1</span></span><button class="pc-btn is-sm" type="button">Start from this</button></div>
+    <div class="pc-variant"><span class="pc-variant-view"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,46 50,64 50,72 14,54"/><polygon class="f-r" points="50,64 86,46 86,54 50,72"/><polygon class="f-top" points="50,28 86,46 50,64 14,46"/><polygon class="f-top" points="40,40 60,30 60,24 40,34"/></svg></span><span class="pc-variant-meta"><span style="font-weight: 600;">Print-in-place hinge</span><span class="pc-caption pc-mono">5 params</span></span><span class="pc-row" style="padding: 0 4px;"><span class="tag">mechanical</span><span class="tag">no supports</span></span><button class="pc-btn is-sm" type="button">Start from this</button></div>
+    <div class="pc-variant"><span class="pc-variant-view"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="30,44 50,54 50,74 30,64"/><polygon class="f-r" points="50,54 70,44 70,64 50,74"/><polygon class="f-top" points="50,34 70,44 50,54 30,44"/><ellipse class="f-hole" cx="50" cy="44" rx="9" ry="4.5"/></svg></span><span class="pc-variant-meta"><span style="font-weight: 600;">Cable clip</span><span class="pc-caption pc-mono">4 params</span></span><span class="pc-row" style="padding: 0 4px;"><span class="tag">desk</span><span class="tag">adhesive</span></span><button class="pc-btn is-sm" type="button">Start from this</button></div>
+    <div class="pc-variant"><span class="pc-variant-view"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="20,40 50,55 50,70 20,55"/><polygon class="f-r" points="50,55 80,40 80,55 50,70"/><polygon class="f-top" points="50,25 80,40 50,55 20,40"/><polygon class="f-r" points="44,34 62,25 62,4 44,13"/></svg></span><span class="pc-variant-meta"><span style="font-weight: 600;">Phone stand</span><span class="pc-caption pc-mono">4 params</span></span><span class="pc-row" style="padding: 0 4px;"><span class="tag">desk</span><span class="tag">angle</span></span><button class="pc-btn is-sm" type="button">Start from this</button></div>
+  </div>
+  <p class="pc-caption">Want to add one? Examples are plain JSON in the app's repository and can be added by pull request.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'dark' };
+  }
+}
+</script>
+</body>
+</html>

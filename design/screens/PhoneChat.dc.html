@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone chat</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/promptcad/components/bundle.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6e9bff}a:hover{color:#8db1ff}
+</style>
+</helmet>
+<div class="app phone pc-root" data-theme="{{theme}}">
+  <header class="topbar">
+    <button class="project" type="button" style="padding-left: 0;">18650 holder<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button>
+    <span class="grow"></span>
+    <span class="pc-status is-ok"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>412 ms</span>
+    <button class="pc-btn is-icon is-ghost" type="button" aria-label="Export"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8 M4.5 6L8 2.5 11.5 6 M3 9.5v4h10v-4"/></svg></button>
+  </header>
+  <div class="phone-body">
+    <div class="chat-scroll">
+      <div class="pc-msg is-user"><div class="pc-msg-img" role="img" aria-label="Photo of a drawer with cells" style="display: grid; place-items: center;"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true" style="color: var(--ink-muted);"><path d="M2.5 3.5h11v9h-11z M2.5 10.5l3.5-3 3 2.5 2-1.5 2.5 2"/></svg></div><div class="pc-msg-body">Something to keep these cells from rolling around in this drawer.</div></div>
+      <div class="pc-msg is-assistant">
+        <div class="pc-msg-body">They look like 18650s. Made a 4-slot holder with 19 mm bores at 21 mm pitch and a sliding lid. The drawer looks about 30 mm deep, so I kept it at 22 mm tall.</div>
+        <div class="pc-msg-meta"><span class="pc-chip is-accent"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2c.6 3.2 2.8 5.4 6 6-3.2.6-5.4 2.8-6 6-.6-3.2-2.8-5.4-6-6 3.2-.6 5.4-2.8 6-6z"/></svg>v1</span><span class="pc-mono">2,310 tok · $0.011</span></div>
+      </div>
+      <div class="pc-msg is-user"><div class="pc-msg-body">Walls 2.4 mm please, and chamfer the top edge a little.</div></div>
+      <div class="pc-msg is-assistant">
+        <div class="pc-msg-body">Set wall to 2.4 mm and added a 0.6 mm chamfer on the top edge.</div>
+        <div class="pc-msg-meta"><span class="pc-chip is-accent"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2c.6 3.2 2.8 5.4 6 6-3.2.6-5.4 2.8-6 6-.6-3.2-2.8-5.4-6-6 3.2-.6 5.4-2.8 6-6z"/></svg>v2</span><span class="pc-mono">1,180 tok · $0.006</span></div>
+      </div>
+    </div>
+    <div class="chat-foot">
+      <div class="pc-composer">
+        <textarea rows="2" aria-label="Prompt">Make it 5 slots and add a finger notch on the lid</textarea>
+        <div class="pc-composer-bar">
+          <button class="pc-btn is-icon is-ghost" type="button" aria-label="Attach photo or sketch"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z M2.5 10.5l3.5-3 3 2.5 2-1.5 2.5 2"/></svg></button>
+          <button class="pc-btn is-icon is-ghost" type="button" aria-label="Dictate" style="color: var(--accent); background: var(--accent-soft);"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5a2 2 0 0 1 4 0v4a2 2 0 0 1-4 0z M3.5 7.5a4.5 4.5 0 0 0 9 0 M8 12v2"/></svg></button>
+          <button class="pc-model" type="button">sonnet-5-5<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button>
+          <span class="pc-spacer"></span>
+          <button class="pc-btn is-icon is-primary" type="button" aria-label="Send"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8h10 M8.5 4l4 4-4 4"/></svg></button>
+        </div>
+      </div>
+      <div class="pc-caption" style="margin-top: 6px;">Listening… tap the mic to stop. Chrome sends speech to Google for recognition.</div>
+    </div>
+  </div>
+  <nav class="pc-tabbar" role="tablist">
+    <button class="pc-tab" role="tab" aria-selected="true" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v7H7l-3 2.5v-2.5H2.5z"/></svg>Chat</button>
+    <button class="pc-tab" role="tab" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4.5L2 8l3.5 3.5 M10.5 4.5L14 8l-3.5 3.5"/></svg>Code</button>
+    <button class="pc-tab" role="tab" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l5.5 3v6L8 14l-5.5-3V5z M2.5 5L8 8l5.5-3 M8 8v6"/></svg>3D</button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'dark' };
+  }
+}
+</script>
+</body>
+</html>
