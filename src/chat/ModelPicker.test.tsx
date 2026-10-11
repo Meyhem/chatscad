@@ -1,0 +1,77 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { DEFAULT_SETTINGS, type ProviderProfile } from '../db/db'
+import { newProfile } from '../db/profiles'
+import { getSettings } from '../db/settings'
+import { selectActiveModel, selectActiveProfile, useProvidersStore } from '../settings/providersStore'
+import { resetDb } from '../test/db'
+import { ModelPicker, modelIds } from './ModelPicker'
+
+const openrouter = newProfile({
+  name: 'OpenRouter',
+  adapter: 'openai-compatible',
+  baseUrl: 'https://openrouter.ai/api/v1',
+  defaultModel: 'openai/gpt-5-mini',
+  cachedModels: [{ id: 'openai/gpt-5-mini' }, { id: 'qwen/qwen3-coder' }],
+})
+const anthropic = newProfile({ name: 'Anthropic', adapter: 'anthropic', baseUrl: 'https://api.anthropic.com', defaultModel: 'claude-sonnet-5-5' })
+
+function seed(profiles: ProviderProfile[]) {
+  useProvidersStore.setState({ ...useProvidersStore.getInitialState(), loaded: true, profiles, settings: DEFAULT_SETTINGS }, true)
+}
+
+beforeEach(resetDb)
+
+it('is a disabled "No model" button without providers', () => {
+  seed([])
+  render(<ModelPicker />)
+  expect(screen.getByRole('button', { name: 'No model' })).toBeDisabled()
+})
+
+it('lists the models of every profile, filters by search, and remembers the choice', async () => {
+  seed([openrouter, anthropic])
+  render(<ModelPicker />)
+  await userEvent.click(screen.getByRole('button', { name: 'Model: openai/gpt-5-mini' }))
+  expect(screen.getByRole('group', { name: 'OpenRouter' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'claude-sonnet-5-5' })).toBeInTheDocument()
+
+  await userEvent.type(screen.getByLabelText('Search models'), 'qwen')
+  expect(screen.queryByRole('button', { name: 'openai/gpt-5-mini' })).toBeNull()
+  expect(screen.queryByRole('group', { name: 'Anthropic' })).toBeNull()
+
+  await userEvent.click(screen.getByRole('button', { name: 'qwen/qwen3-coder' }))
+  expect(screen.queryByLabelText('Search models')).toBeNull()
+  expect(selectActiveModel(useProvidersStore.getState())).toBe('qwen/qwen3-coder')
+  expect(screen.getByRole('button', { name: 'Model: qwen/qwen3-coder' })).toBeInTheDocument()
+  await vi.waitFor(async () => expect((await getSettings()).activeModel).toBe('qwen/qwen3-coder'))
+})
+
+it('switches profile when a model of another profile is picked', async () => {
+  seed([openrouter, anthropic])
+  render(<ModelPicker />)
+  await userEvent.click(screen.getByRole('button', { name: 'Model: openai/gpt-5-mini' }))
+  await userEvent.click(screen.getByRole('button', { name: 'claude-sonnet-5-5' }))
+  expect(selectActiveProfile(useProvidersStore.getState())?.name).toBe('Anthropic')
+})
+
+it('accepts a model name typed by hand for the active profile', async () => {
+  seed([openrouter])
+  render(<ModelPicker />)
+  await userEvent.click(screen.getByRole('button', { name: 'Model: openai/gpt-5-mini' }))
+  await userEvent.type(screen.getByLabelText('Search models'), 'mistral/devstral')
+  expect(screen.getByRole('button', { name: 'Use “mistral/devstral” with OpenRouter' })).toBeInTheDocument()
+  await userEvent.keyboard('{Enter}')
+  expect(selectActiveModel(useProvidersStore.getState())).toBe('mistral/devstral')
+})
+
+it('closes on Escape', async () => {
+  seed([openrouter])
+  render(<ModelPicker />)
+  await userEvent.click(screen.getByRole('button', { name: 'Model: openai/gpt-5-mini' }))
+  await userEvent.keyboard('{Escape}')
+  expect(screen.queryByLabelText('Search models')).toBeNull()
+})
+
+it('puts the default model first when the provider did not list it', () => {
+  expect(modelIds({ ...anthropic, cachedModels: [{ id: 'claude-a' }] })).toEqual(['claude-sonnet-5-5', 'claude-a'])
+})

@@ -1,8 +1,16 @@
 export {
+  ArrowRight as IconSend,
   Check as IconCheck,
+  ChevronDown as IconChevron,
   Download as IconDownload,
+  Info as IconInfo,
   LoaderCircle as IconSpinner,
+  Plus as IconPlus,
   Scan as IconFit,
+  Search as IconSearch,
+  Settings as IconSettings,
+  Sparkle as IconSparkle,
+  Square as IconStop,
   TriangleAlert as IconWarning,
   X as IconX,
 } from 'lucide-react'
