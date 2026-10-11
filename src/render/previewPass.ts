@@ -18,7 +18,8 @@ export function withPreviewPass(createWorker: WorkerFactory, opts: PreviewPassOp
     let terminated = false
     return {
       async render(req) {
-        if (opts.enabled()) {
+        // The tagged click-to-refine preview only feeds picking; a quick pass would add nothing.
+        if (opts.enabled() && !req.preview) {
           const quick = await inner.render({ ...req, params: { ...req.params, $fn: LOW_QUALITY_FN } })
           // A newer request made the controller kill this worker; its result is never delivered.
           if (terminated) return quick

@@ -9,7 +9,8 @@ export interface RenderControllerOptions {
   createWorker: WorkerFactory
   /** `req` is the request that produced `result`, so callers can tell which code it belongs to. */
   onResult(result: RenderResult, req: RenderRequest): void
-  onStart?(): void
+  /** `req` is the request that is starting (M5: tagged previews start quietly). */
+  onStart?(req: RenderRequest): void
   debounceMs?: number
   timeoutMs?: number
 }
@@ -17,7 +18,7 @@ export interface RenderControllerOptions {
 export class RenderController {
   private readonly createWorker: WorkerFactory
   private readonly onResult: (result: RenderResult, req: RenderRequest) => void
-  private readonly onStart: () => void
+  private readonly onStart: (req: RenderRequest) => void
   private readonly debounceMs: number
   private readonly timeoutMs: number
 
@@ -69,7 +70,7 @@ export class RenderController {
     this.settle()
     const id = ++this.currentId
     this.inFlight = true
-    this.onStart()
+    this.onStart(req)
 
     const worker = (this.worker ??= this.createWorker())
     const startedAt = performance.now()

@@ -72,3 +72,12 @@ it('drops the quick mesh and skips the full pass once the controller has termina
   expect(handles[0].requests).toHaveLength(1)
   expect(handles[0].terminate).toHaveBeenCalled()
 })
+
+it('skips the quick pass for the click-to-refine tagged preview', async () => {
+  const { handles, factory } = fakeFactory(() => okResult())
+  const onPreview = vi.fn()
+  const worker = withPreviewPass(factory, { enabled: () => true, onPreview })()
+  await worker.render({ code: 'cube(1);', preview: { tagged: true } })
+  expect(handles[0].requests).toEqual([{ code: 'cube(1);', preview: { tagged: true } }])
+  expect(onPreview).not.toHaveBeenCalled()
+})

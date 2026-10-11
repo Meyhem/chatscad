@@ -163,6 +163,8 @@ describe('M3', () => {
     const handle = {
       render: (req: RenderRequest) =>
         new Promise<RenderResult>((resolve) => {
+          // M5's tagged follow-up only feeds picking; answer it at once so the slider render is the pending one.
+          if (req.preview) return resolve(okResult())
           requests.push(req)
           if (requests.length === 1) resolve(okResult())
           else pending.push(() => resolve(okResult()))

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { paramOverrides } from '../scad/customizer'
+import { useRefineStore } from '../refine/refineStore'
 import { useAppStore } from '../state/store'
 import { DEFAULT_DEBOUNCE_MS, DEFAULT_TIMEOUT_MS, RenderController } from './controller'
 import { createRenderWorker, type WorkerFactory } from './createRenderWorker'
@@ -25,12 +26,25 @@ export function useRenderLoop(
     const { renderStarted, renderFinished } = useAppStore.getState()
     // The store params each request was built from, so the result records exactly what it rendered.
     const paramsOf = new WeakMap<RenderRequest, Params>()
-    const controller = new RenderController({
+    const controller: RenderController = new RenderController({
       createWorker,
       debounceMs,
       timeoutMs,
-      onStart: renderStarted,
-      onResult: (result, req) => renderFinished(result, req.code, paramsOf.get(req) ?? {}),
+      // M5: a tagged preview runs quietly; the status pill follows the normal render only.
+      onStart: (req) => {
+        if (!req.preview) renderStarted()
+      },
+      onResult: (result, req) => {
+        // M5: a tagged preview only feeds picking; it never touches mesh, stl, status or lastRender.
+        if (req.preview) {
+          useRefineStore.getState().taggedFinished(result, req.code)
+          return
+        }
+        renderFinished(result, req.code, paramsOf.get(req) ?? {})
+        if (result.ok && useRefineStore.getState().baseRendered(req.code, result.mesh)) {
+          controller.request({ ...req, preview: { tagged: true } }, { immediate: true })
+        }
+      },
     })
     const send = (immediate: boolean) => {
       const { code, params, libraries } = useAppStore.getState()

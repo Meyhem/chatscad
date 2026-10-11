@@ -5,6 +5,8 @@ import type { RenderWorkerHandle } from './createRenderWorker'
 import type { RenderRequest } from './types'
 import { buildRenderRequest, useRenderLoop } from './useRenderLoop'
 
+const normal = (rs: RenderRequest[]) => rs.filter((r) => !r.preview)
+
 beforeEach(() => {
   useAppStore.setState(useAppStore.getInitialState(), true)
   vi.useFakeTimers()
@@ -28,14 +30,14 @@ it('renders the initial code immediately, then re-renders after debounced edits'
   renderHook(() => useRenderLoop(createWorker, 600, 60_000))
 
   await act(() => vi.advanceTimersByTimeAsync(0))
-  expect(requests).toEqual([{ code: DEFAULT_CODE }])
+  expect(normal(requests)).toEqual([{ code: DEFAULT_CODE }])
   expect(useAppStore.getState().status).toBe('ok')
 
   act(() => useAppStore.getState().setCode('cube(1);'))
   await act(() => vi.advanceTimersByTimeAsync(599))
-  expect(requests).toHaveLength(1)
+  expect(normal(requests)).toHaveLength(1)
   await act(() => vi.advanceTimersByTimeAsync(1))
-  expect(requests[1]).toEqual({ code: 'cube(1);' })
+  expect(normal(requests)[1]).toEqual({ code: 'cube(1);' })
 })
 
 it('terminates the worker on unmount', async () => {
@@ -53,7 +55,7 @@ it('sends only the parameters that differ from the source defaults, and records 
 
   act(() => useAppStore.getState().setParams({ width: 30, depth: 20, nope: 1 }))
   await act(() => vi.advanceTimersByTimeAsync(600))
-  expect(requests[1]).toEqual({ code: DEFAULT_CODE, params: { width: 30 } })
+  expect(normal(requests)[1]).toEqual({ code: DEFAULT_CODE, params: { width: 30 } })
   expect(useAppStore.getState().renderedParams).toEqual({ width: 30, depth: 20, nope: 1 })
   expect(useAppStore.getState().lastRender?.code).toBe(DEFAULT_CODE)
 })
@@ -65,7 +67,7 @@ it('re-renders at once with the libraries when they change', async () => {
 
   act(() => useAppStore.getState().setLibraries(['BOSL2']))
   await act(() => vi.advanceTimersByTimeAsync(0))
-  expect(requests[1]).toEqual({ code: DEFAULT_CODE, libraries: ['BOSL2'] })
+  expect(normal(requests)[1]).toEqual({ code: DEFAULT_CODE, libraries: ['BOSL2'] })
 })
 
 it('builds requests without empty params or libraries', () => {

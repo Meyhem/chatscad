@@ -180,3 +180,19 @@ it('cancels the in-flight render as soon as a newer request arrives, without wai
   await vi.advanceTimersByTimeAsync(600)
   expect(workers[1].requests).toEqual([{ code: 'newer' }])
 })
+
+it('passes the request that is starting to onStart', async () => {
+  vi.useFakeTimers()
+  const onStart = vi.fn()
+  const controller = new RenderController({
+    createWorker: () => ({ render: () => new Promise<RenderResult>(() => {}), terminate: () => {} }),
+    onResult: () => {},
+    onStart,
+    debounceMs: 10,
+  })
+  controller.request({ code: 'cube(1);', preview: { tagged: true } }, { immediate: true })
+  await vi.advanceTimersByTimeAsync(0)
+  expect(onStart).toHaveBeenCalledWith({ code: 'cube(1);', preview: { tagged: true } })
+  controller.dispose()
+  vi.useRealTimers()
+})
