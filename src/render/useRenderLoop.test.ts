@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
-import { DEFAULT_CODE, useAppStore } from '../state/store'
+import { useAppStore } from '../state/store'
+import { STARTER_CODE as DEFAULT_CODE } from '../test/fixtures'
 import { okResult } from '../test/results'
 import type { RenderWorkerHandle } from './createRenderWorker'
 import type { RenderRequest } from './types'
@@ -8,7 +9,7 @@ import { buildRenderRequest, useRenderLoop } from './useRenderLoop'
 const normal = (rs: RenderRequest[]) => rs.filter((r) => !r.preview)
 
 beforeEach(() => {
-  useAppStore.setState(useAppStore.getInitialState(), true)
+  useAppStore.setState({ ...useAppStore.getInitialState(), code: DEFAULT_CODE }, true)
   vi.useFakeTimers()
 })
 afterEach(() => vi.useRealTimers())
@@ -77,4 +78,24 @@ it('builds requests without empty params or libraries', () => {
     params: { w: 2 },
     libraries: ['MCAD'],
   })
+})
+
+it('sends nothing to the worker while the code is empty, then renders once code is typed', async () => {
+  useAppStore.setState({ code: '' })
+  const { requests, createWorker } = instantWorker()
+  renderHook(() => useRenderLoop(createWorker, 600, 60_000))
+  await act(() => vi.advanceTimersByTimeAsync(1_000))
+  expect(normal(requests)).toEqual([])
+  expect(useAppStore.getState().status).toBe('empty')
+
+  act(() => useAppStore.getState().setCode('cube(1);'))
+  await act(() => vi.advanceTimersByTimeAsync(600))
+  expect(normal(requests)).toEqual([{ code: 'cube(1);' }])
+  expect(useAppStore.getState().status).toBe('ok')
+
+  act(() => useAppStore.getState().setCode('   '))
+  await act(() => vi.advanceTimersByTimeAsync(1_000))
+  expect(normal(requests)).toHaveLength(1)
+  expect(useAppStore.getState().status).toBe('empty')
+  expect(useAppStore.getState().mesh).toBeNull()
 })

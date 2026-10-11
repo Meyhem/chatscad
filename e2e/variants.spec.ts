@@ -21,7 +21,7 @@ test('asks for three variants, renders them in the background and uses the picke
   }
   expect(llm.requests).toBe(3)
   // The main view was not disturbed by the background renders.
-  await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm')
+  await expect(page.getByTestId('render-status')).toHaveText('Nothing to render')
 
   const widest = dialog.getByRole('option').filter({ hasText: '30 × 10 × 10 mm' })
   await widest.locator('.pc-variant-meta').first().click()

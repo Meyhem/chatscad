@@ -12,6 +12,7 @@ import type { Bounds, MeshData } from '../render/types'
 import { useAppStore } from '../state/store'
 import { useTokens } from '../theme/tokens'
 import { DimsReadout } from '../ui/DimsReadout'
+import { EmptyModelCard } from './EmptyModelCard'
 import { IconFit, IconSpinner, IconWarning } from '../ui/icons'
 import { TriangleWarning } from './TriangleWarning'
 import { computeCameraFit } from './cameraFit'
@@ -152,6 +153,7 @@ export function Viewer({
   previewing = false,
   paused = false,
   refine = false,
+  empty = false,
 }: {
   mesh: MeshData | null
   stale: boolean
@@ -161,6 +163,8 @@ export function Viewer({
   paused?: boolean
   /** Click-to-refine: tap a part of the workbench model (M5). Off for other viewers, such as History's. */
   refine?: boolean
+  /** The editor holds no code: show the empty state over the grid. */
+  empty?: boolean
 }) {
   const t = useTokens(TOKENS)
   const [fitToken, setFitToken] = useState(0)
@@ -229,6 +233,8 @@ export function Viewer({
         {thumbnails && <ThumbnailRegistrar />}
         <ResumeOnShow paused={paused} />
       </Canvas>
+
+      {empty && <EmptyModelCard />}
 
       <div className="absolute top-3 left-3">
         {stale ? (

@@ -1,10 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
-import { waitForFirstRender, watchCspViolations } from './support'
+import { openWithStarter, watchCspViolations } from './support'
 
 async function openExport(page: Page, tab: string) {
-  await page.goto('./')
-  await waitForFirstRender(page)
+  await openWithStarter(page)
   await page.getByRole('button', { name: 'Share', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Export and share' })
   await dialog.getByRole('tab', { name: tab }).click()

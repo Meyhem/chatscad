@@ -39,3 +39,7 @@ describe('exportDisabledReason', () => {
     expect(exportDisabledReason('ok')).toBeNull()
   })
 })
+
+it('explains that an empty model cannot be exported', () => {
+  expect(exportDisabledReason('empty')).toBe('Write or generate a model first')
+})

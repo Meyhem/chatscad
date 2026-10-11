@@ -1,3 +1,4 @@
+import { waitForAppReady } from './support'
 import { expect, test, type Page, type Route } from '@playwright/test'
 
 const RENDER_TIMEOUT = 90_000
@@ -64,7 +65,7 @@ async function prompt(page: Page, text: string) {
 test('a prompt becomes code that renders, with the cost shown', async ({ page }) => {
   const bodies = await fakeLlm(page, ['Made a 30 × 20 × 10 mm block.\n\n```openscad\ncube([30, 20, 10]);\n```\n'])
   await page.goto('./')
-  await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm', { timeout: RENDER_TIMEOUT })
+  await waitForAppReady(page)
   await addFakeProfile(page)
 
   await prompt(page, 'A 30 by 20 by 10 mm block')
@@ -91,7 +92,7 @@ test('a reply that fails to compile is sent back with the error, and the fixed r
     'Closed the bracket.\n\n<<<<<<< SEARCH\ncube([12, 12, 12]\n=======\ncube([12, 12, 12]);\n>>>>>>> REPLACE\n',
   ])
   await page.goto('./')
-  await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm', { timeout: RENDER_TIMEOUT })
+  await waitForAppReady(page)
   await addFakeProfile(page)
 
   await prompt(page, 'A 12 mm cube')

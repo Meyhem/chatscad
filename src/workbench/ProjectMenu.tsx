@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { importFromText, saveProjectFile } from '../history/projectFile'
 import { useProjectStore } from '../history/projectStore'
-import { DEFAULT_CODE, useAppStore } from '../state/store'
+import { useAppStore } from '../state/store'
 import { IconChevronDown, IconGallery, IconImport, IconPlus, IconX } from '../ui/icons'
 
 type Mode = 'menu' | 'rename' | 'delete'
@@ -76,7 +76,7 @@ export function ProjectMenu() {
                 className={item}
                 onClick={() => {
                   close()
-                  void store().newProject({ code: DEFAULT_CODE, origin: 'blank' }).then(toWorkbench)
+                  void store().newProject({ code: '', origin: 'blank' }).then(toWorkbench)
                 }}
               >
                 <IconPlus className="pc-i" aria-hidden="true" />

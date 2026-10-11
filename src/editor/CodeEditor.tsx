@@ -1,6 +1,6 @@
 import { setDiagnostics, type Diagnostic as CmDiagnostic } from '@codemirror/lint'
 import { Annotation, EditorState, Transaction, type Text } from '@codemirror/state'
-import { EditorView } from '@codemirror/view'
+import { EditorView, placeholder } from '@codemirror/view'
 import { basicSetup } from 'codemirror'
 import { useEffect, useRef } from 'react'
 import type { Diagnostic } from '../render/types'
@@ -52,6 +52,7 @@ export function CodeEditor({ value, onChange, diagnostics, reveal = null, onBlur
           tokenTheme,
           diagnosticsExtension,
           pickExtension,
+          placeholder('Write OpenSCAD here, or describe a part in the chat'),
           EditorView.updateListener.of((u) => {
             if (u.docChanged && !u.transactions.some((t) => t.annotation(external))) onChangeRef.current(u.state.doc.toString())
           }),

@@ -1,11 +1,15 @@
 import { expect, test } from '@playwright/test'
-import { waitForFirstRender } from './support'
+import { replaceCode, STARTER_CODE, waitForAppReady, waitForFirstRender } from './support'
 
 test('switches between Chat, Code and 3D, with the symbol key row in Code', async ({ page }) => {
   await page.goto('./')
-  await waitForFirstRender(page)
+  await waitForAppReady(page)
   const tabs = page.getByRole('tablist', { name: 'Panels' })
   await expect(tabs).toBeVisible()
+  await tabs.getByRole('tab', { name: 'Code' }).click()
+  await replaceCode(page, STARTER_CODE)
+  await tabs.getByRole('tab', { name: 'Chat' }).click()
+  await waitForFirstRender(page)
   await expect(page.getByRole('textbox', { name: 'Prompt' })).toBeVisible()
 
   await tabs.getByRole('tab', { name: '3D' }).click()

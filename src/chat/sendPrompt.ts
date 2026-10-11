@@ -16,7 +16,7 @@ import { awaitRender } from '../render/awaitRender'
 import { errorMessage } from '../render/result'
 import type { RenderResult } from '../render/types'
 import { selectActiveModel, selectActiveProfile, useProvidersStore } from '../settings/providersStore'
-import { DEFAULT_CODE, useAppStore } from '../state/store'
+import { isEmptyCode, useAppStore } from '../state/store'
 import { useChatStore, type ChatMessage } from './chatStore'
 import { streamingText } from './streamingText'
 
@@ -184,7 +184,7 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
       userText: input.userText,
       // A selection's line numbers refer to the real code, even when it is the sample.
       ctx: {
-        code: startCode === DEFAULT_CODE && !input.selection ? '' : startCode,
+        code: isEmptyCode(startCode) && !input.selection ? '' : startCode,
         libraries: currentLibraries(),
         ...(input.selection ? { selection: input.selection } : {}),
       },

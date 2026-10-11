@@ -14,25 +14,18 @@ export interface PreviewMesh {
   mesh: MeshData
 }
 
-export type RenderStatus = 'idle' | 'rendering' | 'ok' | 'error'
+/** 'empty': the editor holds no code, so nothing is sent to the worker. */
+export type RenderStatus = 'idle' | 'rendering' | 'ok' | 'error' | 'empty'
 
 export interface RevealRequest {
   line: number
   id: number
 }
 
-export const DEFAULT_CODE = `// ChatSCAD: edit me
-/* [Dimensions] */
-width = 20;  // [5:1:100]
-depth = 20;  // [5:1:100]
-height = 10; // [2:1:50]
+/** Shown in place of a render while the editor holds no code; also what awaitRender() gets for empty code. */
+export const EMPTY_CODE_ERROR = 'The code is empty'
 
-difference() {
-  cube([width, depth, height]);
-  translate([width / 2, depth / 2, 2])
-    cylinder(h = height, r = min(width, depth) / 4, $fn = 48);
-}
-`
+export const isEmptyCode = (code: string): boolean => code.trim() === ''
 
 export type CodeSource = 'manual' | 'ai' | 'autofix' | 'restore' | 'slider' | 'gallery' | 'import'
 
@@ -76,6 +69,8 @@ export interface AppState {
   setCode(code: string, source?: CodeSource): void // source defaults to 'manual'
   renderStarted(): void
   renderFinished(result: RenderResult, code: string, params?: Params): void
+  /** The code is empty: clear the model and record a failed render so awaitRender() settles. */
+  renderEmpty(): void
   goToLine(line: number): void
   setView(view: AppState['view']): void
 }
@@ -84,7 +79,7 @@ let revealId = 0
 let insertId = 0
 
 export const useAppStore = create<AppState>()((set) => ({
-  code: DEFAULT_CODE,
+  code: '',
   codeSource: 'manual',
   status: 'idle',
   mesh: null,
@@ -132,6 +127,20 @@ export const useAppStore = create<AppState>()((set) => ({
           }
         : { status: 'error', lastRender: { code, result: r }, error: r.error, logs: r.logs, diagnostics: r.diagnostics, renderMs: r.renderMs },
     ),
+  renderEmpty: () =>
+    set((s) => ({
+      status: 'empty',
+      mesh: null,
+      stl: null,
+      renderedCode: null,
+      renderedParams: null,
+      preview: null,
+      lastRender: { code: s.code, result: { ok: false, error: EMPTY_CODE_ERROR, logs: [], diagnostics: [], renderMs: 0 } },
+      logs: [],
+      diagnostics: [],
+      error: null,
+      renderMs: null,
+    })),
   goToLine: (line) => set({ reveal: { line, id: ++revealId } }),
   setView: (view) => set({ view }),
 }))

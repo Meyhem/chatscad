@@ -1,11 +1,12 @@
 import { errorResult, okResult } from '../test/results'
-import { DEFAULT_CODE, selectCanExport, useAppStore } from './store'
+import { STARTER_CODE as DEFAULT_CODE } from '../test/fixtures'
+import { EMPTY_CODE_ERROR, selectCanExport, useAppStore } from './store'
 
-beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true))
+beforeEach(() => useAppStore.setState({ ...useAppStore.getInitialState(), code: DEFAULT_CODE }, true))
 
-it('starts idle with the default model code', () => {
-  const s = useAppStore.getState()
-  expect(s.code).toBe(DEFAULT_CODE)
+it('starts idle with empty code', () => {
+  const s = useAppStore.getInitialState()
+  expect(s.code).toBe('')
   expect(s.status).toBe('idle')
   expect(s.mesh).toBeNull()
   expect(s.reveal).toBeNull()
@@ -173,4 +174,17 @@ describe('parameters (M3)', () => {
     useAppStore.getState().setView('gallery')
     expect(useAppStore.getState().view).toBe('gallery')
   })
+})
+
+it('renderEmpty clears the model and records a failed render for the empty code', () => {
+  useAppStore.getState().renderFinished(okResult(), DEFAULT_CODE)
+  useAppStore.setState({ code: '  \n' })
+  useAppStore.getState().renderEmpty()
+  const s = useAppStore.getState()
+  expect(s.status).toBe('empty')
+  expect(s.mesh).toBeNull()
+  expect(s.stl).toBeNull()
+  expect(s.logs).toEqual([])
+  expect(selectCanExport(s)).toBe(false)
+  expect(s.lastRender).toEqual({ code: '  \n', result: { ok: false, error: EMPTY_CODE_ERROR, logs: [], diagnostics: [], renderMs: 0 } })
 })

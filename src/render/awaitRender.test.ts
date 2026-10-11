@@ -32,3 +32,10 @@ it('rejects immediately when the signal is already aborted', async () => {
   useAppStore.getState().renderFinished(okResult(), 'cube(4);')
   await expect(awaitRender('cube(4);', controller.signal)).rejects.toBeInstanceOf(DOMException)
 })
+
+it('resolves with a failed render for empty code, so a chat turn never waits forever', async () => {
+  useAppStore.setState({ code: '' })
+  const pending = awaitRender('')
+  useAppStore.getState().renderEmpty()
+  await expect(pending).resolves.toMatchObject({ ok: false, error: 'The code is empty' })
+})

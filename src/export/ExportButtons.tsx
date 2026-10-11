@@ -8,6 +8,8 @@ export function exportDisabledReason(status: RenderStatus): string | null {
       return 'Wait for the first render to finish'
     case 'rendering':
       return 'Wait for the render to finish'
+    case 'empty':
+      return 'Write or generate a model first'
     case 'error':
       return 'Fix the error first, so the file matches the code'
     case 'ok':

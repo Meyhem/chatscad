@@ -33,6 +33,8 @@ export function summaryLine(
     }
     case 'rendering':
       return { text: 'Compiling main.scad…', tone: 'is-muted' }
+    case 'empty':
+      return null
     case 'ok':
       return { text: `Rendered in ${ms}`, tone: 'is-ok' }
     case 'error': {

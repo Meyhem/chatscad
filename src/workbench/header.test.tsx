@@ -3,7 +3,7 @@ import type { Version } from '../db/db'
 import { importFromText, saveProjectFile } from '../history/projectFile'
 import { useProjectStore } from '../history/projectStore'
 import { renderedVersionLabel } from '../history/renderedVersion'
-import { DEFAULT_CODE, useAppStore } from '../state/store'
+import { useAppStore } from '../state/store'
 import { makeProject, makeVersion } from '../test/fixtures'
 import { HistoryControls } from './HistoryControls'
 import { ProjectMenu } from './ProjectMenu'
@@ -55,12 +55,12 @@ describe('ProjectMenu', () => {
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
-  it('starts a new project from the default model and returns to the workbench', async () => {
+  it('starts an empty new project and returns to the workbench', async () => {
     useAppStore.getState().setView('history')
     render(<ProjectMenu />)
     openMenu()
     fireEvent.click(screen.getByRole('menuitem', { name: 'New project' }))
-    await waitFor(() => expect(actions.newProject).toHaveBeenCalledWith({ code: DEFAULT_CODE, origin: 'blank' }))
+    await waitFor(() => expect(actions.newProject).toHaveBeenCalledWith({ code: '', origin: 'blank' }))
     expect(useAppStore.getState().view).toBe('workbench')
   })
 

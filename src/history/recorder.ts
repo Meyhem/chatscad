@@ -3,7 +3,7 @@ import { putBlob } from '../db/blobs'
 import type { Version } from '../db/db'
 import { paramsEqual, type Params } from '../render/params'
 import { effectiveValues, paramOverrides } from '../scad/customizer'
-import { useAppStore, type AppState, type CodeSource } from '../state/store'
+import { isEmptyCode, useAppStore, type AppState, type CodeSource } from '../state/store'
 import { matchesHead } from './matchesHead'
 import { bakeMessage, describeParamChanges, manualMessage, truncate } from './messages'
 import { useProjectStore, type CommitInput } from './projectStore'
@@ -99,7 +99,7 @@ export function startRecorder(deps: RecorderDeps = {}): Recorder {
 
   function statusFor(s: AppState, snap: Snapshot): Pick<Version, 'compileStatus' | 'renderMs'> {
     const lr = s.lastRender
-    if (!lr || lr.code !== snap.code) return { compileStatus: 'pending', renderMs: null }
+    if (!lr || lr.code !== snap.code || isEmptyCode(snap.code)) return { compileStatus: 'pending', renderMs: null }
     if (!lr.result.ok) return { compileStatus: 'error', renderMs: lr.result.renderMs }
     return paramsEqual(s.renderedParams, snap.params) ? { compileStatus: 'ok', renderMs: lr.result.renderMs } : { compileStatus: 'pending', renderMs: null }
   }
@@ -200,6 +200,8 @@ export function startRecorder(deps: RecorderDeps = {}): Recorder {
     const s = useAppStore.getState()
     const lr = s.lastRender
     if (!lr || lr.code !== s.code) return
+    // Empty code is not a failed compile; nothing was rendered.
+    if (isEmptyCode(lr.code)) return
     if (lr.result.ok && !paramsEqual(s.renderedParams, s.params)) return
     if (dirty) {
       if (lr.result.ok) await commitDirty({ code: s.code, params: s.params }, s)

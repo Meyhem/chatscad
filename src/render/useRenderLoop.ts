@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { paramOverrides } from '../scad/customizer'
 import { useRefineStore } from '../refine/refineStore'
-import { useAppStore } from '../state/store'
+import { isEmptyCode, useAppStore } from '../state/store'
 import { DEFAULT_DEBOUNCE_MS, DEFAULT_TIMEOUT_MS, RenderController } from './controller'
 import { createRenderWorker, type WorkerFactory } from './createRenderWorker'
 import type { Params } from './params'
@@ -51,11 +51,16 @@ export function useRenderLoop(
     })
     const send = (immediate: boolean) => {
       const { code, params, libraries } = useAppStore.getState()
-      const req = buildRenderRequest(code, params, libraries)
-      paramsOf.set(req, params)
       // The running preview belongs to the outgoing mesh; drop it so "finding parts…" never sticks.
       previews.cancel()
       useRefineStore.getState().cancelPending()
+      if (isEmptyCode(code)) {
+        controller.cancel()
+        useAppStore.getState().renderEmpty()
+        return
+      }
+      const req = buildRenderRequest(code, params, libraries)
+      paramsOf.set(req, params)
       controller.request(req, { immediate })
     }
     send(true)

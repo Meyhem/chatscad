@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module'
 import { expect, test } from '@playwright/test'
-import { RENDER_TIMEOUT, waitForFirstRender, watchCspViolations } from './support'
+import { RENDER_TIMEOUT, waitForAppReady, watchCspViolations } from './support'
 
 // lz-string is CommonJS without named ESM exports; Playwright runs specs as ESM.
 const LZString = createRequire(import.meta.url)('lz-string') as typeof import('lz-string')
@@ -27,6 +27,6 @@ test('a share link opens as a new project, and the link the app makes opens the 
 test('a damaged link creates nothing and says why', async ({ page }) => {
   await page.goto('./#s=garbage!!')
   await expect(page.getByRole('alert')).toContainText('This link could not be opened')
-  await waitForFirstRender(page)
+  await waitForAppReady(page)
   expect(new URL(page.url()).hash).toBe('')
 })

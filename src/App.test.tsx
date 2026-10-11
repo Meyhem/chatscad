@@ -9,6 +9,7 @@ import type { RenderRequest, RenderResult } from './render/types'
 import { useProvidersStore } from './settings/providersStore'
 import { useAppStore } from './state/store'
 import { resetDb } from './test/db'
+import { STARTER_CODE } from './test/fixtures'
 import { errorResult, okResult } from './test/results'
 import { App } from './App'
 import { useRefineStore } from './refine/refineStore'
@@ -18,12 +19,14 @@ import { emitLoadProgress } from './render/loadProgress'
 import { usePrefs } from './settings/prefsStore'
 
 vi.mock('./viewer/Viewer', () => ({
-  Viewer: ({ stale }: { stale: boolean }) => <div data-testid="viewer" data-stale={String(stale)} />,
+  Viewer: ({ stale, empty }: { stale: boolean; empty?: boolean }) => (
+    <div data-testid="viewer" data-stale={String(stale)} data-empty={String(!!empty)} />
+  ),
 }))
 
 beforeEach(async () => {
   await resetDb()
-  useAppStore.setState(useAppStore.getInitialState(), true)
+  useAppStore.setState({ ...useAppStore.getInitialState(), code: STARTER_CODE }, true)
   useChatStore.setState(useChatStore.getInitialState(), true)
   useProvidersStore.setState(useProvidersStore.getInitialState(), true)
   useExportStore.setState(useExportStore.getInitialState(), true)
@@ -287,4 +290,15 @@ it('highlights the picked part in the editor and clears it when the code changes
   act(() => view.dispatch({ changes: { from: 0, insert: '// edited\n' } }))
   await waitFor(() => expect(container.querySelectorAll('.cm-pick-line')).toHaveLength(0))
   expect(useRefineStore.getState().pick).toBeNull()
+})
+
+it('opens an empty project without rendering anything', async () => {
+  useAppStore.setState({ code: '' })
+  const render$ = vi.fn(async () => okResult())
+  render(<App createWorker={() => ({ render: render$, terminate: () => {} })} />)
+  await waitFor(() => expect(screen.getByTestId('render-status')).toHaveTextContent('Nothing to render'))
+  expect(screen.getByTestId('viewer')).toHaveAttribute('data-empty', 'true')
+  expect(screen.getByRole('button', { name: 'Export STL' })).toBeDisabled()
+  await new Promise((r) => setTimeout(r, 50))
+  expect(render$).not.toHaveBeenCalled()
 })

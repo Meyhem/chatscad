@@ -112,3 +112,8 @@ it('does not replay an earlier key-row insert when the editor mounts again', () 
   expect(screen.getByTestId('code-editor')).toHaveTextContent('cube(1)')
   expect(screen.getByTestId('code-editor')).not.toHaveTextContent(';')
 })
+
+it('suggests a next step while the document is empty', () => {
+  const { container } = render(<CodeEditor value="" onChange={() => {}} diagnostics={[]} />)
+  expect(container.querySelector('.cm-placeholder')).toHaveTextContent('Write OpenSCAD here, or describe a part in the chat')
+})

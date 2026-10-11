@@ -4,7 +4,7 @@ import { useChatStore } from '../chat/chatStore'
 import type { ProviderProfile } from '../db/db'
 import { currentLibraries, useProjectStore } from '../history/projectStore'
 import { selectActiveModel, selectActiveProfile, useProvidersStore } from '../settings/providersStore'
-import { DEFAULT_CODE, useAppStore } from '../state/store'
+import { isEmptyCode, useAppStore } from '../state/store'
 import { useVariantStore } from './variantStore'
 
 /** Starts "Generate 3" with the same request sendPrompt() would send for a single reply. Returns false when nothing was sent. */
@@ -22,7 +22,7 @@ export function startVariants(text: string, deps: { createProvider?(profile: Pro
     model,
     history: useChatStore.getState().history,
     userText,
-    ctx: { code: code === DEFAULT_CODE ? '' : code, libraries: currentLibraries() },
+    ctx: { code: isEmptyCode(code) ? '' : code, libraries: currentLibraries() },
     maxFixAttempts: providers.settings.autoFixAttempts,
     projectId: project?.id ?? null,
     parentId: head?.id ?? null,

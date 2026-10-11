@@ -2,7 +2,7 @@ import { ProviderError } from '../ai/types'
 import { DEFAULT_SETTINGS, db } from '../db/db'
 import { newProfile } from '../db/profiles'
 import { useProvidersStore } from '../settings/providersStore'
-import { DEFAULT_CODE, useAppStore } from '../state/store'
+import { useAppStore } from '../state/store'
 import { resetDb } from '../test/db'
 import { scriptedProvider } from '../test/providers'
 import { errorResult, okResult } from '../test/results'
@@ -60,9 +60,9 @@ it('runs a turn: user message, labelled reply with cost, AI code in the editor, 
   )
 })
 
-it('starts from an empty file while the editor still holds the sample model', async () => {
+it('sends an empty editor when the code is only whitespace', async () => {
   const { provider, requests } = scriptedProvider(FULL)
-  expect(useAppStore.getState().code).toBe(DEFAULT_CODE)
+  useAppStore.setState({ code: '\n  \n' })
   await sendPrompt('A block', { createProvider: () => provider, render: async () => okResult() })
   expect(requests[0].messages.at(-1)?.content).toContain('The editor is empty.')
 })

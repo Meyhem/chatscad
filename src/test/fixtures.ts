@@ -33,3 +33,17 @@ export function makeProject(over: Partial<Project> = {}): Project {
     ...over,
   }
 }
+
+/** The cube-with-a-hole model new projects used to start with; tests that need something to render load it explicitly. */
+export const STARTER_CODE = `// ChatSCAD: edit me
+/* [Dimensions] */
+width = 20;  // [5:1:100]
+depth = 20;  // [5:1:100]
+height = 10; // [2:1:50]
+
+difference() {
+  cube([width, depth, height]);
+  translate([width / 2, depth / 2, 2])
+    cylinder(h = height, r = min(width, depth) / 4, $fn = 48);
+}
+`

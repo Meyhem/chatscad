@@ -1,4 +1,5 @@
-import { selectDisplayMesh, selectShowingPreview, useAppStore, DEFAULT_CODE } from '../state/store'
+import { selectDisplayMesh, selectShowingPreview, useAppStore } from '../state/store'
+import { STARTER_CODE as DEFAULT_CODE } from '../test/fixtures'
 import { okResult } from '../test/results'
 import { showPreviewIfCurrent } from './showPreview'
 import { buildRenderRequest } from './useRenderLoop'

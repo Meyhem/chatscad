@@ -16,10 +16,43 @@ export async function waitForFirstRender(page: Page): Promise<void> {
   await expect(page.getByTestId('render-status')).toHaveText(/^Rendered/, { timeout: RENDER_TIMEOUT })
 }
 
+/** New projects start empty: wait until the app has settled on either an empty or a rendered model. */
+export async function waitForAppReady(page: Page): Promise<void> {
+  await expect(page.getByTestId('render-status')).toHaveText(/^(Nothing to render|Rendered)/, { timeout: RENDER_TIMEOUT })
+}
+
+/** The cube-with-a-hole model new projects used to start with (20 × 20 × 10 mm, three parameters). */
+export const STARTER_CODE = `/* [Dimensions] */
+width = 20;  // [5:1:100]
+depth = 20;  // [5:1:100]
+height = 10; // [2:1:50]
+
+difference() {
+  cube([width, depth, height]);
+  translate([width / 2, depth / 2, 2])
+    cylinder(h = height, r = min(width, depth) / 4, $fn = 48);
+}
+`
+
+export async function replaceCode(page: Page, code: string): Promise<void> {
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('ControlOrMeta+a')
+  // insertText avoids CodeMirror auto-closing brackets that would double up with typed input.
+  await page.keyboard.insertText(code)
+}
+
+/** Opens the app and types the starter model, for specs that need something rendered. */
+export async function openWithStarter(page: Page): Promise<void> {
+  await page.goto('./')
+  await waitForAppReady(page)
+  await replaceCode(page, STARTER_CODE)
+  await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm', { timeout: RENDER_TIMEOUT })
+}
+
 /** Adds an OpenAI-compatible profile for FAKE_BASE and makes it active, then reloads. */
 export async function seedFakeProvider(page: Page, settings: Record<string, unknown> = {}): Promise<void> {
   await page.goto('./')
-  await waitForFirstRender(page)
+  await waitForAppReady(page)
   await page.evaluate(
     async ({ base, patch }) => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -57,7 +90,7 @@ export async function seedFakeProvider(page: Page, settings: Record<string, unkn
     { base: FAKE_BASE, patch: settings },
   )
   await page.reload()
-  await waitForFirstRender(page)
+  await waitForAppReady(page)
 }
 
 /** Serves an OpenAI-compatible endpoint whose replies are the given codes, in turn, as full files. */

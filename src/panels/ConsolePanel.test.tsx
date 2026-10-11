@@ -97,3 +97,7 @@ it('names the download size in the idle line, as the first-run screen does', () 
   })
   expect(summaryLine('idle', null, null, [])).toEqual({ text: 'Loading OpenSCAD…', tone: 'is-muted' })
 })
+
+it('stays quiet while the code is empty', () => {
+  expect(summaryLine('empty', null, null, [])).toBeNull()
+})

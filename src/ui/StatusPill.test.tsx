@@ -68,3 +68,11 @@ it('shows the OpenSCAD download in mono while it loads', () => {
   expect(pill).toHaveClass('pc-status', 'is-busy')
   expect(pill.querySelector('svg.pc-i')).not.toBeNull()
 })
+
+it('says there is nothing to render for empty code, without a spinner', () => {
+  render(<StatusPill status="empty" renderMs={null} error={null} diagnostics={[]} />)
+  const pill = screen.getByTestId('render-status')
+  expect(pill).toHaveTextContent('Nothing to render')
+  expect(pill).toHaveClass('pc-status', 'is-neutral')
+  expect(pill).not.toHaveClass('is-busy')
+})

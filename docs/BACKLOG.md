@@ -16,18 +16,6 @@ Feature ideas not yet scheduled into a plan. Each entry says what the user gets 
 
 **Touches.** `src/settings/ProfileForm.tsx` (Default model field), `LlmProvider.listModels` in the adapters under `src/ai/`, `cachedModels` and `priceTable` on the profile. Fits SPEC "Model selection" and "Token and cost tracking", which already describe `/models` loading and provider-reported prices.
 
-## New projects start empty
-
-**Idea.** "New project" opens an empty workspace: no starter cube with a cylinder cutout, nothing in the viewer, an empty (or comment-only) editor. The user starts from a prompt or their own code.
-
-**Behaviour.**
-
-- Empty code is a valid state, not an error: the status pill and viewer show an empty state (for example "Nothing to render yet"), the console stays quiet, and STL export is disabled.
-- The empty state points at the next step: type a prompt, write code, or pick something from the gallery.
-- No render request goes to the worker while the code is empty.
-
-**Touches.** `DEFAULT_CODE` in `src/state/store.ts` (initial `code` and the "New project" action in `src/workbench/ProjectMenu.tsx`). `src/chat/sendPrompt.ts` and `src/variants/startVariants.ts` compare against `DEFAULT_CODE` to treat the starter as "no code yet"; that check becomes "code is empty". Existing tests and e2e specs that rely on the starter cube need a fixture of their own.
-
 ## Resizable panels on desktop
 
 **Idea.** The user can resize every desktop panel by dragging the border between panels: chat, 3D view, code, sliders (customizer) and console. The layout stays the way they leave it.

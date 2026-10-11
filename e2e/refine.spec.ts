@@ -1,3 +1,4 @@
+import { replaceCode, waitForAppReady } from './support'
 import { expect, test, type Page, type Route } from '@playwright/test'
 
 const RENDER_TIMEOUT = 90_000
@@ -79,13 +80,7 @@ async function seedVisionProfile(page: Page) {
     database.close()
   }, BASE)
   await page.reload()
-  await expect(page.getByTestId('dims')).toBeVisible({ timeout: RENDER_TIMEOUT })
-}
-
-async function replaceCode(page: Page, code: string) {
-  await page.locator('.cm-content').click()
-  await page.keyboard.press('ControlOrMeta+a')
-  await page.keyboard.insertText(code)
+  await waitForAppReady(page)
 }
 
 test('tap a part, ask for a change, and only that part changes', async ({ page }) => {

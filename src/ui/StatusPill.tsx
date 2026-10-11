@@ -1,9 +1,9 @@
 import { formatLoadProgress, type LoadProgress } from '../render/loadProgress'
 import type { Diagnostic } from '../render/types'
 import type { RenderStatus } from '../state/store'
-import { IconCheck, IconSpinner, IconWarning, IconX } from './icons'
+import { IconBox, IconCheck, IconSpinner, IconWarning, IconX } from './icons'
 
-export type PillTone = 'busy' | 'ok' | 'warn' | 'error'
+export type PillTone = 'neutral' | 'busy' | 'ok' | 'warn' | 'error'
 
 export interface StatusDescription {
   tone: PillTone
@@ -35,6 +35,8 @@ export function describeStatus(
         : { ...base, tone: 'busy', label: 'Loading OpenSCAD…' }
     case 'rendering':
       return { ...base, tone: 'busy', label: 'Rendering…' }
+    case 'empty':
+      return { ...base, tone: 'neutral', label: 'Nothing to render' }
     case 'ok': {
       const warnings = diagnostics.filter((d) => d.severity === 'warning').length
       return {
@@ -54,7 +56,7 @@ export function describeStatus(
   }
 }
 
-const ICONS = { busy: IconSpinner, ok: IconCheck, warn: IconWarning, error: IconX } as const
+const ICONS = { neutral: IconBox, busy: IconSpinner, ok: IconCheck, warn: IconWarning, error: IconX } as const
 
 interface Props {
   status: RenderStatus

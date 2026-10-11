@@ -113,7 +113,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
         chat={<ChatPanel />}
         code={<CodePane />}
         keyRow={<KeyRow onInsert={insertText} />}
-        viewer={(paused) => <Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} paused={paused} refine />}
+        viewer={(paused) => <Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} empty={status === 'empty'} paused={paused} refine />}
         params={<CustomizerDock />}
         overlays={
           <>
@@ -183,7 +183,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
 
           <section aria-label="3D view" className="flex min-h-0 min-w-0 flex-col md:border-l md:border-line">
             <div className="min-h-0 flex-1">
-              <Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} refine />
+              <Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} empty={status === 'empty'} refine />
             </div>
             <CustomizerDock />
           </section>

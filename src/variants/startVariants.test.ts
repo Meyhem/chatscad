@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS } from '../db/db'
 import { newProfile } from '../db/profiles'
 import { useChatStore } from '../chat/chatStore'
 import { useProvidersStore } from '../settings/providersStore'
-import { DEFAULT_CODE, useAppStore } from '../state/store'
+import { useAppStore } from '../state/store'
 import { startVariants } from './startVariants'
 import { useVariantStore } from './variantStore'
 
@@ -36,10 +36,10 @@ it('starts three variants with the request the chat would send: model, history, 
   })
 })
 
-it('sends an empty editor for the M1 sample code, and does nothing without text or a model', () => {
+it('sends an empty editor for whitespace-only code, and does nothing without text or a model', () => {
   const start = vi.fn()
   useVariantStore.setState({ start })
-  expect(useAppStore.getState().code).toBe(DEFAULT_CODE)
+  useAppStore.setState({ code: '  \n' })
   expect(startVariants('A hook', { createProvider: () => provider })).toBe(true)
   expect(start.mock.calls[0][0].ctx.code).toBe('')
   expect(startVariants('   ', { createProvider: () => provider })).toBe(false)

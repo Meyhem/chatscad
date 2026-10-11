@@ -226,3 +226,11 @@ it('describes the latest chat turn', () => {
   useChatStore.setState({ messages: [] })
   expect(describeChatTurn()).toEqual({ prompt: null, reply: null, model: null })
 })
+
+it('leaves an empty new project pending instead of marking it failed', async () => {
+  await project().newProject({ code: '', origin: 'blank' })
+  await start()
+  app().renderEmpty()
+  await recorder.settled()
+  expect(project().head).toMatchObject({ code: '', compileStatus: 'pending' })
+})
