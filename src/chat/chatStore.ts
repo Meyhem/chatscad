@@ -13,6 +13,10 @@ export interface ChatMessage {
   compileStatus?: 'ok' | 'error'
   imageBlobIds?: string[] // M5
   audioTranscript?: string // what was dictated, when the prompt was spoken
+  reasoning?: string // the model's reasoning, shown collapsed; never sent back
+  reasoningMs?: number
+  reasoningTokens?: number
+  reasoningStartedAt?: number // memory only: the live "Thinking · 38 s" timer
 }
 
 export interface AutoFixState {
@@ -42,6 +46,7 @@ export interface ChatState {
   addMessage(m: Omit<ChatMessage, 'id'>): string
   patchMessage(id: string, patch: Partial<Omit<ChatMessage, 'id'>>): void
   appendText(id: string, delta: string): void
+  appendReasoning(id: string, delta: string): void
   nextLabel(code: string): string
   labelForCode(code: string): string | null
 }
@@ -63,6 +68,12 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   },
   patchMessage: (id, patch) => set((s) => ({ messages: s.messages.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
   appendText: (id, delta) => set((s) => ({ messages: s.messages.map((m) => (m.id === id ? { ...m, text: m.text + delta } : m)) })),
+  appendReasoning: (id, delta) =>
+    set((s) => ({
+      messages: s.messages.map((m) =>
+        m.id === id ? { ...m, reasoning: (m.reasoning ?? '') + delta, reasoningStartedAt: m.reasoningStartedAt ?? Date.now() } : m,
+      ),
+    })),
   nextLabel: (code) => {
     const n = get().turnCount + 1
     const label = `v${n}`

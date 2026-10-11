@@ -43,3 +43,13 @@ it('shows only the prose before the first code fence or SEARCH block while strea
   expect(streamingText('Made a hook.\n\n```openscad\nmodule ho')).toEqual({ prose: 'Made a hook.', writing: true })
   expect(streamingText('Wider.\n<<<<<<< SEARCH\nw =')).toEqual({ prose: 'Wider.', writing: true })
 })
+
+it('appends reasoning and stamps when it started', () => {
+  vi.useFakeTimers({ now: 1_000 })
+  const id = useChatStore.getState().addMessage({ role: 'assistant', text: '', turnLabel: null, model: 'm', usage: null, status: 'streaming' })
+  useChatStore.getState().appendReasoning(id, 'Wall ')
+  vi.setSystemTime(5_000)
+  useChatStore.getState().appendReasoning(id, 'is 1.6 mm.')
+  vi.useRealTimers()
+  expect(useChatStore.getState().messages[0]).toMatchObject({ reasoning: 'Wall is 1.6 mm.', reasoningStartedAt: 1_000 })
+})

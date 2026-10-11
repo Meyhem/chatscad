@@ -1,6 +1,7 @@
-import { ProviderError } from '../ai/types'
+import { ProviderError, type LlmProvider } from '../ai/types'
 import { DEFAULT_SETTINGS, db } from '../db/db'
 import { newProfile } from '../db/profiles'
+import { useRefineStore } from '../refine/refineStore'
 import { useProvidersStore } from '../settings/providersStore'
 import { useAppStore } from '../state/store'
 import { resetDb } from '../test/db'
@@ -18,6 +19,7 @@ beforeEach(async () => {
   await resetDb()
   useAppStore.setState(useAppStore.getInitialState(), true)
   useChatStore.setState(useChatStore.getInitialState(), true)
+  useRefineStore.setState({ pick: null })
   useProvidersStore.setState(
     {
       ...useProvidersStore.getInitialState(),
@@ -272,4 +274,85 @@ describe('M5: scope retry in the chat', () => {
     expect(chat().history.at(-1)).toEqual({ role: 'assistant', content: 'Made no change.' })
     expect(useAppStore.getState().code).toBe(CODE3)
   })
+})
+
+it('keeps the reasoning, its duration and its tokens on the reply, and never sends it back to the model', async () => {
+  const { provider } = scriptedProvider({ text: FULL, reasoning: 'Wall is 1.6 mm.', usage: { inputTokens: 10, outputTokens: 20, reasoningTokens: 12 } })
+  await sendPrompt('A block', { createProvider: () => provider, render: async () => okResult() })
+  const reply = chat().messages[1]!
+  expect(reply).toMatchObject({ reasoning: 'Wall is 1.6 mm.', reasoningTokens: 12, status: 'done' })
+  expect(typeof reply.reasoningMs).toBe('number')
+  expect(JSON.stringify(chat().history)).not.toContain('1.6 mm')
+})
+
+it('shows a cut-off callout when the reply hit the output limit before any code', async () => {
+  const { provider } = scriptedProvider({ text: '', reasoning: 'Hmm.', stopReason: 'length', usage: { inputTokens: 900, outputTokens: 16384 } })
+  await sendPrompt('A block', { createProvider: () => provider, render: async () => okResult() })
+  expect(chat().messages[1]).toMatchObject({
+    text: '',
+    status: 'done',
+    error: {
+      title: 'The reply was cut off before it wrote any code',
+      body: 'The model used its whole output allowance (16,384 tokens) on reasoning. Try a lower effort or another model.',
+    },
+  })
+})
+
+it('words the cut-off without reasoning', async () => {
+  const { provider } = scriptedProvider({ text: 'Let me', stopReason: 'length', usage: { inputTokens: 9, outputTokens: 4096 } })
+  await sendPrompt('A block', { createProvider: () => provider, render: async () => okResult() })
+  expect(chat().messages[1]!.error).toEqual({
+    title: 'The reply was cut off before it wrote any code',
+    body: 'The model reached its output limit (4,096 tokens).',
+  })
+})
+
+it('keeps "The reply had no code." and the reasoning when the model only reasoned', async () => {
+  const { provider } = scriptedProvider({ text: '', reasoning: 'Just thoughts.' })
+  await sendPrompt('A block', { createProvider: () => provider, render: async () => okResult() })
+  expect(chat().messages[1]).toMatchObject({ text: 'The reply had no code.', reasoning: 'Just thoughts.' })
+  expect(chat().messages[1]!.error).toBeUndefined()
+})
+
+it('adds each provider notice once per turn as a note', async () => {
+  let calls = 0
+  const provider: LlmProvider = {
+    listModels: async () => [],
+    async *streamChat() {
+      calls += 1
+      yield { type: 'notice', text: 'This model ignored the reasoning setting.' }
+      yield { type: 'text', delta: calls === 1 ? BROKEN : FIXED }
+      yield { type: 'usage', usage: { inputTokens: 1, outputTokens: 1 }, stopReason: 'end' }
+    },
+  }
+  await sendPrompt('A block', { createProvider: () => provider, render: async (code) => (code.includes(');') ? okResult() : errorResult()) })
+  expect(calls).toBe(2)
+  expect(chat().messages.filter((m) => m.role === 'note' && m.text === 'This model ignored the reasoning setting.')).toHaveLength(1)
+})
+
+it('clears the first attempt reasoning when a scoped reply starts over', () => {
+  const id = useChatStore.getState().addMessage({ role: 'assistant', text: '', turnLabel: null, model: null, usage: null, status: 'streaming' })
+  useChatStore.getState().appendReasoning(id, 'old thoughts')
+  useChatStore.getState().patchMessage(id, { text: '', reasoning: undefined, reasoningStartedAt: undefined })
+  expect(chat().messages[0]!.reasoning).toBeUndefined()
+})
+
+it('keeps the partial reasoning when the user stops mid-reasoning', async () => {
+  let release!: () => void
+  const gate = new Promise<void>((r) => (release = r))
+  const provider: LlmProvider = {
+    listModels: async () => [],
+    async *streamChat(_req, signal) {
+      yield { type: 'reasoning', delta: 'Halfway there' }
+      await gate
+      signal?.throwIfAborted()
+      throw new ProviderError('aborted', 'The request was stopped')
+    },
+  }
+  const done = sendPrompt('A block', { createProvider: () => provider, render: async () => okResult() })
+  await vi.waitFor(() => expect(chat().messages[1]?.reasoning).toBe('Halfway there'))
+  stopTurn()
+  release()
+  await done
+  expect(chat().messages[1]).toMatchObject({ status: 'done', reasoning: 'Halfway there', text: 'Stopped before the reply finished.' })
 })

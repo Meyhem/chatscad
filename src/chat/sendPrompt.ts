@@ -2,7 +2,7 @@ import { computeCost, priceFor } from '../ai/cost'
 import { currentLibraries } from '../history/projectStore'
 import { createProvider as defaultCreateProvider } from '../ai/createProvider'
 import { describeProviderError } from '../ai/errors'
-import { runTurn, type TurnEvent } from '../ai/runTurn'
+import { runTurn, type GenerateResult, type TurnEvent } from '../ai/runTurn'
 import type { LlmProvider } from '../ai/types'
 import type { ProviderProfile } from '../db/db'
 import { addUsage } from '../db/usage'
@@ -46,6 +46,19 @@ export function compileErrorCallout(result: RenderResult): { title: string; body
   return { title: first ? calloutHeadline(first) : 'The code did not compile', body: result.error }
 }
 
+/** The callout for a reply that hit the provider's output limit before it wrote any code. */
+export function cutOffCallout(result: GenerateResult): { title: string; body: string } | undefined {
+  if (result.stopReason !== 'length' || result.code !== null) return undefined
+  const n = result.usage.outputTokens.toLocaleString('en-US')
+  return {
+    title: 'The reply was cut off before it wrote any code',
+    body:
+      result.reasoning !== ''
+        ? `The model used its whole output allowance (${n} tokens) on reasoning. Try a lower effort or another model.`
+        : `The model reached its output limit (${n} tokens).`,
+  }
+}
+
 export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<void> {
   const userText = text.trim()
   const chat = useChatStore.getState()
@@ -72,6 +85,7 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
   const visualCheck = await getVisualCheck()
   const provider = (deps.createProvider ?? defaultCreateProvider)(profile)
   let checked = false
+  const notices = new Set<string>()
 
   const startCode = useAppStore.getState().code
   const controller = new AbortController()
@@ -108,19 +122,32 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
       case 'delta':
         store.appendText(current, e.text)
         return
+      case 'reasoning':
+        store.appendReasoning(current, e.text)
+        return
+      case 'notice':
+        if (!notices.has(e.text)) {
+          notices.add(e.text)
+          store.addMessage(note(e.text))
+        }
+        return
       case 'retry':
-        store.patchMessage(current, { text: '' })
+        store.patchMessage(current, { text: '', reasoning: undefined, reasoningStartedAt: undefined })
         return
       case 'reply': {
         const { result } = e
         const { cost, costSource } = computeCost(result.usage, priceFor(profile, result.model))
         const label = result.code !== null ? store.nextLabel(result.code) : null
+        const cutOff = cutOffCallout(result)
         store.patchMessage(current, {
-          text: result.prose || (result.code !== null ? 'Updated main.scad.' : 'The reply had no code.'),
+          text: result.prose || (result.code !== null ? 'Updated main.scad.' : cutOff ? '' : 'The reply had no code.'),
           status: 'done',
           turnLabel: label,
           model: result.model,
           usage: { inputTokens: result.usage.inputTokens, outputTokens: result.usage.outputTokens, cost },
+          ...(result.reasoningMs !== null ? { reasoningMs: result.reasoningMs } : {}),
+          ...(result.usage.reasoningTokens !== undefined ? { reasoningTokens: result.usage.reasoningTokens } : {}),
+          ...(cutOff ? { error: cutOff } : {}),
         })
         if (e.attempt === 0) {
           useChatStore.setState((s) => ({
