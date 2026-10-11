@@ -18,6 +18,7 @@ import { partPickFixture } from './test/picks'
 import { useExportStore } from './export/exportStore'
 import { emitLoadProgress } from './render/loadProgress'
 import { usePrefs } from './settings/prefsStore'
+import { writePrefs } from './db/prefs'
 
 vi.mock('./viewer/Viewer', () => ({
   Viewer: ({ stale, empty }: { stale: boolean; empty?: boolean }) => (
@@ -225,6 +226,8 @@ it('shows the OpenSCAD download progress in the pill before the first render', (
 })
 
 it('renders a quick $fn = 12 pass before the full render when the setting is on', async () => {
+  // Stored too: the app loads its preferences from the database on start, which would otherwise reset this.
+  await writePrefs({ lowQualityPreview: true })
   usePrefs.setState({ lowQualityPreview: true })
   const seen: RenderRequest[] = []
   render(
