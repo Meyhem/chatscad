@@ -78,3 +78,10 @@ it('renders model output as plain text, never as HTML', () => {
   expect(screen.getByText(evil)).toBeInTheDocument()
   expect(screen.getByTestId('console').querySelector('img')).toBeNull()
 })
+
+it('names the engine in the console head', () => {
+  const { rerender } = render(<ConsolePanel status="ok" renderMs={1} error={null} logs={[]} />)
+  expect(screen.getByText('OpenSCAD · manifold')).toBeInTheDocument()
+  rerender(<ConsolePanel status="ok" renderMs={1} error={null} logs={[]} engineLabel="OpenSCAD 2026.10.08 · manifold" />)
+  expect(screen.getByText('OpenSCAD 2026.10.08 · manifold')).toBeInTheDocument()
+})

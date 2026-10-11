@@ -2,7 +2,7 @@ import { highlightingFor } from '@codemirror/language'
 import { Text } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { CodeEditor, toCmDiagnostics } from './CodeEditor'
 
 function viewOf(container: HTMLElement): EditorView {
@@ -68,4 +68,18 @@ describe('toCmDiagnostics', () => {
     const [d] = toCmDiagnostics(doc, [{ line: 99, severity: 'warning', message: 'w' }])
     expect(d).toMatchObject({ from: 17, to: 18 })
   })
+})
+
+it('does not report a value it was given as an edit', () => {
+  const onChange = vi.fn()
+  const { rerender } = render(<CodeEditor value="a" onChange={onChange} diagnostics={[]} />)
+  rerender(<CodeEditor value="b" onChange={onChange} diagnostics={[]} />)
+  expect(onChange).not.toHaveBeenCalled()
+})
+
+it('calls onBlur when the editor loses focus', () => {
+  const onBlur = vi.fn()
+  const { container } = render(<CodeEditor value="a" onChange={() => {}} diagnostics={[]} onBlur={onBlur} />)
+  fireEvent.blur(container.querySelector('.cm-content')!)
+  expect(onBlur).toHaveBeenCalledTimes(1)
 })

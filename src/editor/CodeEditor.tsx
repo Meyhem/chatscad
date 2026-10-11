@@ -1,5 +1,5 @@
 import { setDiagnostics, type Diagnostic as CmDiagnostic } from '@codemirror/lint'
-import { EditorState, type Text } from '@codemirror/state'
+import { Annotation, EditorState, type Text } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { basicSetup } from 'codemirror'
 import { useEffect, useRef } from 'react'
@@ -16,18 +16,24 @@ export function toCmDiagnostics(doc: Text, diagnostics: Diagnostic[]): CmDiagnos
   })
 }
 
+/** Marks the transaction that mirrors a new `value` prop, so it is not reported back as an edit. */
+const external = Annotation.define<boolean>()
+
 interface Props {
   value: string
   onChange(code: string): void
   diagnostics: Diagnostic[]
   reveal?: RevealRequest | null
+  onBlur?(): void
 }
 
-export function CodeEditor({ value, onChange, diagnostics, reveal = null }: Props) {
+export function CodeEditor({ value, onChange, diagnostics, reveal = null, onBlur }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
+  const onBlurRef = useRef(onBlur)
+  onBlurRef.current = onBlur
 
   useEffect(() => {
     const view = new EditorView({
@@ -40,7 +46,12 @@ export function CodeEditor({ value, onChange, diagnostics, reveal = null }: Prop
           tokenTheme,
           diagnosticsExtension,
           EditorView.updateListener.of((u) => {
-            if (u.docChanged) onChangeRef.current(u.state.doc.toString())
+            if (u.docChanged && !u.transactions.some((t) => t.annotation(external))) onChangeRef.current(u.state.doc.toString())
+          }),
+          EditorView.domEventHandlers({
+            blur: () => {
+              onBlurRef.current?.()
+            },
           }),
         ],
       }),
@@ -57,7 +68,7 @@ export function CodeEditor({ value, onChange, diagnostics, reveal = null }: Prop
   useEffect(() => {
     const view = viewRef.current
     if (view && view.state.doc.toString() !== value) {
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } })
+      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value }, annotations: external.of(true) })
     }
   }, [value])
 

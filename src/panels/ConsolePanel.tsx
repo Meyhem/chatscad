@@ -40,9 +40,10 @@ interface Props {
   error: string | null
   renderMs: number | null
   onGoToLine?(line: number): void
+  engineLabel?: string
 }
 
-export function ConsolePanel({ status, logs, error, renderMs, onGoToLine }: Props) {
+export function ConsolePanel({ status, logs, error, renderMs, onGoToLine, engineLabel = 'OpenSCAD · manifold' }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight
@@ -54,7 +55,7 @@ export function ConsolePanel({ status, logs, error, renderMs, onGoToLine }: Prop
     <section className="pc-console flex h-full flex-col rounded-none border-0" aria-label="Console">
       <div className="pc-console-head shrink-0">
         <span className="pc-label">Console</span>
-        <span className="pc-caption ml-auto">OpenSCAD · manifold</span>
+        <span className="pc-caption ml-auto">{engineLabel}</span>
       </div>
       <div ref={ref} data-testid="console" className="min-h-0 flex-1 overflow-auto py-1">
         {logs.map((line, i) => {
