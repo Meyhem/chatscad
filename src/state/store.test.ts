@@ -81,3 +81,43 @@ describe('selectCanExport', () => {
     expect(selectCanExport(useAppStore.getState())).toBe(false)
   })
 })
+
+describe('M2 additions', () => {
+  it('starts on the workbench with manual code and no finished render', () => {
+    const s = useAppStore.getState()
+    expect(s.view).toBe('workbench')
+    expect(s.codeSource).toBe('manual')
+    expect(s.lastRender).toBeNull()
+  })
+
+  it('records where the code came from', () => {
+    useAppStore.getState().setCode('cube(2);', 'ai')
+    expect(useAppStore.getState()).toMatchObject({ code: 'cube(2);', codeSource: 'ai' })
+    useAppStore.getState().setCode('cube(3);')
+    expect(useAppStore.getState().codeSource).toBe('manual')
+  })
+
+  it('an unchanged setCode keeps the source (the editor echoes AI code back)', () => {
+    useAppStore.getState().setCode('cube(2);', 'ai')
+    const listener = vi.fn()
+    const unsubscribe = useAppStore.subscribe(listener)
+    useAppStore.getState().setCode('cube(2);')
+    unsubscribe()
+    expect(useAppStore.getState().codeSource).toBe('ai')
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('remembers the last finished render and its code, success or failure', () => {
+    const ok = okResult()
+    useAppStore.getState().renderFinished(ok, 'cube(1);')
+    expect(useAppStore.getState().lastRender).toEqual({ code: 'cube(1);', result: ok })
+    const failed = errorResult()
+    useAppStore.getState().renderFinished(failed, 'cube(')
+    expect(useAppStore.getState().lastRender).toEqual({ code: 'cube(', result: failed })
+  })
+
+  it('switches between the workbench and the settings page', () => {
+    useAppStore.getState().setView('settings')
+    expect(useAppStore.getState().view).toBe('settings')
+  })
+})
