@@ -49,9 +49,22 @@ export async function decryptString(key: CryptoKey, b64: string): Promise<string
 
 export const isUnlocked = (): boolean => unlockedKey !== null
 
+const lockListeners = new Set<() => void>()
+
+/** Called after every lock state change, so state that holds profiles (the providers store) can reload them. */
+export function onLockChange(fn: () => void): () => void {
+  lockListeners.add(fn)
+  return () => lockListeners.delete(fn)
+}
+
+function notifyLockChange(): void {
+  for (const fn of lockListeners) fn()
+}
+
 export function lock(): void {
   unlockedKey = null
   plainKeys = new Map()
+  notifyLockChange()
 }
 
 export const unlockedKeyFor = (profileId: string): string | null => plainKeys.get(profileId) ?? null
@@ -62,6 +75,7 @@ async function writeProfilesAndSettings(profiles: ProviderProfile[], patch: Para
     await updateSettings(patch)
   })
   await useSettingsStore.getState().load()
+  notifyLockChange()
 }
 
 export async function enableLock(passphrase: string): Promise<void> {
@@ -103,6 +117,7 @@ export async function unlock(passphrase: string): Promise<boolean> {
   }
   unlockedKey = key
   plainKeys = plain
+  notifyLockChange()
   return true
 }
 

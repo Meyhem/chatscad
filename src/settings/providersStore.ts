@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { DEFAULT_SETTINGS, type ProviderProfile, type Settings } from '../db/db'
 import { deleteProfile, listProfiles, newProfile, saveProfile } from '../db/profiles'
 import { getSettings, updateSettings } from '../db/settings'
+import { onLockChange } from '../security/lock'
 import type { ProviderPreset } from './presets'
 
 export type ConnectionStatus = 'ok' | 'blocked' | 'failed'
@@ -57,7 +58,12 @@ export const useProvidersStore = create<ProvidersState>()((set, get) => ({
     if (!current) return
     const next: ProviderProfile = { ...current, ...patch, updatedAt: Date.now() }
     set((s) => ({ profiles: s.profiles.map((p) => (p.id === id ? next : p)), status: without(s.status, id) }))
-    await saveProfile(next)
+    try {
+      await saveProfile(next)
+    } catch {
+      // A key cannot be changed while the keys are locked; show what is actually stored.
+      await get().load()
+    }
   },
 
   removeProfile: async (id) => {
@@ -84,3 +90,6 @@ export function selectActiveModel(s: Pick<ProvidersState, 'profiles' | 'settings
   if (s.settings.activeProfileId === profile.id && s.settings.activeModel) return s.settings.activeModel
   return profile.defaultModel.trim() || null
 }
+
+// Lock, unlock and lock-mode changes rewrite the stored profiles; reload so this tab never keeps a plaintext copy.
+onLockChange(() => void useProvidersStore.getState().load())

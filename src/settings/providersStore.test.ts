@@ -93,3 +93,29 @@ describe('active profile and model', () => {
     expect(selectActiveModel(useProvidersStore.getInitialState())).toBeNull()
   })
 })
+
+describe('passphrase lock in the open tab', () => {
+  it('"Lock now" locks the profiles this tab already holds, so a provider call fails before any request', async () => {
+    const { enableLock, lock } = await import('../security/lock')
+    const { createProvider } = await import('../ai/createProvider')
+    await saveProfile(newProfile({ name: 'P', adapter: 'openai-compatible', baseUrl: 'https://llm.test/v1', apiKey: 'sk-plain', defaultModel: 'm' }))
+    await useProvidersStore.getState().load()
+    await enableLock('correct horse battery')
+    lock()
+    await vi.waitFor(() => expect(selectActiveProfile(useProvidersStore.getState())?.keyEncrypted).toBe(true))
+    const provider = createProvider(selectActiveProfile(useProvidersStore.getState())!)
+    await expect(provider.listModels()).rejects.toMatchObject({ kind: 'auth' })
+  })
+
+  it('a key change while locked is not kept in memory when it cannot be stored', async () => {
+    const { enableLock, lock } = await import('../security/lock')
+    const saved = await saveProfile(newProfile({ name: 'P', adapter: 'openai-compatible', baseUrl: 'https://llm.test/v1', apiKey: 'sk-plain' }))
+    await useProvidersStore.getState().load()
+    await enableLock('correct horse battery')
+    lock()
+    await vi.waitFor(() => expect(useProvidersStore.getState().profiles[0]?.keyEncrypted).toBe(true))
+    const sealed = useProvidersStore.getState().profiles[0]!.apiKey
+    await useProvidersStore.getState().updateProfile(saved.id, { apiKey: 'sk-other' })
+    expect(useProvidersStore.getState().profiles[0]!.apiKey).toBe(sealed)
+  })
+})
