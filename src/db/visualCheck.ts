@@ -1,12 +1,12 @@
 import { computeCost } from '../ai/cost'
 import type { Usage } from '../ai/types'
-import { db, DEFAULT_SETTINGS, type PromptCadDb, type ProviderProfile, type UsageRecord } from './db'
+import { db, DEFAULT_SETTINGS, type ChatScadDb, type ProviderProfile, type UsageRecord } from './db'
 
-export async function getVisualCheck(database: PromptCadDb = db): Promise<boolean> {
+export async function getVisualCheck(database: ChatScadDb = db): Promise<boolean> {
   return (await database.settings.get('app'))?.visualCheck ?? false
 }
 
-export async function setVisualCheck(on: boolean, database: PromptCadDb = db): Promise<void> {
+export async function setVisualCheck(on: boolean, database: ChatScadDb = db): Promise<void> {
   await database.transaction('rw', database.settings, async () => {
     const current = await database.settings.get('app')
     await database.settings.put({ ...DEFAULT_SETTINGS, ...current, id: 'app', visualCheck: on })
@@ -15,7 +15,7 @@ export async function setVisualCheck(on: boolean, database: PromptCadDb = db): P
 
 export async function recordVisualCheckUsage(
   input: { profile: ProviderProfile; model: string; usage: Usage; projectId?: string | null },
-  database: PromptCadDb = db,
+  database: ChatScadDb = db,
 ): Promise<UsageRecord> {
   const { cost, costSource } = computeCost(input.usage, input.profile.priceTable[input.model])
   const record: UsageRecord = {

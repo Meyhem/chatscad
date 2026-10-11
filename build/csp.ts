@@ -17,7 +17,7 @@ export const CSP = [
 
 export function cspPlugin(): Plugin {
   return {
-    name: 'promptcad-csp',
+    name: 'chatscad-csp',
     apply: 'build',
     transformIndexHtml: (html) =>
       html.replace('<head>', `<head>\n    <meta http-equiv="Content-Security-Policy" content="${CSP}">`),

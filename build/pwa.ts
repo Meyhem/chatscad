@@ -38,8 +38,8 @@ export function pwaOptions(base: string, tokens: TokenFile = readTokens()): Part
     // The PNG glob already covers the icons.
     includeManifestIcons: false,
     manifest: {
-      name: 'PromptCAD',
-      short_name: 'PromptCAD',
+      name: 'ChatSCAD',
+      short_name: 'ChatSCAD',
       description: 'Describe a part, get OpenSCAD code, render it in the browser and export STL.',
       display: 'standalone',
       start_url: '.',
@@ -60,7 +60,7 @@ export function pwaOptions(base: string, tokens: TokenFile = readTokens()): Part
 export function pwaHeadPlugin(base: string, tokens: TokenFile = readTokens()): Plugin {
   const panel = primaryColor(tokens, 'panel')
   return {
-    name: 'promptcad-pwa-head',
+    name: 'chatscad-pwa-head',
     transformIndexHtml: (html) =>
       html.replace(
         '</head>',

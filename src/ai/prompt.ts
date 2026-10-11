@@ -10,7 +10,7 @@ export interface PromptContext {
   selection?: { startLine: number; endLine: number; label: string } // M5: scoped edit
 }
 
-export const SYSTEM_PROMPT = `You are PromptCAD's modelling assistant. You write OpenSCAD for parts that will be 3D printed.
+export const SYSTEM_PROMPT = `You are ChatSCAD's modelling assistant. You write OpenSCAD for parts that will be 3D printed.
 
 Rules for the code:
 - Write valid OpenSCAD only. Units are millimetres.

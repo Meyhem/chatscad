@@ -9,7 +9,7 @@ it('knows BOSL2 and MCAD and nothing else', () => {
 })
 
 it('builds bundle URLs under the base path', () => {
-  expect(libraryUrl('/promptcad/', 'BOSL2')).toBe('/promptcad/libraries/BOSL2.json')
+  expect(libraryUrl('/chatscad/', 'BOSL2')).toBe('/chatscad/libraries/BOSL2.json')
 })
 
 it('accepts only relative paths without empty or parent segments', () => {

@@ -47,7 +47,7 @@ async function fakeLlm(page: Page, replies: string[]): Promise<ChatBody[]> {
 async function seedVisionProfile(page: Page) {
   await expect(page.getByRole('textbox', { name: 'Prompt' })).toBeVisible({ timeout: RENDER_TIMEOUT })
   await page.evaluate(async (baseUrl) => {
-    const open = indexedDB.open('promptcad')
+    const open = indexedDB.open('chatscad')
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       open.onsuccess = () => resolve(open.result)
       open.onerror = () => reject(open.error)

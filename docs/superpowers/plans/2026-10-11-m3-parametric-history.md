@@ -1,4 +1,4 @@
-# PromptCAD M3 — Parametric and History Implementation Plan
+# ChatSCAD M3 — Parametric and History Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -10,7 +10,7 @@
 
 **Spec:** [`docs/SPEC.md`](../../SPEC.md) ("Editing modes › Parametric models", "Projects and version history", "Variants, gallery…" › Example gallery, "Security" › Key storage) and [`docs/superpowers/specs/2026-10-11-m2-m5-design.md`](../specs/2026-10-11-m2-m5-design.md) (decisions D3, D6, D7, D8, D13, D14; "M3 — Parametric and history"; **Shared contracts**).
 
-**Prerequisite:** M2 has been executed exactly as the design doc's **Shared contracts** describe: `src/ai/*` (`types.ts`, `createProvider.ts`, `prompt.ts` with `PromptContext`, `runTurn.ts`), `src/db/db.ts` (Dexie v1 with `providerProfiles`, `usage`, `settings`, `DEFAULT_SETTINGS`, `PromptCadDb`, `db`) with repositories `src/db/profiles.ts`, `src/db/usage.ts`, `src/db/settings.ts`, `src/chat/chatStore.ts` (`ChatMessage`), `src/ui/format.ts` (`formatCost`, `formatTokens`), `src/render/awaitRender.ts`, and the store additions `codeSource`, `lastRender`, `setCode(code, source)`, `view`, `setView`. This plan references M2 code only through those names. Where a task changes an M2 file, it shows the full new code of the pieces it changes and says what to keep; it never cites M2 line numbers. Two M2 details the contracts leave open are pinned as assumptions in "Contract issues" at the end (the chat store's hook name, and the names of three repository functions); each task that touches them gives the fallback code to add if M2 named them differently.
+**Prerequisite:** M2 has been executed exactly as the design doc's **Shared contracts** describe: `src/ai/*` (`types.ts`, `createProvider.ts`, `prompt.ts` with `PromptContext`, `runTurn.ts`), `src/db/db.ts` (Dexie v1 with `providerProfiles`, `usage`, `settings`, `DEFAULT_SETTINGS`, `ChatScadDb`, `db`) with repositories `src/db/profiles.ts`, `src/db/usage.ts`, `src/db/settings.ts`, `src/chat/chatStore.ts` (`ChatMessage`), `src/ui/format.ts` (`formatCost`, `formatTokens`), `src/render/awaitRender.ts`, and the store additions `codeSource`, `lastRender`, `setCode(code, source)`, `view`, `setView`. This plan references M2 code only through those names. Where a task changes an M2 file, it shows the full new code of the pieces it changes and says what to keep; it never cites M2 line numbers. Two M2 details the contracts leave open are pinned as assumptions in "Contract issues" at the end (the chat store's hook name, and the names of three repository functions); each task that touches them gives the fallback code to add if M2 named them differently.
 
 **Design sources:** [`design/screens/`](../../../design/screens/): `Main.dc.html` (Customizer dock under the viewer, project button, "v3 · edited by slider" caption, History button), `History.dc.html`, `Gallery.dc.html`, `Providers.dc.html` (settings nav sections only), `CompileError.dc.html` (Problems tab, "from v3" next to the dims, "Showing v3, the last version that compiled", console head "OpenSCAD 2025.03 · manifold"). Deferred from these screens: the Share button and the "Timelapse GIF" button in the History footer (M4), the "Ask Claude about the selection" button (M5), the phone parameter sheet (M4). See "Deferred from M3".
 
@@ -1332,7 +1332,7 @@ it('knows BOSL2 and MCAD and nothing else', () => {
 })
 
 it('builds bundle URLs under the base path', () => {
-  expect(libraryUrl('/promptcad/', 'BOSL2')).toBe('/promptcad/libraries/BOSL2.json')
+  expect(libraryUrl('/chatscad/', 'BOSL2')).toBe('/chatscad/libraries/BOSL2.json')
 })
 
 it('accepts only relative paths without empty or parent segments', () => {
@@ -1958,9 +1958,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Test: `src/db/db.test.ts`, `src/db/repos.test.ts`, `src/settings/settingsStore.test.ts`
 
 **Interfaces:**
-- Consumes: M2 `src/db/db.ts` (v1 stores, `ProviderProfile`, `UsageRecord`, `Settings`, `DEFAULT_SETTINGS`, `PromptCadDb`, `db`); M2 `src/db/settings.ts`; `ParamValue` (M1).
+- Consumes: M2 `src/db/db.ts` (v1 stores, `ProviderProfile`, `UsageRecord`, `Settings`, `DEFAULT_SETTINGS`, `ChatScadDb`, `db`); M2 `src/db/settings.ts`; `ParamValue` (M1).
 - Produces:
-  - `src/db/db.ts` (contract): `VersionSource`, `Project`, `Version`, `StoredMessage`, `Preset`, `StoredBlob` exactly as the design doc; `PrinterProfile { id: string }` (reserved); `Settings` gains `theme: ThemeSetting`, `debounceMs`, `timeoutMs`, `lastProjectId`, `lockMode`, and (see "Contract issues") `lockSalt: string | null`, `lockVerifier: string | null`; `type ThemeSetting = 'system' | 'dark' | 'light'`; `V1_STORES`, `V2_STORES`; `fillSettingsDefaults(row: Record<string, unknown>): void`; `PromptCadDb` declares `version(2)` with the new tables, an extra `versionId` index on `usage`, and an upgrade that fills the new settings fields.
+  - `src/db/db.ts` (contract): `VersionSource`, `Project`, `Version`, `StoredMessage`, `Preset`, `StoredBlob` exactly as the design doc; `PrinterProfile { id: string }` (reserved); `Settings` gains `theme: ThemeSetting`, `debounceMs`, `timeoutMs`, `lastProjectId`, `lockMode`, and (see "Contract issues") `lockSalt: string | null`, `lockVerifier: string | null`; `type ThemeSetting = 'system' | 'dark' | 'light'`; `V1_STORES`, `V2_STORES`; `fillSettingsDefaults(row: Record<string, unknown>): void`; `ChatScadDb` declares `version(2)` with the new tables, an extra `versionId` index on `usage`, and an upgrade that fills the new settings fields.
   - `src/db/settings.ts` (M2 repository; M3 relies on): `getSettings(): Promise<Settings>` (row merged over `DEFAULT_SETTINGS`), `updateSettings(patch: Partial<Omit<Settings, 'id'>>): Promise<Settings>`.
   - `src/db/projects.ts`: `putProject(p: Project): Promise<void>`, `getProject(id: string): Promise<Project | undefined>`, `listRecentProjects(limit?: number): Promise<Project[]>` (newest `updatedAt` first, default 8), `listAllProjects(): Promise<Project[]>`, `deleteProjectCascade(id: string): Promise<void>` (project, versions, messages, presets, and their thumbnail and image blobs).
   - `src/db/messages.ts`: `putMessage(m: StoredMessage): Promise<void>`, `listMessages(projectId: string): Promise<StoredMessage[]>` (by `createdAt`), `messagesForVersion(versionId: string): Promise<StoredMessage[]>`.
@@ -1980,7 +1980,7 @@ Tests that use IndexedDB run in the Node environment with `fake-indexeddb/auto` 
 import 'fake-indexeddb/auto'
 import Dexie from 'dexie'
 import type { ProviderProfile, UsageRecord } from './db'
-import { DEFAULT_SETTINGS, PromptCadDb, V1_STORES } from './db'
+import { DEFAULT_SETTINGS, ChatScadDb, V1_STORES } from './db'
 
 const profile: ProviderProfile = {
   id: 'p1',
@@ -2019,7 +2019,7 @@ it('upgrades a version 1 database to version 2 without losing profiles, usage or
   await v1.table('settings').add({ id: 'app', activeProfileId: 'p1', activeModel: 'openai/gpt-5-mini', autoFixAttempts: 3 })
   v1.close()
 
-  const v2 = new PromptCadDb(name)
+  const v2 = new ChatScadDb(name)
   await v2.open()
   expect(v2.verno).toBe(2)
   expect(await v2.providerProfiles.get('p1')).toEqual(profile)
@@ -2302,7 +2302,7 @@ export function fillSettingsDefaults(row: Record<string, unknown>): void {
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) if (!(key in row)) row[key] = value
 }
 
-export class PromptCadDb extends Dexie {
+export class ChatScadDb extends Dexie {
   providerProfiles!: Table<ProviderProfile, string>
   usage!: Table<UsageRecord, string>
   settings!: Table<Settings, 'app'>
@@ -2313,7 +2313,7 @@ export class PromptCadDb extends Dexie {
   blobs!: Table<StoredBlob, string>
   printerProfiles!: Table<PrinterProfile, string>
 
-  constructor(name = 'promptcad') {
+  constructor(name = 'chatscad') {
     super(name)
     this.version(1).stores(V1_STORES)
     this.version(2)
@@ -2327,8 +2327,8 @@ export class PromptCadDb extends Dexie {
   }
 }
 
-/** Database name 'promptcad'. Tests use `fake-indexeddb` and `new PromptCadDb(uniqueName)` or `resetDb()`. */
-export const db = new PromptCadDb()
+/** Database name 'chatscad'. Tests use `fake-indexeddb` and `new ChatScadDb(uniqueName)` or `resetDb()`. */
+export const db = new ChatScadDb()
 ```
 
 `src/db/settings.ts`: M3 relies on these two functions. If M2's file already exports them with these signatures, leave it; otherwise add them (keeping M2's own exports):
@@ -5878,13 +5878,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes: `db`, `Project`, `Version`, `StoredMessage`, `Preset` (Task 6); `getProject`, `listAllProjects` (Task 6); `listMessages` (Task 6); `listPresets` (Task 6); `listVersions` (Task 7); `isLibraryName` (Task 4); `saveFile` (M1).
 - Produces:
-  - `PROJECT_FORMAT = 'promptcad-project'`, `BACKUP_FORMAT = 'promptcad-backup'`, `MAX_CODE_LENGTH = 1_000_000`, `MAX_FILE_LENGTH = 50_000_000`.
-  - `interface ProjectFile { format: 'promptcad-project'; version: 1; exportedAt: number; project: { name: string; origin: Project['origin']; enabledLibraries: string[] }; headVersionId: string; versions: FileVersion[]; messages: FileMessage[]; presets: FilePreset[] }` with `FileVersion = Omit<Version, 'projectId' | 'thumbnailBlobId'>`, `FileMessage = Omit<StoredMessage, 'projectId' | 'imageBlobIds' | 'usageId'>`, `FilePreset = Omit<Preset, 'projectId'>`; `interface BackupFile { format: 'promptcad-backup'; version: 1; exportedAt: number; projects: ProjectFile[] }`.
+  - `PROJECT_FORMAT = 'chatscad-project'`, `BACKUP_FORMAT = 'chatscad-backup'`, `MAX_CODE_LENGTH = 1_000_000`, `MAX_FILE_LENGTH = 50_000_000`.
+  - `interface ProjectFile { format: 'chatscad-project'; version: 1; exportedAt: number; project: { name: string; origin: Project['origin']; enabledLibraries: string[] }; headVersionId: string; versions: FileVersion[]; messages: FileMessage[]; presets: FilePreset[] }` with `FileVersion = Omit<Version, 'projectId' | 'thumbnailBlobId'>`, `FileMessage = Omit<StoredMessage, 'projectId' | 'imageBlobIds' | 'usageId'>`, `FilePreset = Omit<Preset, 'projectId'>`; `interface BackupFile { format: 'chatscad-backup'; version: 1; exportedAt: number; projects: ProjectFile[] }`.
   - `exportProject(projectId: string): Promise<ProjectFile>`, `exportAllProjects(): Promise<BackupFile>`: no keys, no usage ids, no thumbnails, no images (spec: "never … included in project exports").
   - `parseImport(data: unknown): { ok: true; files: ProjectFile[] } | { ok: false; error: string }`: validates every field (types, lengths, enums, identifier-shaped parameter names other than `__proto__`/`constructor`/`prototype`, parameter values, parents that appear earlier in the file, unique ids and labels, the head and message versions present in the file, known libraries); the error names the field path ("versions[2].code must be text").
   - `importProjectFile(file: ProjectFile): Promise<Project>`: writes the project with fresh ids in one transaction.
   - `importFromText(text: string): Promise<{ ok: true; projects: Project[] } | { ok: false; error: string }>`: size check, `JSON.parse`, `parseImport`, then import; nothing is written when validation fails.
-  - `projectFileName(name: string): string` ("box-with-lid.promptcad.json"); `saveProjectFile(projectId: string): Promise<void>`; `saveBackupFile(): Promise<void>` ("promptcad-backup-2026-10-11.json").
+  - `projectFileName(name: string): string` ("box-with-lid.chatscad.json"); `saveProjectFile(projectId: string): Promise<void>`; `saveBackupFile(): Promise<void>` ("chatscad-backup-2026-10-11.json").
 
 - [ ] **Step 1: Write the failing test**
 
@@ -5980,7 +5980,7 @@ describe('validation', () => {
   }
 
   it.each([
-    ['a different format', (f: any) => (f.format = 'zip'), 'format must be "promptcad-project" or "promptcad-backup"'],
+    ['a different format', (f: any) => (f.format = 'zip'), 'format must be "chatscad-project" or "chatscad-backup"'],
     ['code that is not text', (f: any) => (f.versions[0].code = 5), 'versions[0].code must be text'],
     ['code that is too long', (f: any) => (f.versions[0].code = 'x'.repeat(1_000_001)), 'versions[0].code is longer than 1,000,000 characters'],
     ['a parent later in the file', (f: any) => (f.versions[1].parentId = f.versions[2].id), 'versions[1].parentId points at a version that is not earlier in the file'],
@@ -6000,7 +6000,7 @@ describe('validation', () => {
 
   it('names the project inside a backup', () => {
     const bad = mutate((f) => (f.versions[0].code = null))
-    expect(parseImport({ format: 'promptcad-backup', version: 1, exportedAt: 1, projects: [file, bad] })).toEqual({
+    expect(parseImport({ format: 'chatscad-backup', version: 1, exportedAt: 1, projects: [file, bad] })).toEqual({
       ok: false,
       error: 'projects[1].versions[0].code must be text',
     })
@@ -6012,8 +6012,8 @@ describe('validation', () => {
 })
 
 it('names export files after the project', () => {
-  expect(projectFileName('Box with lid')).toBe('box-with-lid.promptcad.json')
-  expect(projectFileName('  ***  ')).toBe('project.promptcad.json')
+  expect(projectFileName('Box with lid')).toBe('box-with-lid.chatscad.json')
+  expect(projectFileName('  ***  ')).toBe('project.chatscad.json')
 })
 ```
 
@@ -6036,8 +6036,8 @@ import { isLibraryName } from '../render/libraries'
 import type { ParamValue } from '../render/types'
 import { listVersions } from './versions'
 
-export const PROJECT_FORMAT = 'promptcad-project'
-export const BACKUP_FORMAT = 'promptcad-backup'
+export const PROJECT_FORMAT = 'chatscad-project'
+export const BACKUP_FORMAT = 'chatscad-backup'
 export const MAX_CODE_LENGTH = 1_000_000
 export const MAX_FILE_LENGTH = 50_000_000
 
@@ -6313,7 +6313,7 @@ export async function importFromText(text: string): Promise<{ ok: true; projects
 
 export function projectFileName(name: string): string {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-  return `${slug || 'project'}.promptcad.json`
+  return `${slug || 'project'}.chatscad.json`
 }
 
 const jsonBlob = (data: unknown) => new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -6325,7 +6325,7 @@ export async function saveProjectFile(projectId: string): Promise<void> {
 
 export async function saveBackupFile(): Promise<void> {
   const date = new Date().toISOString().slice(0, 10)
-  await saveFile(jsonBlob(await exportAllProjects()), `promptcad-backup-${date}.json`)
+  await saveFile(jsonBlob(await exportAllProjects()), `chatscad-backup-${date}.json`)
 }
 ```
 
@@ -7178,10 +7178,10 @@ describe('ProjectMenu', () => {
   it('shows why an import failed, naming the field', async () => {
     render(<ProjectMenu />)
     openMenu()
-    const file = new File(['{"format":"promptcad-project"}'], 'bad.json', { type: 'application/json' })
+    const file = new File(['{"format":"chatscad-project"}'], 'bad.json', { type: 'application/json' })
     fireEvent.change(screen.getByLabelText('Project file'), { target: { files: [file] } })
     expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't import bad.jsonversions[2].code must be text")
-    expect(importFromText).toHaveBeenCalledWith('{"format":"promptcad-project"}')
+    expect(importFromText).toHaveBeenCalledWith('{"format":"chatscad-project"}')
   })
 
   it('opens the first imported project', async () => {
@@ -8407,7 +8407,7 @@ export function GalleryView() {
   return (
     <div className="flex h-full flex-col bg-bg text-ink">
       <header className="flex h-(--header-height) shrink-0 items-center gap-3 border-b border-line bg-panel pr-3 pl-4">
-        <span className="text-[15px] font-bold tracking-tight">PromptCAD</span>
+        <span className="text-[15px] font-bold tracking-tight">ChatSCAD</span>
         <span aria-hidden="true" className="h-5 w-px bg-line" />
         <span className="font-semibold">Examples</span>
         <span className="flex-1" />
@@ -8719,7 +8719,7 @@ import { useSettingsStore } from '../settings/settingsStore'
 
 export const PBKDF2_ITERATIONS = 310_000
 export const LOCKED_MESSAGE = 'Your API keys are locked. Unlock them in Settings › Security.'
-const VERIFIER = 'promptcad-lock-v1'
+const VERIFIER = 'chatscad-lock-v1'
 
 // Held in memory only: closing the tab forgets them (spec "Security").
 let unlockedKey: CryptoKey | null = null
@@ -9924,7 +9924,7 @@ import { useUndoShortcuts } from './workbench/useUndoShortcuts'
   if (view === 'gallery') return <GalleryView />
 ```
 
-3. Header: right after the separator that follows the `PromptCAD` heading, add `<ProjectMenu />`. Replace `{stale && <span className="pc-caption">last model that compiled</span>}` with `{stale && <RenderedFromCaption />}`. Right before M2's Settings button (or before `<ExportButtons … />` if M2 placed nothing there), add `<HistoryControls />`.
+3. Header: right after the separator that follows the `ChatSCAD` heading, add `<ProjectMenu />`. Replace `{stale && <span className="pc-caption">last model that compiled</span>}` with `{stale && <RenderedFromCaption />}`. Right before M2's Settings button (or before `<ExportButtons … />` if M2 placed nothing there), add `<HistoryControls />`.
 
 4. Body: the element that holds the workbench columns (M1's `<main …>`, extended by M2 with the chat column) is rendered only when `view === 'workbench'`; when `view === 'history'` render `<HistoryView createWorker={createWorker} />` in its place (M2's settings branch stays as it is). Inside the workbench, replace the 3D view section with:
 
@@ -10061,8 +10061,8 @@ with
 Run: `npm run e2e`
 Expected: PASS (5 smoke tests + 2 history tests). The flow test checks, in order: the default model renders; Examples → Box with lid gives "138 × 44 × 32 mm" and "v1 · from an example"; moving `inner_width` to 80 gives "178 × 44 × 32 mm" and "v2 · edited by slider"; History lists "inner_width 60 → 80"; Restore v1 gives "138 × 44 × 32 mm" and "v3 · restored"; after a reload the project, head, dims, three versions, the "Restored v1" message and a stored thumbnail are all still there; no CSP violation. If a step fails, open `playwright-report/` and fix the cause in the task that owns it; do not loosen the assertion.
 
-Run: `BASE_PATH=/promptcad/ npm run e2e`
-Expected: PASS again under the GitHub Pages sub-path (library bundles and the engine `VERSION` file load from `/promptcad/`).
+Run: `BASE_PATH=/chatscad/ npm run e2e`
+Expected: PASS again under the GitHub Pages sub-path (library bundles and the engine `VERSION` file load from `/chatscad/`).
 
 - [ ] **Step 3: Full verification**
 

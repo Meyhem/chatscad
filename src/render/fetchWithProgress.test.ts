@@ -16,7 +16,7 @@ const fakeFetch = (res: Response) => vi.fn(async () => res) as unknown as typeof
 
 async function run(res: Response) {
   const seen: LoadProgress[] = []
-  const buf = await fetchWithProgress('/promptcad/openscad/openscad.wasm', (p) => seen.push(p), fakeFetch(res))
+  const buf = await fetchWithProgress('/chatscad/openscad/openscad.wasm', (p) => seen.push(p), fakeFetch(res))
   return { buf, seen }
 }
 
@@ -46,5 +46,5 @@ it('drops the total when there is no length or more bytes arrive than declared',
 })
 
 it('fails with the URL and the HTTP status', async () => {
-  await expect(run(streamed([], {}, 404))).rejects.toThrow('Failed to download /promptcad/openscad/openscad.wasm: HTTP 404')
+  await expect(run(streamed([], {}, 404))).rejects.toThrow('Failed to download /chatscad/openscad/openscad.wasm: HTTP 404')
 })

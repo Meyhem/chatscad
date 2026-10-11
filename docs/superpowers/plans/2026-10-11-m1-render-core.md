@@ -1,8 +1,8 @@
-# PromptCAD M1 — Render Core Implementation Plan
+# ChatSCAD M1 — Render Core Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A Vite + React (TSX) app, styled from the PromptCAD design system, where you paste OpenSCAD into a CodeMirror editor, it compiles in a Web Worker with OpenSCAD WASM (Manifold backend), the mesh shows in a three.js viewer with mm dimensions, and you can download binary STL and the `.scad` source.
+**Goal:** A Vite + React (TSX) app, styled from the ChatSCAD design system, where you paste OpenSCAD into a CodeMirror editor, it compiles in a Web Worker with OpenSCAD WASM (Manifold backend), the mesh shows in a three.js viewer with mm dimensions, and you can download binary STL and the `.scad` source.
 
 **Architecture:** All work is client-side. A single `RenderController` is the only path to the render worker; it owns debounce (600 ms), cancellation (a newer request terminates the in-flight worker) and the 60 s timeout. The worker (Comlink) creates a fresh OpenSCAD WASM instance per render, writes `/main.scad`, runs `callMain`, parses the binary STL into typed arrays and transfers them back. A Zustand store holds code, render status, the last good mesh/STL, logs, diagnostics and a "reveal this line" request; React components (`.tsx`) render from it. Every colour, radius, font and size comes from `design/tokens.json`, generated into CSS custom properties; the design system's `pc-*` component classes are used as-is from `design/components.css`, and Tailwind v4 is used for layout with a token-backed theme.
 
@@ -10,7 +10,7 @@
 
 **Spec:** [`docs/SPEC.md`](../../SPEC.md). This plan implements Milestone 1 ("Render core") plus the cross-cutting rules from "Rendering pipeline", "Security" and "Tech stack" that M1 code touches.
 
-**Design sources:** the PromptCAD design system and screens, copied into [`design/`](../../../design/README.md) (`tokens.json`, `components.css`) so every task can read them. Originals: design system https://claude.ai/artifact/Ww9x79XKgeaW9w19vs13io and screens https://claude.ai/artifact/TNXkMGKfbuVrEAh8MEvMDA. M1 builds the **Workbench** screen without its chat column, the **Compile error** screen's status pill, stale viewer, editor gutter and inline callout, and the **First run** screen's "Loading OpenSCAD…" state. Chat, Customizer dock, history, settings, share, the export dialog and the phone tab bar belong to later milestones (see "Deferred from M1").
+**Design sources:** the ChatSCAD design system and screens, copied into [`design/`](../../../design/README.md) (`tokens.json`, `components.css`) so every task can read them. Originals: design system https://claude.ai/artifact/Ww9x79XKgeaW9w19vs13io and screens https://claude.ai/artifact/TNXkMGKfbuVrEAh8MEvMDA. M1 builds the **Workbench** screen without its chat column, the **Compile error** screen's status pill, stale viewer, editor gutter and inline callout, and the **First run** screen's "Loading OpenSCAD…" state. Chat, Customizer dock, history, settings, share, the export dialog and the phone tab bar belong to later milestones (see "Deferred from M1").
 
 ## Global Constraints
 
@@ -41,7 +41,7 @@ From the design system (`design/tokens.json`, its README and component docs):
 - Icons: 16px line icons, 1.5px stroke, square caps, `currentColor`, from Lucide (`lucide-react`, bundled, no CDN), always with the `pc-i` class so `components.css` sizes them.
 - Controls are `control-md` (36px) on desktop and at least `touch-target` (44px) on coarse pointers; `components.css` handles this for `pc-*` controls.
 - Corners: `radius-sm` inputs and chips, `radius-md` buttons, `radius-lg` dialogs, `radius-pill` only for status pills and switches.
-- Wordmark only: "There is no logo yet. Set the name 'PromptCAD' in Archivo 700 and never draw a stand-in mark."
+- Wordmark only: "There is no logo yet. Set the name 'ChatSCAD' in Archivo 700 and never draw a stand-in mark."
 
 ## Review Focus
 
@@ -141,7 +141,7 @@ Run from the repo root (it already has `README.md`, `docs/`, `design/` and `.git
 
 ```bash
 npm init -y
-npm pkg set name=promptcad private=true type=module version=0.0.0
+npm pkg set name=chatscad private=true type=module version=0.0.0
 npm pkg delete main scripts.test
 npm i react react-dom
 npm i -D vite @vitejs/plugin-react typescript @types/react @types/react-dom @types/node tailwindcss @tailwindcss/vite vitest jsdom @testing-library/react @testing-library/jest-dom @testing-library/user-event tsx
@@ -201,7 +201,7 @@ export default defineConfig({
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>PromptCAD</title>
+    <title>ChatSCAD</title>
   </head>
   <body>
     <div id="root"></div>
@@ -261,7 +261,7 @@ import { App } from './App'
 
 it('shows the app name', () => {
   render(<App />)
-  expect(screen.getByRole('heading', { name: 'PromptCAD' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'ChatSCAD' })).toBeInTheDocument()
 })
 ```
 
@@ -279,7 +279,7 @@ export function App() {
   return (
     <div className="flex h-full flex-col">
       <header className="border-b px-3 py-2">
-        <h1 className="font-semibold">PromptCAD</h1>
+        <h1 className="font-semibold">ChatSCAD</h1>
       </header>
     </div>
   )
@@ -611,7 +611,7 @@ export function App() {
   return (
     <div className="pc-root flex h-full flex-col bg-bg text-ink">
       <header className="flex h-(--header-height) shrink-0 items-center gap-3 border-b border-line bg-panel pl-4 pr-3">
-        <h1 className="text-[15px] font-bold tracking-tight">PromptCAD</h1>
+        <h1 className="text-[15px] font-bold tracking-tight">ChatSCAD</h1>
       </header>
     </div>
   )
@@ -2184,7 +2184,7 @@ export interface RevealRequest {
   id: number
 }
 
-export const DEFAULT_CODE = `// PromptCAD: edit me
+export const DEFAULT_CODE = `// ChatSCAD: edit me
 /* [Dimensions] */
 width = 20;  // [5:1:100]
 depth = 20;  // [5:1:100]
@@ -3850,7 +3850,7 @@ function scriptedWorker(respond: (req: RenderRequest) => RenderResult) {
 
 it('renders the default model, shows dims in the header, and enables STL export', async () => {
   render(<App createWorker={scriptedWorker(() => okResult())} />)
-  expect(screen.getByRole('heading', { name: 'PromptCAD' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'ChatSCAD' })).toBeInTheDocument()
   expect(screen.getByTestId('viewer')).toBeInTheDocument()
   expect(screen.getByRole('tab', { name: 'main.scad' })).toHaveAttribute('aria-selected', 'true')
   await waitFor(() => expect(screen.getByTestId('dims')).toHaveTextContent('20 × 20 × 10 mm'))
@@ -3924,7 +3924,7 @@ export const CSP = [
 
 export function cspPlugin(): Plugin {
   return {
-    name: 'promptcad-csp',
+    name: 'chatscad-csp',
     apply: 'build',
     transformIndexHtml: (html) =>
       html.replace('<head>', `<head>\n    <meta http-equiv="Content-Security-Policy" content="${CSP}">`),
@@ -3974,7 +3974,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
   return (
     <div className="pc-root flex h-full flex-col bg-bg text-ink">
       <header className="flex h-(--header-height) shrink-0 items-center gap-3 border-b border-line bg-panel pl-4 pr-3">
-        <h1 className="text-[15px] font-bold tracking-tight">PromptCAD</h1>
+        <h1 className="text-[15px] font-bold tracking-tight">ChatSCAD</h1>
         <span aria-hidden="true" className="h-5 w-px bg-line" />
         <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} />
         {bounds && <DimsReadout bounds={bounds} />}

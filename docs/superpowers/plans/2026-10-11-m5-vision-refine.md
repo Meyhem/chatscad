@@ -1,4 +1,4 @@
-# PromptCAD M5 — Vision and Click-to-Refine Implementation Plan
+# ChatSCAD M5 — Vision and Click-to-Refine Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -10,7 +10,7 @@
 
 **Spec:** [`docs/SPEC.md`](../../SPEC.md) ("Editing modes › Click-to-refine", "Image and sketch input", "Rendering pipeline", "Risks and open questions") and the M2–M5 design [`docs/superpowers/specs/2026-10-11-m2-m5-design.md`](../specs/2026-10-11-m2-m5-design.md) (decision D12, "M5 — Vision and click-to-refine", "Shared contracts").
 
-**Prerequisite:** M2, M3 and M4 have been executed exactly as the design doc's **Shared contracts** describe. This plan uses only contract names from those milestones: `src/ai/types.ts` (`ContentPart`, `LlmMessage`, `ChatRequest`, `Usage`, `LlmProvider`, `ProviderError`), `src/ai/createProvider.ts`, the adapters (OpenAI-compatible and Anthropic), `src/ai/prompt.ts` (`PromptContext.selection`, `buildSystemPrompt`, `buildMessages`), `src/ai/runTurn.ts` (`generateCode`, `GenerateResult`, `runTurn`, `TurnEvent`), `src/ai/edits.ts` (`parseReply`, `applyEdits`), `src/ai/cost.ts` (`computeCost`), `src/chat/chatStore.ts` (`ChatMessage.imageBlobIds`), `src/db/db.ts` (`PromptCadDb`, `db`, `DEFAULT_SETTINGS`, `Settings`, `ProviderProfile`, `UsageRecord`, the `blobs` table, `StoredMessage.imageBlobIds`), `src/scad/lexer.ts` (`lex`, `Token`), and `src/export/frames.ts` (`renderFrames`, `presetPose`). Where a task changes one of those files it shows the full new code of the pieces it changes; files and names outside the contracts (the composer component, the chat column, the settings page) are located with the `grep` commands given in the step. Before starting, run `npm run typecheck && npm test` on the branch and confirm both pass.
+**Prerequisite:** M2, M3 and M4 have been executed exactly as the design doc's **Shared contracts** describe. This plan uses only contract names from those milestones: `src/ai/types.ts` (`ContentPart`, `LlmMessage`, `ChatRequest`, `Usage`, `LlmProvider`, `ProviderError`), `src/ai/createProvider.ts`, the adapters (OpenAI-compatible and Anthropic), `src/ai/prompt.ts` (`PromptContext.selection`, `buildSystemPrompt`, `buildMessages`), `src/ai/runTurn.ts` (`generateCode`, `GenerateResult`, `runTurn`, `TurnEvent`), `src/ai/edits.ts` (`parseReply`, `applyEdits`), `src/ai/cost.ts` (`computeCost`), `src/chat/chatStore.ts` (`ChatMessage.imageBlobIds`), `src/db/db.ts` (`ChatScadDb`, `db`, `DEFAULT_SETTINGS`, `Settings`, `ProviderProfile`, `UsageRecord`, the `blobs` table, `StoredMessage.imageBlobIds`), `src/scad/lexer.ts` (`lex`, `Token`), and `src/export/frames.ts` (`renderFrames`, `presetPose`). Where a task changes one of those files it shows the full new code of the pieces it changes; files and names outside the contracts (the composer component, the chat column, the settings page) are located with the `grep` commands given in the step. Before starting, run `npm run typecheck && npm test` on the branch and confirm both pass.
 
 **Design sources:** [`design/screens/`](../../../design/screens/): `Refine.dc.html` (3D highlight in the `pick` token, popover with **Ask AI** and **Show code** (the screen's "Ask Claude" becomes "Ask AI" because providers are generic), editor lines styled like `.cl.is-pick`, composer pick chip "bores · lines 15–17" with "Only this part will change", "Tap empty space to clear · Esc"), `PhoneSketch.dc.html` (sketch canvas, Pen / Line / Size / Erase, undo, note, "Attach to prompt"), `PhoneChat.dc.html` (`pc-msg-img` thumbnail above a user bubble), `Main.dc.html` (attach button in the composer bar). Deviations, each deliberate: the popover's summary line shows triangle count and bounding size ("1,024 triangles · 19 × 19 × 22 mm") instead of the screen's semantic sentence ("4 cylinders, d = 19 mm, subtracted from body()"), which would need geometry understanding; the sketch's "Note for Claude" field is labelled "Note"; picking reaches top-level statements and main-assembly children, so the screen's example (a `for` loop inside `module body()`) resolves to the `body` part and its module definition (see "Contract issues" and "Deferred beyond v1").
 
@@ -2075,9 +2075,9 @@ git commit -m "feat(refine): quiet tagged follow-up render through the RenderCon
 - Test: `src/db/activeProfile.test.ts`, `src/refine/useEscapeToClearPick.test.ts`, `src/refine/PickPopover.test.tsx`
 
 **Interfaces:**
-- Consumes: `PromptCadDb`, `db`, `DEFAULT_SETTINGS`, `ProviderProfile` (M2 contract); `useRefineStore` (Task 7); `PickResult`, `pickTitle`, `pickSummary` (Task 6); `partPickFixture`, `boxPickFixture` (Task 6).
+- Consumes: `ChatScadDb`, `db`, `DEFAULT_SETTINGS`, `ProviderProfile` (M2 contract); `useRefineStore` (Task 7); `PickResult`, `pickTitle`, `pickSummary` (Task 6); `partPickFixture`, `boxPickFixture` (Task 6).
 - Produces:
-  - `getActiveProfile(database?: PromptCadDb): Promise<ProviderProfile | null>`
+  - `getActiveProfile(database?: ChatScadDb): Promise<ProviderProfile | null>`
   - `useVisionSupport(): boolean`: the active profile's `capabilities.vision`, live (Dexie `liveQuery`), `false` while loading or without a profile.
   - `focusComposer(): boolean`: focuses `.pc-composer textarea`; returns whether one was found.
   - `useEscapeToClearPick(): void`: Esc clears the pick, except when the key comes from inside the code editor (`.cm-editor`), where Esc belongs to CodeMirror.
@@ -2092,7 +2092,7 @@ git commit -m "feat(refine): quiet tagged follow-up render through the RenderCon
 // @vitest-environment node
 import 'fake-indexeddb/auto'
 import { getActiveProfile } from './activeProfile'
-import { DEFAULT_SETTINGS, PromptCadDb, type ProviderProfile } from './db'
+import { DEFAULT_SETTINGS, ChatScadDb, type ProviderProfile } from './db'
 
 const profile = (id: string, vision: boolean): ProviderProfile => ({
   id,
@@ -2108,9 +2108,9 @@ const profile = (id: string, vision: boolean): ProviderProfile => ({
   updatedAt: 0,
 })
 
-let database: PromptCadDb
+let database: ChatScadDb
 beforeEach(() => {
-  database = new PromptCadDb(`active-profile-${crypto.randomUUID()}`)
+  database = new ChatScadDb(`active-profile-${crypto.randomUUID()}`)
 })
 afterEach(async () => {
   await database.delete()
@@ -2247,9 +2247,9 @@ Expected: FAIL, because `./activeProfile`, `./useEscapeToClearPick` and `./PickP
 `src/db/activeProfile.ts`:
 
 ```ts
-import { db, type PromptCadDb, type ProviderProfile } from './db'
+import { db, type ChatScadDb, type ProviderProfile } from './db'
 
-export async function getActiveProfile(database: PromptCadDb = db): Promise<ProviderProfile | null> {
+export async function getActiveProfile(database: ChatScadDb = db): Promise<ProviderProfile | null> {
   const settings = await database.settings.get('app')
   if (!settings?.activeProfileId) return null
   return (await database.providerProfiles.get(settings.activeProfileId)) ?? null
@@ -3359,7 +3359,7 @@ git commit -m "test(ai): pin the image part wire format of both adapters" -m "Co
 - Test: `src/images/prepareImage.test.ts`, `src/images/base64.test.ts`, `src/db/images.test.ts`, `src/images/attachments.test.ts`
 
 **Interfaces:**
-- Consumes: `db`, `PromptCadDb`, `StoredBlob` and the `blobs` table (M3 contract).
+- Consumes: `db`, `ChatScadDb`, `StoredBlob` and the `blobs` table (M3 contract).
 - Produces:
   - `MAX_IMAGE_EDGE = 1568`, `JPEG_QUALITY = 0.85`; `type OutputType = 'image/png' | 'image/jpeg'`
   - `fitWithin(width, height, max = MAX_IMAGE_EDGE): { width; height }`
@@ -3457,12 +3457,12 @@ it('rejects anything that is not a base64 data URL', () => {
 ```ts
 // @vitest-environment node
 import 'fake-indexeddb/auto'
-import { PromptCadDb } from './db'
+import { ChatScadDb } from './db'
 import { loadImage, saveImage } from './images'
 
-let database: PromptCadDb
+let database: ChatScadDb
 beforeEach(() => {
-  database = new PromptCadDb(`images-${crypto.randomUUID()}`)
+  database = new ChatScadDb(`images-${crypto.randomUUID()}`)
 })
 afterEach(async () => {
   await database.delete()
@@ -3661,16 +3661,16 @@ export function imageDataToPng(image: ImageData): Promise<Blob> {
 `src/db/images.ts`:
 
 ```ts
-import { db, type PromptCadDb } from './db'
+import { db, type ChatScadDb } from './db'
 
 /** Images attached to prompts, stored with the message (and so the version) that used them. */
-export async function saveImage(blob: Blob, database: PromptCadDb = db): Promise<string> {
+export async function saveImage(blob: Blob, database: ChatScadDb = db): Promise<string> {
   const id = crypto.randomUUID()
   await database.blobs.put({ id, kind: 'image', data: blob })
   return id
 }
 
-export async function loadImage(id: string, database: PromptCadDb = db): Promise<Blob | null> {
+export async function loadImage(id: string, database: ChatScadDb = db): Promise<Blob | null> {
   const row = await database.blobs.get(id)
   return row?.kind === 'image' ? row.data : null
 }
@@ -5236,7 +5236,7 @@ git commit -m "feat(chat): send images, sketches and the picked part with the pr
 - Test: `src/db/visualCheck.test.ts`, `src/refine/visualCheck.test.ts`, `src/settings/VisualCheckSetting.test.tsx`
 
 **Interfaces:**
-- Consumes: `Settings`, `DEFAULT_SETTINGS`, `PromptCadDb`, `db`, `ProviderProfile`, `UsageRecord` (M2/M3 contract); `computeCost` (M2); `LlmProvider`, `ContentPart`, `Usage`, `ModelPrice`, `ProviderError` (M2); `ChatMessage` (M2); `renderFrames`, `presetPose` (M4 contract); `blobToBase64`, `imageDataToPng` (Task 13); `readToken` (M1); `errorMessage` (M1).
+- Consumes: `Settings`, `DEFAULT_SETTINGS`, `ChatScadDb`, `db`, `ProviderProfile`, `UsageRecord` (M2/M3 contract); `computeCost` (M2); `LlmProvider`, `ContentPart`, `Usage`, `ModelPrice`, `ProviderError` (M2); `ChatMessage` (M2); `renderFrames`, `presetPose` (M4 contract); `blobToBase64`, `imageDataToPng` (Task 13); `readToken` (M1); `errorMessage` (M1).
 - Produces:
   - Contract field `Settings.visualCheck: boolean`, `DEFAULT_SETTINGS.visualCheck = false`.
   - `getVisualCheck(database?)`, `setVisualCheck(on, database?)`, `recordVisualCheckUsage({ profile, model, usage, projectId? }, database?)`.
@@ -5253,12 +5253,12 @@ git commit -m "feat(chat): send images, sketches and the picked part with the pr
 ```ts
 // @vitest-environment node
 import 'fake-indexeddb/auto'
-import { DEFAULT_SETTINGS, PromptCadDb, type ProviderProfile } from './db'
+import { DEFAULT_SETTINGS, ChatScadDb, type ProviderProfile } from './db'
 import { getVisualCheck, recordVisualCheckUsage, setVisualCheck } from './visualCheck'
 
-let database: PromptCadDb
+let database: ChatScadDb
 beforeEach(() => {
-  database = new PromptCadDb(`visual-check-${crypto.randomUUID()}`)
+  database = new ChatScadDb(`visual-check-${crypto.randomUUID()}`)
 })
 afterEach(async () => {
   await database.delete()
@@ -5426,13 +5426,13 @@ No Dexie version bump is needed: `settings` is a singleton record, the field is 
 ```ts
 import { computeCost } from '../ai/cost'
 import type { Usage } from '../ai/types'
-import { db, DEFAULT_SETTINGS, type PromptCadDb, type ProviderProfile, type UsageRecord } from './db'
+import { db, DEFAULT_SETTINGS, type ChatScadDb, type ProviderProfile, type UsageRecord } from './db'
 
-export async function getVisualCheck(database: PromptCadDb = db): Promise<boolean> {
+export async function getVisualCheck(database: ChatScadDb = db): Promise<boolean> {
   return (await database.settings.get('app'))?.visualCheck ?? false
 }
 
-export async function setVisualCheck(on: boolean, database: PromptCadDb = db): Promise<void> {
+export async function setVisualCheck(on: boolean, database: ChatScadDb = db): Promise<void> {
   await database.transaction('rw', database.settings, async () => {
     const current = await database.settings.get('app')
     await database.settings.put({ ...DEFAULT_SETTINGS, ...current, id: 'app', visualCheck: on })
@@ -5441,7 +5441,7 @@ export async function setVisualCheck(on: boolean, database: PromptCadDb = db): P
 
 export async function recordVisualCheckUsage(
   input: { profile: ProviderProfile; model: string; usage: Usage; projectId?: string | null },
-  database: PromptCadDb = db,
+  database: ChatScadDb = db,
 ): Promise<UsageRecord> {
   const { cost, costSource } = computeCost(input.usage, input.profile.priceTable[input.model])
   const record: UsageRecord = {
@@ -5668,7 +5668,7 @@ git commit -m "feat(refine): optional visual check of AI results by a vision mod
 - Test: `e2e/refine.spec.ts`
 
 **Interfaces:**
-- Consumes: the whole M5 feature through the UI; the fake OpenAI-compatible endpoint pattern from the design doc (`page.route('https://fake-llm.test/v1/**', …)`); the `promptcad` IndexedDB stores `providerProfiles` and `settings` (M2 contract shapes).
+- Consumes: the whole M5 feature through the UI; the fake OpenAI-compatible endpoint pattern from the design doc (`page.route('https://fake-llm.test/v1/**', …)`); the `chatscad` IndexedDB stores `providerProfiles` and `settings` (M2 contract shapes).
 - Produces: two Playwright tests against the production build with the real OpenSCAD WASM and the CSP on.
 
 **Why tapping the canvas centre is deterministic.** "Fit view" points the camera at the centre of the model's bounding box from a fixed direction (`computeCameraFit`, M1), and that centre is the middle of the canvas. The model is a 40 × 40 × 10 mm plate with a 10 × 10 × 10 mm peg standing on its middle, so the box centre (20, 20, 10) lies on the peg's footprint and the line of sight from the iso direction meets the peg's side face first. Tapping the centre therefore always hits the peg, at any canvas size, with no test-only code in the production build. The test waits for `data-part-tags="ready"`, which the viewer sets for users too (it drives "finding parts…"). The provider profile is written straight into IndexedDB, because its shape is a shared contract while the providers page's labels are not; M2's `getSettings` fills in any settings field the seed leaves out.
@@ -5727,7 +5727,7 @@ async function fakeLlm(page: Page, replies: string[]): Promise<ChatBody[]> {
 async function seedVisionProfile(page: Page) {
   await expect(page.getByRole('textbox', { name: 'Prompt' })).toBeVisible({ timeout: RENDER_TIMEOUT })
   await page.evaluate(async (baseUrl) => {
-    const open = indexedDB.open('promptcad')
+    const open = indexedDB.open('chatscad')
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       open.onsuccess = () => resolve(open.result)
       open.onerror = () => reject(open.error)

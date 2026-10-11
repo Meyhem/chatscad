@@ -4,7 +4,7 @@ import { encodeShare, type SharePayload } from './link'
 import { useShareNotice } from './shareNotice'
 
 const payload: SharePayload = { v: 1, name: 'Broom hook', code: 'cube([62, 38, 44]);', params: { wall: 2.4 } }
-const loc = (hash: string) => ({ hash, pathname: '/promptcad/', search: '?x=1' })
+const loc = (hash: string) => ({ hash, pathname: '/chatscad/', search: '?x=1' })
 
 beforeEach(() => useShareNotice.setState({ notice: null }))
 
@@ -21,7 +21,7 @@ it('imports a valid link once and clears the hash, keeping the base path', async
   const importer = vi.fn(async () => {})
   expect(await consumeShareHash(loc(`#s=${encodeShare(payload)}`), hist, importer)).toEqual({ status: 'imported', name: 'Broom hook' })
   expect(importer).toHaveBeenCalledExactlyOnceWith(payload)
-  expect(hist.replaceState).toHaveBeenCalledWith(null, '', '/promptcad/?x=1')
+  expect(hist.replaceState).toHaveBeenCalledWith(null, '', '/chatscad/?x=1')
 })
 
 it('creates no project for a bad link, and still clears the hash', async () => {

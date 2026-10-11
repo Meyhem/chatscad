@@ -14,7 +14,7 @@ function join(...parts: string[]): string {
 }
 
 function siteOrigin(): string {
-  return typeof location !== 'undefined' ? location.origin : 'https://your-promptcad-site'
+  return typeof location !== 'undefined' ? location.origin : 'https://your-chatscad-site'
 }
 
 export function describeProviderError(err: unknown, baseUrl: string): { title: string; body: string } {
@@ -52,7 +52,7 @@ export function describeProviderError(err: unknown, baseUrl: string): { title: s
       }
       return {
         title: `Couldn't reach ${host}`,
-        body: `Check the base URL and your connection. If both are right, ${host} doesn't accept requests from a web page (CORS), and PromptCAD has no server to relay them.`,
+        body: `Check the base URL and your connection. If both are right, ${host} doesn't accept requests from a web page (CORS), and ChatSCAD has no server to relay them.`,
       }
     }
     case 'auth':

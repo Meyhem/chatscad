@@ -97,10 +97,10 @@ describe('ProjectMenu', () => {
   it('shows why an import failed, naming the field', async () => {
     render(<ProjectMenu />)
     openMenu()
-    const file = new File(['{"format":"promptcad-project"}'], 'bad.json', { type: 'application/json' })
+    const file = new File(['{"format":"chatscad-project"}'], 'bad.json', { type: 'application/json' })
     fireEvent.change(screen.getByLabelText('Project file'), { target: { files: [file] } })
     expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't import bad.jsonversions[2].code must be text")
-    expect(importFromText).toHaveBeenCalledWith('{"format":"promptcad-project"}')
+    expect(importFromText).toHaveBeenCalledWith('{"format":"chatscad-project"}')
   })
 
   it('opens the first imported project', async () => {

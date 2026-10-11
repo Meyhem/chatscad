@@ -23,7 +23,7 @@ export async function seedFakeProvider(page: Page, settings: Record<string, unkn
   await page.evaluate(
     async ({ base, patch }) => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const req = indexedDB.open('promptcad')
+        const req = indexedDB.open('chatscad')
         req.onsuccess = () => resolve(req.result)
         req.onerror = () => reject(req.error)
       })

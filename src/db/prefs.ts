@@ -1,4 +1,4 @@
-import { db as defaultDb, DEFAULT_SETTINGS, type PromptCadDb, type Settings } from './db'
+import { db as defaultDb, DEFAULT_SETTINGS, type ChatScadDb, type Settings } from './db'
 
 export type Prefs = Pick<Settings, 'variantCount' | 'lowQualityPreview' | 'transcriptionModel'>
 
@@ -12,11 +12,11 @@ export function prefsFrom(row: Partial<Settings> | undefined): Prefs {
   }
 }
 
-export async function readPrefs(database: PromptCadDb = defaultDb): Promise<Prefs> {
+export async function readPrefs(database: ChatScadDb = defaultDb): Promise<Prefs> {
   return prefsFrom(await database.settings.get('app'))
 }
 
-export async function writePrefs(patch: Partial<Prefs>, database: PromptCadDb = defaultDb): Promise<Prefs> {
+export async function writePrefs(patch: Partial<Prefs>, database: ChatScadDb = defaultDb): Promise<Prefs> {
   const current = await database.settings.get('app')
   const next = prefsFrom({ ...current, ...patch })
   await database.settings.put({ ...DEFAULT_SETTINGS, ...current, ...next, id: 'app' })

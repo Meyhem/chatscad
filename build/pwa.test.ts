@@ -8,10 +8,10 @@ const WASM = fileURLToPath(new URL('../public/openscad/openscad.wasm', import.me
 const tokens = readTokens()
 
 it('asks before updating and registers from the bundle, never from an inline script', () => {
-  const options = pwaOptions('/promptcad/')
+  const options = pwaOptions('/chatscad/')
   expect(options.registerType).toBe('prompt')
   expect(options.injectRegister).toBe(false)
-  expect(options.base).toBe('/promptcad/')
+  expect(options.base).toBe('/chatscad/')
   expect(CSP).toContain("script-src 'self' 'wasm-unsafe-eval'")
   expect(CSP).toContain("worker-src 'self' blob:")
 })
@@ -32,7 +32,7 @@ it.skipIf(!existsSync(WASM))('leaves at least twice the pinned WASM size in the 
 it('is an installable standalone app coloured from the design tokens', () => {
   const { manifest } = pwaOptions('/')
   if (!manifest) throw new Error('manifest missing')
-  expect(manifest).toMatchObject({ name: 'PromptCAD', short_name: 'PromptCAD', display: 'standalone', start_url: '.', scope: '.' })
+  expect(manifest).toMatchObject({ name: 'ChatSCAD', short_name: 'ChatSCAD', display: 'standalone', start_url: '.', scope: '.' })
   expect(manifest.background_color).toBe(primaryColor(tokens, 'bg'))
   expect(manifest.theme_color).toBe(primaryColor(tokens, 'panel'))
   expect(manifest.icons).toBe(ICONS)
@@ -44,8 +44,8 @@ it('is an installable standalone app coloured from the design tokens', () => {
 })
 
 it('adds the iOS touch icon and the theme colour under the base path', () => {
-  const transform = pwaHeadPlugin('/promptcad/', tokens).transformIndexHtml as (html: string) => string
-  const html = transform('<html><head><title>PromptCAD</title></head><body></body></html>')
-  expect(html).toContain('<link rel="apple-touch-icon" href="/promptcad/icons/icon-192.png">')
+  const transform = pwaHeadPlugin('/chatscad/', tokens).transformIndexHtml as (html: string) => string
+  const html = transform('<html><head><title>ChatSCAD</title></head><body></body></html>')
+  expect(html).toContain('<link rel="apple-touch-icon" href="/chatscad/icons/icon-192.png">')
   expect(html).toContain(`<meta name="theme-color" content="${primaryColor(tokens, 'panel')}">`)
 })

@@ -1,4 +1,4 @@
-# PromptCAD
+# ChatSCAD
 
 Client-only React PWA: an LLM (from M2) writes OpenSCAD, the browser compiles it with OpenSCAD WASM in a Web Worker, the user iterates and exports STL. No backend; static hosting only (GitHub Pages).
 
@@ -21,7 +21,7 @@ Client-only React PWA: an LLM (from M2) writes OpenSCAD, the browser compiles it
 | `npm test` | Vitest unit and component tests (jsdom) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run e2e` | Production build plus Playwright against the real OpenSCAD WASM, CSP active |
-| `npm run build` | Static build into `dist/`; set `BASE_PATH=/promptcad/` to build for a sub-path |
+| `npm run build` | Static build into `dist/`; set `BASE_PATH=/chatscad/` to build for a sub-path |
 | `npm run tokens` | Regenerate `src/styles/tokens.css` from `design/tokens.json` |
 | `npm run fetch:openscad` | Install the pinned OpenSCAD WASM; `-- --latest` prints the newest snapshot and its SHA-256 for a deliberate bump |
 
@@ -42,8 +42,8 @@ Client-only React PWA: an LLM (from M2) writes OpenSCAD, the browser compiles it
 - **CSP stays strict.** `script-src 'self' 'wasm-unsafe-eval'`, fonts and everything else self-hosted. Do not add CDNs, analytics, or `data:` fonts (Vite font inlining is disabled on purpose).
 - **Model output is untrusted.** Render it as text only (`textContent`, React text nodes), never as HTML.
 - **OpenSCAD WASM is pinned by URL and SHA-256** in `scripts/fetch-openscad.ts`. Bump it on purpose, never by downloading "latest" into the build.
-- **Base path.** All asset URLs must work under `BASE_PATH` (GitHub Pages serves from `/promptcad/`). Use `import.meta.env.BASE_URL`, never a hard-coded leading `/`.
+- **Base path.** All asset URLs must work under `BASE_PATH` (GitHub Pages serves from `/chatscad/`). Use `import.meta.env.BASE_URL`, never a hard-coded leading `/`.
 
 ## Deployment
 
-`.github/workflows/pages.yml` runs typecheck, unit tests and the end-to-end tests on every push and pull request. On `main` it uploads the tested `dist/` and deploys it to GitHub Pages at https://meyhem.github.io/promptcad/. Pages must be set to "GitHub Actions" as its source in the repository settings.
+`.github/workflows/pages.yml` runs typecheck, unit tests and the end-to-end tests on every push and pull request. On `main` it uploads the tested `dist/` and deploys it to GitHub Pages at https://meyhem.github.io/chatscad/. Pages must be set to "GitHub Actions" as its source in the repository settings.

@@ -10,8 +10,8 @@ import { isLibraryName } from '../render/libraries'
 import type { ParamValue } from '../render/types'
 import { listVersions } from './versions'
 
-export const PROJECT_FORMAT = 'promptcad-project'
-export const BACKUP_FORMAT = 'promptcad-backup'
+export const PROJECT_FORMAT = 'chatscad-project'
+export const BACKUP_FORMAT = 'chatscad-backup'
 export const MAX_CODE_LENGTH = 1_000_000
 export const MAX_FILE_LENGTH = 50_000_000
 
@@ -294,7 +294,7 @@ export async function importFromText(text: string): Promise<{ ok: true; projects
 
 export function projectFileName(name: string): string {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-  return `${slug || 'project'}.promptcad.json`
+  return `${slug || 'project'}.chatscad.json`
 }
 
 const jsonBlob = (data: unknown) => new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -306,5 +306,5 @@ export async function saveProjectFile(projectId: string): Promise<void> {
 
 export async function saveBackupFile(): Promise<void> {
   const date = new Date().toISOString().slice(0, 10)
-  await saveFile(jsonBlob(await exportAllProjects()), `promptcad-backup-${date}.json`)
+  await saveFile(jsonBlob(await exportAllProjects()), `chatscad-backup-${date}.json`)
 }

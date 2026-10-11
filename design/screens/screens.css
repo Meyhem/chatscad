@@ -1,4 +1,4 @@
-/* PromptCAD screens: tokens from the PromptCAD design system (dark is primary), plus app-shell layout. */
+/* ChatSCAD screens: tokens from the ChatSCAD design system (dark is primary), plus app-shell layout. */
 :root {
   --bg: #0d1015; --panel: #141920; --panel-raised: #1b222b; --inset: #0a0d11; --viewport: #0b0e12;
   --line: #252d38; --line-strong: #5f6c7d; --ink: #e6eaf0; --ink-muted: #9aa5b4; --ink-disabled: #5a6574;

@@ -6,7 +6,7 @@ export interface LoadProgress {
   total: number | null
 }
 
-export const LOAD_PROGRESS_TYPE = 'promptcad:openscad-load-progress'
+export const LOAD_PROGRESS_TYPE = 'chatscad:openscad-load-progress'
 
 export interface LoadProgressMessage extends LoadProgress {
   type: typeof LOAD_PROGRESS_TYPE

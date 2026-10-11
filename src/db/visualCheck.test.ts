@@ -1,11 +1,11 @@
 // @vitest-environment node
 import 'fake-indexeddb/auto'
-import { DEFAULT_SETTINGS, PromptCadDb, type ProviderProfile } from './db'
+import { DEFAULT_SETTINGS, ChatScadDb, type ProviderProfile } from './db'
 import { getVisualCheck, recordVisualCheckUsage, setVisualCheck } from './visualCheck'
 
-let database: PromptCadDb
+let database: ChatScadDb
 beforeEach(() => {
-  database = new PromptCadDb(`visual-check-${crypto.randomUUID()}`)
+  database = new ChatScadDb(`visual-check-${crypto.randomUUID()}`)
 })
 afterEach(async () => {
   await database.delete()

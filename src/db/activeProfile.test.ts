@@ -1,7 +1,7 @@
 // @vitest-environment node
 import 'fake-indexeddb/auto'
 import { getActiveProfile } from './activeProfile'
-import { DEFAULT_SETTINGS, PromptCadDb, type ProviderProfile } from './db'
+import { DEFAULT_SETTINGS, ChatScadDb, type ProviderProfile } from './db'
 
 const profile = (id: string, vision: boolean): ProviderProfile => ({
   id,
@@ -17,9 +17,9 @@ const profile = (id: string, vision: boolean): ProviderProfile => ({
   updatedAt: 0,
 })
 
-let database: PromptCadDb
+let database: ChatScadDb
 beforeEach(() => {
-  database = new PromptCadDb(`active-profile-${crypto.randomUUID()}`)
+  database = new ChatScadDb(`active-profile-${crypto.randomUUID()}`)
 })
 afterEach(async () => {
   await database.delete()

@@ -1,9 +1,9 @@
 # Design sources
 
-Copies of the PromptCAD design system that the app builds from. The originals live in two Claude artifacts:
+Copies of the ChatSCAD design system that the app builds from. The originals live in two Claude artifacts:
 
-- Design system (tokens, brand book, components): https://claude.ai/artifact/Ww9x79XKgeaW9w19vs13io (version `1791700265-ad72`, copied 2026-10-11)
-- Screens (desktop workbench, flows, phone tabs, three-tab navigation): https://claude.ai/artifact/TNXkMGKfbuVrEAh8MEvMDA (version `1791725429-f466`)
+- Design system (tokens, brand book, components): https://claude.ai/artifact/Ww9x79XKgeaW9w19vs13io (version `1791726354-7ceb`, copied 2026-10-11)
+- Screens (desktop workbench, flows, phone tabs, three-tab navigation): https://claude.ai/artifact/TNXkMGKfbuVrEAh8MEvMDA (version `1791726373-6bc4`)
 
 | File | What | Changes from the source |
 | --- | --- | --- |
@@ -14,4 +14,4 @@ To update: copy the files again from the artifact, keep the one change above, ru
 
 ## Screens
 
-`screens/` holds the screen designs (`*.dc.html` plus `screens.css`) from the screens artifact, version `1791725429-f466`, copied 2026-10-11. The `Nav*` boards show the Project, History and Settings tabs that replace the older headers in `Main`, `History` and `Providers`. They are reference mockups for the plans, not app code: open them to see layout, copy and states. They load Google Fonts and use hex colours in `screens.css`; neither rule applies to `design/`, only to `src/`.
+`screens/` holds the screen designs (`*.dc.html` plus `screens.css`) from the screens artifact, version `1791726373-6bc4`, copied 2026-10-11. The `Nav*` boards show the Project, History and Settings tabs that replace the older headers in `Main`, `History` and `Providers`. They are reference mockups for the plans, not app code: open them to see layout, copy and states. They load Google Fonts and use hex colours in `screens.css`; neither rule applies to `design/`, only to `src/`.

@@ -21,7 +21,7 @@ export interface RevealRequest {
   id: number
 }
 
-export const DEFAULT_CODE = `// PromptCAD: edit me
+export const DEFAULT_CODE = `// ChatSCAD: edit me
 /* [Dimensions] */
 width = 20;  // [5:1:100]
 depth = 20;  // [5:1:100]

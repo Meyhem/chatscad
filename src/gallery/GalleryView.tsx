@@ -34,7 +34,7 @@ export function GalleryView() {
   return (
     <div className="flex h-full flex-col bg-bg text-ink">
       <header className="flex h-(--header-height) shrink-0 items-center gap-3 border-b border-line bg-panel pr-3 pl-4">
-        <span className="text-[15px] font-bold tracking-tight">PromptCAD</span>
+        <span className="text-[15px] font-bold tracking-tight">ChatSCAD</span>
         <span aria-hidden="true" className="h-5 w-px bg-line" />
         <span className="font-semibold">Examples</span>
         <span className="flex-1" />

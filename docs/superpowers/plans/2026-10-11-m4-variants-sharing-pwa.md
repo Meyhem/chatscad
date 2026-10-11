@@ -1,8 +1,8 @@
-# PromptCAD M4 — Variants, Sharing and PWA Implementation Plan
+# ChatSCAD M4 — Variants, Sharing and PWA Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make PromptCAD installable and usable on a phone, let the user ask for three variants and pick one, share a model as a self-contained link, and export PNG, turntable GIF and timelapse GIF, so the M4 exit holds: "install on phone, dictate a prompt, pick a variant, share a link".
+**Goal:** Make ChatSCAD installable and usable on a phone, let the user ask for three variants and pick one, share a model as a self-contained link, and export PNG, turntable GIF and timelapse GIF, so the M4 exit holds: "install on phone, dictate a prompt, pick a variant, share a link".
 
 **Architecture:** A second render worker behind `RenderQueue` (FIFO, same timeout and respawn rules as `RenderController`) compiles everything that must not disturb the main view: variants and timelapse frames. One offscreen three.js frame renderer (`renderFrames`) turns a `MeshData` plus camera poses into `ImageData`, which feeds PNG encoding on the main thread and GIF encoding (`gifenc`) in a module worker; the export dialog's Image, Turntable and Timelapse tabs differ only in the frame list. Share links are `#s=` + lz-string of `{ v: 1, name, code, params }`, validated before a project is created. `vite-plugin-pwa` precaches the shell and the OpenSCAD WASM; the render worker fetches the WASM itself so the status pill can show download progress. Under the `md` breakpoint the workbench becomes a Chat / Code / 3D tab layout.
 
@@ -10,7 +10,7 @@
 
 **Spec:** [`docs/SPEC.md`](../../SPEC.md) ("Variants, gallery, voice and model choice", "Sharing and export", "PWA and mobile UX", "Security", "Rendering pipeline" limits) and the design doc [`docs/superpowers/specs/2026-10-11-m2-m5-design.md`](../specs/2026-10-11-m2-m5-design.md) (M4 scope, decisions D10 and D11, Shared contracts).
 
-**Prerequisite:** M2 (AI loop) and M3 (parametric and history) are executed exactly as the design doc's **Shared contracts** describe: `src/ai/*` (`LlmProvider`, `ProviderError`, `createProvider`, `describeProviderError`, `generateCode`, `runTurn`, `computeCost`, `PromptContext`), `src/db/db.ts` (`PromptCadDb`, `db`, `Settings`, `DEFAULT_SETTINGS`, `ProviderProfile`, `UsageRecord`, `Project`, `Version`, `StoredMessage`), `src/chat/chatStore.ts`, `src/ui/format.ts` (`formatTokens`, `formatCost`), the app store's `view`, `codeSource`, `lastRender`, `params`, `setParams`, `renderedParams`, `src/render/awaitRender.ts`, `src/scad/customizer.ts` (`parseCustomizer`), `src/history/versions.ts` (`createVersion`, `listVersions`, `ancestry`, `nextLabel`) and `src/history/projectStore.ts` (`openProject`, `newProject`, `restore`, `branchFrom`, `undo`, `redo`). This plan references M2/M3 code only through those names. Where a task changes an M2/M3 file, it shows the full new code of the pieces it changes, anchored on contract names rather than line numbers. Names the contracts do not fix are listed once under "Integration points" below and again under "Contract issues" at the end.
+**Prerequisite:** M2 (AI loop) and M3 (parametric and history) are executed exactly as the design doc's **Shared contracts** describe: `src/ai/*` (`LlmProvider`, `ProviderError`, `createProvider`, `describeProviderError`, `generateCode`, `runTurn`, `computeCost`, `PromptContext`), `src/db/db.ts` (`ChatScadDb`, `db`, `Settings`, `DEFAULT_SETTINGS`, `ProviderProfile`, `UsageRecord`, `Project`, `Version`, `StoredMessage`), `src/chat/chatStore.ts`, `src/ui/format.ts` (`formatTokens`, `formatCost`), the app store's `view`, `codeSource`, `lastRender`, `params`, `setParams`, `renderedParams`, `src/render/awaitRender.ts`, `src/scad/customizer.ts` (`parseCustomizer`), `src/history/versions.ts` (`createVersion`, `listVersions`, `ancestry`, `nextLabel`) and `src/history/projectStore.ts` (`openProject`, `newProject`, `restore`, `branchFrom`, `undo`, `redo`). This plan references M2/M3 code only through those names. Where a task changes an M2/M3 file, it shows the full new code of the pieces it changes, anchored on contract names rather than line numbers. Names the contracts do not fix are listed once under "Integration points" below and again under "Contract issues" at the end.
 
 **Design sources:** [`design/screens/`](../../../design/screens/) `Variants.dc.html` (picker), `Export.dc.html` (export dialog, Timelapse tab shown), `PhoneChat.dc.html` (tab bar, mic caption), `Phone3D.dc.html` (44 px viewer buttons, parameter sheet), `PhoneCode.dc.html` (symbol key row), `FirstRun.dc.html` ("Loading OpenSCAD 5.2 / 8.4 MB" pill and "Downloading OpenSCAD (8.4 MB, cached for offline use after this)…" console line), `Main.dc.html` (composer "Variants per prompt" button, header **Share**). Classes come from `design/components.css` (`pc-variant`, `pc-dialog`, `pc-scrim`, `pc-tabs`, `pc-tabbar`, `pc-switch`, `pc-callout`, `pc-input`, `pc-select`); the `.sheet`, `.grabber`, `.keyrow`, `.key` and `.overlay` rules in `screens.css` are reference only and are rebuilt with token utilities. Deferred: the Export screen's version thumbnail strip, the Phone3D "Camera presets" viewer button, WebM turntable, Web Share Target (see "Deferred from M4").
 
@@ -59,7 +59,7 @@ From CLAUDE.md:
 - **CSP stays strict.** `script-src 'self' 'wasm-unsafe-eval'`, `worker-src 'self' blob:`, fonts self-hosted, no CDNs, no `data:` fonts, no inline scripts (so `injectRegister` must not be `'inline'`).
 - **Model output is untrusted.** Prompts, prose, variant code, share-link names and code render as React text nodes only.
 - **OpenSCAD WASM is pinned** by URL and SHA-256 in `scripts/fetch-openscad.ts`. The precache limit is raised to fit it, never by fetching "latest".
-- **Base path.** Every URL works under `BASE_PATH` (`/promptcad/`): use `import.meta.env.BASE_URL` or relative URLs, never a leading `/`.
+- **Base path.** Every URL works under `BASE_PATH` (`/chatscad/`): use `import.meta.env.BASE_URL` or relative URLs, never a leading `/`.
 - **Git.** One logical change per commit, conventional messages; `npm run typecheck && npm test && npm run e2e` green before every push; never force-push.
 
 From the design system (as in M1): `accent` marks the one primary action per region; status "always carries an icon and a word"; dialogs use `pc-dialog` (`radius-lg`, `shadow-pop`) over `pc-scrim`; controls reach `touch-target` (44 px) on coarse pointers; every changing number is mono with tabular figures.
@@ -243,11 +243,11 @@ e2e/phone.spec.ts
 - Test: `src/db/prefs.test.ts`, `src/settings/prefsStore.test.ts`, `src/app/GlobalOverlays.test.tsx`
 
 **Interfaces:**
-- Consumes: `PromptCadDb`, `db`, `Settings`, `DEFAULT_SETTINGS` (M2/M3).
+- Consumes: `ChatScadDb`, `db`, `Settings`, `DEFAULT_SETTINGS` (M2/M3).
 - Produces:
   - `Settings` gains `variantCount: 1 | 3`, `lowQualityPreview: boolean`, `transcriptionModel: string`; `DEFAULT_SETTINGS` gains `variantCount: 1`, `lowQualityPreview: false`, `transcriptionModel: 'whisper-1'`
   - `type Prefs = Pick<Settings, 'variantCount' | 'lowQualityPreview' | 'transcriptionModel'>`
-  - `prefsFrom(row: Partial<Settings> | undefined): Prefs`, `readPrefs(database?: PromptCadDb): Promise<Prefs>`, `writePrefs(patch: Partial<Prefs>, database?: PromptCadDb): Promise<Prefs>`
+  - `prefsFrom(row: Partial<Settings> | undefined): Prefs`, `readPrefs(database?: ChatScadDb): Promise<Prefs>`, `writePrefs(patch: Partial<Prefs>, database?: ChatScadDb): Promise<Prefs>`
   - `usePrefs` Zustand hook: `Prefs & { loaded: boolean; load(): Promise<void>; update(patch: Partial<Prefs>): Promise<void> }`
   - `<GlobalOverlays />`: mounts once in `App`, loads prefs; later tasks add their overlays to it
 
@@ -259,12 +259,12 @@ The M4 fields are not indexed, so no Dexie version bump is needed: `prefsFrom` f
 
 ```ts
 import 'fake-indexeddb/auto'
-import { DEFAULT_SETTINGS, PromptCadDb, type Settings } from './db'
+import { DEFAULT_SETTINGS, ChatScadDb, type Settings } from './db'
 import { prefsFrom, readPrefs, writePrefs } from './prefs'
 
-let database: PromptCadDb
+let database: ChatScadDb
 beforeEach(() => {
-  database = new PromptCadDb(`prefs-${crypto.randomUUID()}`)
+  database = new ChatScadDb(`prefs-${crypto.randomUUID()}`)
 })
 afterEach(() => database.delete())
 
@@ -378,7 +378,7 @@ If `npm run typecheck` then flags an M2/M3 test or helper that builds a full `Se
 `src/db/prefs.ts`:
 
 ```ts
-import { db as defaultDb, DEFAULT_SETTINGS, type PromptCadDb, type Settings } from './db'
+import { db as defaultDb, DEFAULT_SETTINGS, type ChatScadDb, type Settings } from './db'
 
 export type Prefs = Pick<Settings, 'variantCount' | 'lowQualityPreview' | 'transcriptionModel'>
 
@@ -392,11 +392,11 @@ export function prefsFrom(row: Partial<Settings> | undefined): Prefs {
   }
 }
 
-export async function readPrefs(database: PromptCadDb = defaultDb): Promise<Prefs> {
+export async function readPrefs(database: ChatScadDb = defaultDb): Promise<Prefs> {
   return prefsFrom(await database.settings.get('app'))
 }
 
-export async function writePrefs(patch: Partial<Prefs>, database: PromptCadDb = defaultDb): Promise<Prefs> {
+export async function writePrefs(patch: Partial<Prefs>, database: ChatScadDb = defaultDb): Promise<Prefs> {
   const current = await database.settings.get('app')
   const next = prefsFrom({ ...current, ...patch })
   await database.settings.put({ ...DEFAULT_SETTINGS, ...current, ...next, id: 'app' })
@@ -927,7 +927,7 @@ const fakeFetch = (res: Response) => vi.fn(async () => res) as unknown as typeof
 
 async function run(res: Response) {
   const seen: LoadProgress[] = []
-  const buf = await fetchWithProgress('/promptcad/openscad/openscad.wasm', (p) => seen.push(p), fakeFetch(res))
+  const buf = await fetchWithProgress('/chatscad/openscad/openscad.wasm', (p) => seen.push(p), fakeFetch(res))
   return { buf, seen }
 }
 
@@ -957,7 +957,7 @@ it('drops the total when there is no length or more bytes arrive than declared',
 })
 
 it('fails with the URL and the HTTP status', async () => {
-  await expect(run(streamed([], {}, 404))).rejects.toThrow('Failed to download /promptcad/openscad/openscad.wasm: HTTP 404')
+  await expect(run(streamed([], {}, 404))).rejects.toThrow('Failed to download /chatscad/openscad/openscad.wasm: HTTP 404')
 })
 ```
 
@@ -1050,7 +1050,7 @@ export interface LoadProgress {
   total: number | null
 }
 
-export const LOAD_PROGRESS_TYPE = 'promptcad:openscad-load-progress'
+export const LOAD_PROGRESS_TYPE = 'chatscad:openscad-load-progress'
 
 export interface LoadProgressMessage extends LoadProgress {
   type: typeof LOAD_PROGRESS_TYPE
@@ -3106,8 +3106,8 @@ it('accepts a link an app has percent-encoded', () => {
 })
 
 it('builds the link on the current page URL, replacing any hash', () => {
-  const link = createShareLink(payload, 'https://meyhem.github.io/promptcad/?x=1#old')
-  expect(link.url).toBe(`https://meyhem.github.io/promptcad/?x=1#s=${encodeShare(payload)}`)
+  const link = createShareLink(payload, 'https://meyhem.github.io/chatscad/?x=1#old')
+  expect(link.url).toBe(`https://meyhem.github.io/chatscad/?x=1#s=${encodeShare(payload)}`)
   expect(link.bytes).toBe(link.url!.length)
   expect(link.level).toBe('ok')
   expect(link.payload).toBe(payload)
@@ -3138,9 +3138,9 @@ describe('rejects, in plain words', () => {
 
   it('links from a newer format or without a model', () => {
     expect(bad({ v: 2, name: 'x', code: 'cube(1);', params: {} })).toBe(
-      'The link was made by a newer PromptCAD (format 2). Reload the app to update it, then open the link again.',
+      'The link was made by a newer ChatSCAD (format 2). Reload the app to update it, then open the link again.',
     )
-    expect(bad([1, 2])).toBe('The link does not contain a PromptCAD model.')
+    expect(bad([1, 2])).toBe('The link does not contain a ChatSCAD model.')
     expect(bad({ v: 1, name: 'x', code: '   ' })).toBe('The link has no OpenSCAD code.')
     expect(bad({ v: 1, code: 'x'.repeat(200_001) })).toBe('The code in the link is longer than 200,000 characters.')
   })
@@ -3193,7 +3193,7 @@ import { encodeShare, type SharePayload } from './link'
 import { useShareNotice } from './shareNotice'
 
 const payload: SharePayload = { v: 1, name: 'Broom hook', code: 'cube([62, 38, 44]);', params: { wall: 2.4 } }
-const loc = (hash: string) => ({ hash, pathname: '/promptcad/', search: '?x=1' })
+const loc = (hash: string) => ({ hash, pathname: '/chatscad/', search: '?x=1' })
 
 beforeEach(() => useShareNotice.setState({ notice: null }))
 
@@ -3210,7 +3210,7 @@ it('imports a valid link once and clears the hash, keeping the base path', async
   const importer = vi.fn(async () => {})
   expect(await consumeShareHash(loc(`#s=${encodeShare(payload)}`), hist, importer)).toEqual({ status: 'imported', name: 'Broom hook' })
   expect(importer).toHaveBeenCalledExactlyOnceWith(payload)
-  expect(hist.replaceState).toHaveBeenCalledWith(null, '', '/promptcad/?x=1')
+  expect(hist.replaceState).toHaveBeenCalledWith(null, '', '/chatscad/?x=1')
 })
 
 it('creates no project for a bad link, and still clears the hash', async () => {
@@ -3318,7 +3318,7 @@ const DEFAULT_NAME = 'Shared model'
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_]*$/
 const RESERVED = new Set(['__proto__', 'constructor', 'prototype'])
 const DAMAGED = 'The link is damaged or cut off, so the model could not be read. Ask for the link again, or for the .json file.'
-const NOT_A_MODEL = 'The link does not contain a PromptCAD model.'
+const NOT_A_MODEL = 'The link does not contain a ChatSCAD model.'
 
 export type ParseResult = { ok: true; payload: SharePayload } | { ok: false; error: string }
 export type ShareLevel = 'ok' | 'long' | 'too-long'
@@ -3368,7 +3368,7 @@ export function parseSharePayload(value: unknown): ParseResult {
   if (o.v !== 1) {
     return fail(
       typeof o.v === 'number' && o.v > 1
-        ? `The link was made by a newer PromptCAD (format ${o.v}). Reload the app to update it, then open the link again.`
+        ? `The link was made by a newer ChatSCAD (format ${o.v}). Reload the app to update it, then open the link again.`
         : NOT_A_MODEL,
     )
   }
@@ -5276,7 +5276,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Test: `src/variants/temperatures.test.ts`, `src/variants/runVariants.test.ts`, `src/variants/recordUsage.test.ts`, `src/history/setHead.test.ts`, `src/variants/commitPick.test.ts`, `src/variants/variantStore.test.ts`
 
 **Interfaces:**
-- Consumes: `LlmProvider`, `ChatRequest`, `LlmMessage`, `AdapterKind`, `ProviderError` (M2 `src/ai/types.ts`); `PromptContext` (M2 `src/ai/prompt.ts`); `runTurn`, `TurnEvent` (M2 `src/ai/runTurn.ts`); `computeCost` (M2 `src/ai/cost.ts`); `describeProviderError` (M2 `src/ai/errors.ts`); `ProviderProfile`, `UsageRecord`, `PromptCadDb`, `db` (M2); `RenderQueue`, `getRenderQueue` (Task 2); `createVersion` (M3); `useProjectStore().openProject` (M3); `db.projects` (M3).
+- Consumes: `LlmProvider`, `ChatRequest`, `LlmMessage`, `AdapterKind`, `ProviderError` (M2 `src/ai/types.ts`); `PromptContext` (M2 `src/ai/prompt.ts`); `runTurn`, `TurnEvent` (M2 `src/ai/runTurn.ts`); `computeCost` (M2 `src/ai/cost.ts`); `describeProviderError` (M2 `src/ai/errors.ts`); `ProviderProfile`, `UsageRecord`, `ChatScadDb`, `db` (M2); `RenderQueue`, `getRenderQueue` (Task 2); `createVersion` (M3); `useProjectStore().openProject` (M3); `db.projects` (M3).
 - Produces:
   - `VARIANT_LETTERS = ['A', 'B', 'C']`; `interface VariantRequest { provider; profile; model; history; userText: string; ctx; maxFixAttempts; projectId: string | null; parentId: string | null }`
   - `type SlotStatus = 'generating' | 'queued' | 'fixing' | 'ok' | 'error' | 'no-code' | 'failed-request' | 'cancelled'`
@@ -5284,8 +5284,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `VARIANT_TEMPERATURES = [undefined, 0.7, 1.0]`; `variantTemperatures(adapter: AdapterKind, count: number): Array<number | undefined>`; `withTemperature(provider: LlmProvider, temperature: number | undefined): LlmProvider`
   - `interface RunVariantsDeps { queue: Pick<RenderQueue, 'render'>; runTurn: typeof runTurn; recordUsage(record: Omit<UsageRecord, 'id' | 'createdAt'>): Promise<void> }`
   - `runVariants(req: VariantRequest, slots: VariantSlot[], opts: { signal: AbortSignal; onSlot(index: number, patch: Partial<VariantSlot>): void }, deps: RunVariantsDeps): Promise<void>`
-  - `recordUsage(record: Omit<UsageRecord, 'id' | 'createdAt'>, database?: PromptCadDb): Promise<void>`
-  - `setHead(projectId: string, versionId: string, database?: PromptCadDb): Promise<void>`
+  - `recordUsage(record: Omit<UsageRecord, 'id' | 'createdAt'>, database?: ChatScadDb): Promise<void>`
+  - `setHead(projectId: string, versionId: string, database?: ChatScadDb): Promise<void>`
   - `interface CommitPickInput { projectId; parentId; groupId; prompt; slots; picked }`; `compileStatusOf(slot: VariantSlot): Version['compileStatus']`; `interface CommitPickDeps { createVersion; setHead; openProject }`; `commitPick(input: CommitPickInput, deps?: CommitPickDeps): Promise<Version>`
   - `VARIANT_COUNT = 3`; `useVariantStore`: `open`, `groupId`, `request`, `slots`, `selected`, `picking`, `error`, `start(req)`, `regenerate()`, `discard()`, `select(i)`, `pick(): Promise<void>`
 
@@ -5483,11 +5483,11 @@ it('numbers renders in the order they entered the queue', async () => {
 
 ```ts
 import 'fake-indexeddb/auto'
-import { PromptCadDb } from '../db/db'
+import { ChatScadDb } from '../db/db'
 import { recordUsage } from './recordUsage'
 
 it('writes one usage row with an id and a timestamp', async () => {
-  const database = new PromptCadDb(`usage-${crypto.randomUUID()}`)
+  const database = new ChatScadDb(`usage-${crypto.randomUUID()}`)
   const before = Date.now()
   await recordUsage(
     {
@@ -5515,7 +5515,7 @@ it('writes one usage row with an id and a timestamp', async () => {
 
 ```ts
 import 'fake-indexeddb/auto'
-import { PromptCadDb, type Project } from '../db/db'
+import { ChatScadDb, type Project } from '../db/db'
 import { setHead } from './setHead'
 
 const project: Project = {
@@ -5530,7 +5530,7 @@ const project: Project = {
 }
 
 it('moves the project head without creating a version', async () => {
-  const database = new PromptCadDb(`head-${crypto.randomUUID()}`)
+  const database = new ChatScadDb(`head-${crypto.randomUUID()}`)
   await database.projects.put(project)
   await setHead('project-1', 'v4', database)
   const stored = await database.projects.get('project-1')
@@ -5947,10 +5947,10 @@ export async function runVariants(
 `src/variants/recordUsage.ts`:
 
 ```ts
-import { db as defaultDb, type PromptCadDb, type UsageRecord } from '../db/db'
+import { db as defaultDb, type ChatScadDb, type UsageRecord } from '../db/db'
 
 /** One usage row per variant reply (the chat path writes its own through M2's repository). */
-export async function recordUsage(record: Omit<UsageRecord, 'id' | 'createdAt'>, database: PromptCadDb = defaultDb): Promise<void> {
+export async function recordUsage(record: Omit<UsageRecord, 'id' | 'createdAt'>, database: ChatScadDb = defaultDb): Promise<void> {
   await database.usage.put({ ...record, id: crypto.randomUUID(), createdAt: Date.now() })
 }
 ```
@@ -5958,10 +5958,10 @@ export async function recordUsage(record: Omit<UsageRecord, 'id' | 'createdAt'>,
 `src/history/setHead.ts`:
 
 ```ts
-import { db as defaultDb, type PromptCadDb } from '../db/db'
+import { db as defaultDb, type ChatScadDb } from '../db/db'
 
 /** Points the project at an existing version; unlike restore(), it creates no new version. */
-export async function setHead(projectId: string, versionId: string, database: PromptCadDb = defaultDb): Promise<void> {
+export async function setHead(projectId: string, versionId: string, database: ChatScadDb = defaultDb): Promise<void> {
   const updated = await database.projects.update(projectId, { headVersionId: versionId, updatedAt: Date.now() })
   if (updated === 0) throw new Error(`Project ${projectId} was not found`)
 }
@@ -6762,7 +6762,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `hexToRgb(hex: string): Rgb`, `renderIcon(spec: IconSpec): Uint8Array`, `encodePng(width: number, height: number, rgba: Uint8Array): Uint8Array`, `ICON_FILES`
   - `usePwaUpdate(): { needRefresh: boolean; reload(): void; dismiss(): void }`; `<UpdatePrompt needRefresh onReload onDismiss />`
 
-The pinned OpenSCAD WASM is 11,000,303 bytes (`public/openscad/openscad.wasm`), over Workbox's 2 MiB default, so the precache limit is raised to 32 MiB, leaving room for a larger pinned build and the library zips (D8). `registerType: 'prompt'` never swaps a running app; `injectRegister: false` because the app imports `virtual:pwa-register/react` itself, so nothing inline enters `index.html` and `script-src 'self'` holds (the service worker is same-origin; `worker-src 'self' blob:` already allows it). `base` follows `BASE_PATH`, so the worker's scope is `/promptcad/` on GitHub Pages. D11: the icon is the filament square (`brand-dot`: 8 px with a 2 px radius in the screens) on `bg`, both from the primary (dark) theme in `design/tokens.json`, rendered by a dependency-free PNG encoder (`node:zlib`). Regular icons draw the square at half the width; the maskable icon at 40 %, inside the 80 % safe circle.
+The pinned OpenSCAD WASM is 11,000,303 bytes (`public/openscad/openscad.wasm`), over Workbox's 2 MiB default, so the precache limit is raised to 32 MiB, leaving room for a larger pinned build and the library zips (D8). `registerType: 'prompt'` never swaps a running app; `injectRegister: false` because the app imports `virtual:pwa-register/react` itself, so nothing inline enters `index.html` and `script-src 'self'` holds (the service worker is same-origin; `worker-src 'self' blob:` already allows it). `base` follows `BASE_PATH`, so the worker's scope is `/chatscad/` on GitHub Pages. D11: the icon is the filament square (`brand-dot`: 8 px with a 2 px radius in the screens) on `bg`, both from the primary (dark) theme in `design/tokens.json`, rendered by a dependency-free PNG encoder (`node:zlib`). Regular icons draw the square at half the width; the maskable icon at 40 %, inside the 80 % safe circle.
 
 - [ ] **Step 1: Add the dependency and scripts**
 
@@ -6793,10 +6793,10 @@ const WASM = fileURLToPath(new URL('../public/openscad/openscad.wasm', import.me
 const tokens = readTokens()
 
 it('asks before updating and registers from the bundle, never from an inline script', () => {
-  const options = pwaOptions('/promptcad/')
+  const options = pwaOptions('/chatscad/')
   expect(options.registerType).toBe('prompt')
   expect(options.injectRegister).toBe(false)
-  expect(options.base).toBe('/promptcad/')
+  expect(options.base).toBe('/chatscad/')
   expect(CSP).toContain("script-src 'self' 'wasm-unsafe-eval'")
   expect(CSP).toContain("worker-src 'self' blob:")
 })
@@ -6815,7 +6815,7 @@ it.skipIf(!existsSync(WASM))('leaves at least twice the pinned WASM size in the 
 it('is an installable standalone app coloured from the design tokens', () => {
   const { manifest } = pwaOptions('/')
   if (!manifest) throw new Error('manifest missing')
-  expect(manifest).toMatchObject({ name: 'PromptCAD', short_name: 'PromptCAD', display: 'standalone', start_url: '.', scope: '.' })
+  expect(manifest).toMatchObject({ name: 'ChatSCAD', short_name: 'ChatSCAD', display: 'standalone', start_url: '.', scope: '.' })
   expect(manifest.background_color).toBe(primaryColor(tokens, 'bg'))
   expect(manifest.theme_color).toBe(primaryColor(tokens, 'panel'))
   expect(manifest.icons).toBe(ICONS)
@@ -6827,9 +6827,9 @@ it('is an installable standalone app coloured from the design tokens', () => {
 })
 
 it('adds the iOS touch icon and the theme colour under the base path', () => {
-  const transform = pwaHeadPlugin('/promptcad/', tokens).transformIndexHtml as (html: string) => string
-  const html = transform('<html><head><title>PromptCAD</title></head><body></body></html>')
-  expect(html).toContain('<link rel="apple-touch-icon" href="/promptcad/icons/icon-192.png">')
+  const transform = pwaHeadPlugin('/chatscad/', tokens).transformIndexHtml as (html: string) => string
+  const html = transform('<html><head><title>ChatSCAD</title></head><body></body></html>')
+  expect(html).toContain('<link rel="apple-touch-icon" href="/chatscad/icons/icon-192.png">')
   expect(html).toContain(`<meta name="theme-color" content="${primaryColor(tokens, 'panel')}">`)
 })
 ```
@@ -6995,8 +6995,8 @@ export function pwaOptions(base: string, tokens: TokenFile = readTokens()): Part
     // The PNG glob already covers the icons.
     includeManifestIcons: false,
     manifest: {
-      name: 'PromptCAD',
-      short_name: 'PromptCAD',
+      name: 'ChatSCAD',
+      short_name: 'ChatSCAD',
       description: 'Describe a part, get OpenSCAD code, render it in the browser and export STL.',
       display: 'standalone',
       start_url: '.',
@@ -7017,7 +7017,7 @@ export function pwaOptions(base: string, tokens: TokenFile = readTokens()): Part
 export function pwaHeadPlugin(base: string, tokens: TokenFile = readTokens()): Plugin {
   const panel = primaryColor(tokens, 'panel')
   return {
-    name: 'promptcad-pwa-head',
+    name: 'chatscad-pwa-head',
     transformIndexHtml: (html) =>
       html.replace(
         '</head>',
@@ -7157,7 +7157,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { cspPlugin } from './build/csp'
 import { pwaHeadPlugin, pwaOptions } from './build/pwa'
 
-// Sub-path the app is served from; the Pages workflow sets it (e.g. /promptcad/). Local dev and tests use /.
+// Sub-path the app is served from; the Pages workflow sets it (e.g. /chatscad/). Local dev and tests use /.
 const base = process.env.BASE_PATH ?? '/'
 
 export default defineConfig({
@@ -7425,7 +7425,7 @@ function layout() {
   const viewer = vi.fn((paused: boolean) => <div data-testid="viewer-slot" data-paused={String(paused)} />)
   render(
     <PhoneLayout
-      header={<header>PromptCAD</header>}
+      header={<header>ChatSCAD</header>}
       chat={<textarea aria-label="Prompt" />}
       code={<div data-testid="code-slot" />}
       keyRow={<div role="toolbar" aria-label="Code symbols" />}
@@ -8555,7 +8555,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Create: `e2e/support.ts`, `e2e/variants.spec.ts`, `e2e/share.spec.ts`, `e2e/export.spec.ts`, `e2e/pwa.spec.ts`, `e2e/phone.spec.ts`
 
 **Interfaces:**
-- Consumes: the production build with CSP (M1 `webServer`), the real OpenSCAD WASM, the UI from Tasks 1–16, the M2 composer (`textbox` "Prompt", `button` "Send") and the M2 database layout (`promptcad` IndexedDB, stores `providerProfiles` and `settings`, keyed by `id`).
+- Consumes: the production build with CSP (M1 `webServer`), the real OpenSCAD WASM, the UI from Tasks 1–16, the M2 composer (`textbox` "Prompt", `button` "Send") and the M2 database layout (`chatscad` IndexedDB, stores `providerProfiles` and `settings`, keyed by `id`).
 - Produces:
   - `RENDER_TIMEOUT`, `FAKE_BASE = 'https://fake-llm.test/v1'`, `watchCspViolations(page)`, `waitForFirstRender(page)`, `seedFakeProvider(page, settings?)`, `routeFakeLlm(page, codes: string[])`
   - Playwright projects `chromium` (Desktop Chrome, every spec except `phone.spec.ts`) and `phone` (Pixel 7, `phone.spec.ts` only); service workers blocked except in `pwa.spec.ts`
@@ -8569,7 +8569,7 @@ The fake provider is written straight into IndexedDB after the app has opened it
 ```ts
 import { defineConfig, devices } from '@playwright/test'
 
-// BASE_PATH is the sub-path the app is served from, e.g. /promptcad/ on GitHub Pages. Tests navigate relative to it.
+// BASE_PATH is the sub-path the app is served from, e.g. /chatscad/ on GitHub Pages. Tests navigate relative to it.
 const basePath = process.env.BASE_PATH ?? '/'
 const baseURL = `http://localhost:4173${basePath}`
 
@@ -8622,7 +8622,7 @@ export async function seedFakeProvider(page: Page, settings: Record<string, unkn
   await page.evaluate(
     async ({ base, patch }) => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const req = indexedDB.open('promptcad')
+        const req = indexedDB.open('chatscad')
         req.onsuccess = () => resolve(req.result)
         req.onerror = () => reject(req.error)
       })
@@ -8926,12 +8926,12 @@ Expected: no type errors; all Vitest suites pass (including `src/styles/noHardco
 
 - [ ] **Step 2: Check the base path build**
 
-Run: `BASE_PATH=/promptcad/ npm run e2e`
-Expected: PASS, including M1's "loads every file from under the base path" and the PWA spec (the worker's scope is `/promptcad/`).
+Run: `BASE_PATH=/chatscad/ npm run e2e`
+Expected: PASS, including M1's "loads every file from under the base path" and the PWA spec (the worker's scope is `/chatscad/`).
 
 - [ ] **Step 3: Exit criterion on a real phone**
 
-Deploying happens on push; after the Pages workflow finishes, on an Android phone in Chrome open https://meyhem.github.io/promptcad/ and:
+Deploying happens on push; after the Pages workflow finishes, on an Android phone in Chrome open https://meyhem.github.io/chatscad/ and:
 1. Install it (menu › Install app): the home-screen icon is the filament square on the dark ground; it opens standalone.
 2. Turn on airplane mode, reopen it: the model renders.
 3. Back online, with a provider set up, tap the mic and dictate "a wall hook for a 30 mm broom handle"; the words appear in the prompt.

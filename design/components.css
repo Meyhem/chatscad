@@ -1,4 +1,4 @@
-/* PromptCAD components: plain CSS on top of tokens.css. Prefix pc-. */
+/* ChatSCAD components: plain CSS on top of tokens.css. Prefix pc-. */
 
 .pc-root, .pc-root * { box-sizing: border-box; }
 .pc-root { font-family: var(--font-sans); font-size: 14px; line-height: 20px; color: var(--ink); background: var(--panel); }

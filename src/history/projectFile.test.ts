@@ -87,7 +87,7 @@ describe('validation', () => {
   }
 
   it.each([
-    ['a different format', (f: any) => (f.format = 'zip'), 'format must be "promptcad-project" or "promptcad-backup"'],
+    ['a different format', (f: any) => (f.format = 'zip'), 'format must be "chatscad-project" or "chatscad-backup"'],
     ['code that is not text', (f: any) => (f.versions[0].code = 5), 'versions[0].code must be text'],
     ['code that is too long', (f: any) => (f.versions[0].code = 'x'.repeat(1_000_001)), 'versions[0].code is longer than 1,000,000 characters'],
     ['a parent later in the file', (f: any) => (f.versions[1].parentId = f.versions[2].id), 'versions[1].parentId points at a version that is not earlier in the file'],
@@ -107,7 +107,7 @@ describe('validation', () => {
 
   it('names the project inside a backup', () => {
     const bad = mutate((f) => (f.versions[0].code = null))
-    expect(parseImport({ format: 'promptcad-backup', version: 1, exportedAt: 1, projects: [file, bad] })).toEqual({
+    expect(parseImport({ format: 'chatscad-backup', version: 1, exportedAt: 1, projects: [file, bad] })).toEqual({
       ok: false,
       error: 'projects[1].versions[0].code must be text',
     })
@@ -119,8 +119,8 @@ describe('validation', () => {
 })
 
 it('names export files after the project', () => {
-  expect(projectFileName('Box with lid')).toBe('box-with-lid.promptcad.json')
-  expect(projectFileName('  ***  ')).toBe('project.promptcad.json')
+  expect(projectFileName('Box with lid')).toBe('box-with-lid.chatscad.json')
+  expect(projectFileName('  ***  ')).toBe('project.chatscad.json')
 })
 
 it('opens a share link saved as .json from the same import', async () => {

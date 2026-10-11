@@ -132,7 +132,7 @@ export function fillSettingsDefaults(row: Record<string, unknown>): void {
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) if (!(key in row)) row[key] = value
 }
 
-export class PromptCadDb extends Dexie {
+export class ChatScadDb extends Dexie {
   providerProfiles!: Table<ProviderProfile, string>
   usage!: Table<UsageRecord, string>
   settings!: Table<Settings, 'app'>
@@ -143,7 +143,7 @@ export class PromptCadDb extends Dexie {
   blobs!: Table<StoredBlob, string>
   printerProfiles!: Table<PrinterProfile, string>
 
-  constructor(name = 'promptcad') {
+  constructor(name = 'chatscad') {
     super(name)
     this.version(1).stores(V1_STORES)
     this.version(2)
@@ -157,5 +157,5 @@ export class PromptCadDb extends Dexie {
   }
 }
 
-/** Database name 'promptcad'. Tests use `fake-indexeddb` and `new PromptCadDb(uniqueName)` or `resetDb()`. */
-export const db = new PromptCadDb()
+/** Database name 'chatscad'. Tests use `fake-indexeddb` and `new ChatScadDb(uniqueName)` or `resetDb()`. */
+export const db = new ChatScadDb()

@@ -1,10 +1,10 @@
 import 'fake-indexeddb/auto'
-import { DEFAULT_SETTINGS, PromptCadDb, type Settings } from './db'
+import { DEFAULT_SETTINGS, ChatScadDb, type Settings } from './db'
 import { prefsFrom, readPrefs, writePrefs } from './prefs'
 
-let database: PromptCadDb
+let database: ChatScadDb
 beforeEach(() => {
-  database = new PromptCadDb(`prefs-${crypto.randomUUID()}`)
+  database = new ChatScadDb(`prefs-${crypto.randomUUID()}`)
 })
 afterEach(() => database.delete())
 

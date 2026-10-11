@@ -21,7 +21,7 @@ const DEFAULT_NAME = 'Shared model'
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_]*$/
 const RESERVED = new Set(['__proto__', 'constructor', 'prototype'])
 const DAMAGED = 'The link is damaged or cut off, so the model could not be read. Ask for the link again, or for the .json file.'
-const NOT_A_MODEL = 'The link does not contain a PromptCAD model.'
+const NOT_A_MODEL = 'The link does not contain a ChatSCAD model.'
 
 export type ParseResult = { ok: true; payload: SharePayload } | { ok: false; error: string }
 export type ShareLevel = 'ok' | 'long' | 'too-long'
@@ -71,7 +71,7 @@ export function parseSharePayload(value: unknown): ParseResult {
   if (o.v !== 1) {
     return fail(
       typeof o.v === 'number' && o.v > 1
-        ? `The link was made by a newer PromptCAD (format ${o.v}). Reload the app to update it, then open the link again.`
+        ? `The link was made by a newer ChatSCAD (format ${o.v}). Reload the app to update it, then open the link again.`
         : NOT_A_MODEL,
     )
   }

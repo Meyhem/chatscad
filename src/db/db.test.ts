@@ -2,7 +2,7 @@
 import 'fake-indexeddb/auto'
 import Dexie from 'dexie'
 import type { ProviderProfile, UsageRecord } from './db'
-import { DEFAULT_SETTINGS, PromptCadDb, V1_STORES } from './db'
+import { DEFAULT_SETTINGS, ChatScadDb, V1_STORES } from './db'
 
 const profile: ProviderProfile = {
   id: 'p1',
@@ -41,7 +41,7 @@ it('upgrades a version 1 database to version 2 without losing profiles, usage or
   await v1.table('settings').add({ id: 'app', activeProfileId: 'p1', activeModel: 'openai/gpt-5-mini', autoFixAttempts: 3 })
   v1.close()
 
-  const v2 = new PromptCadDb(name)
+  const v2 = new ChatScadDb(name)
   await v2.open()
   expect(v2.verno).toBe(2)
   expect(await v2.providerProfiles.get('p1')).toEqual(profile)

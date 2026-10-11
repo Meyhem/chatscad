@@ -1,5 +1,5 @@
 {
-  "name": "promptcad",
+  "name": "chatscad",
   "version": "0.0.0",
   "description": "A client-only React PWA where an LLM writes OpenSCAD, the browser compiles it with OpenSCAD WASM, and you iterate by chat, code, sliders, 3D picking or images, then export STL. No backend: keys, projects and history stay on your device.",
   "directories": {
@@ -23,16 +23,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Meyhem/promptcad.git"
+    "url": "git+https://github.com/Meyhem/chatscad.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "bugs": {
-    "url": "https://github.com/Meyhem/promptcad/issues"
+    "url": "https://github.com/Meyhem/chatscad/issues"
   },
-  "homepage": "https://github.com/Meyhem/promptcad#readme",
+  "homepage": "https://github.com/Meyhem/chatscad#readme",
   "private": "true",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

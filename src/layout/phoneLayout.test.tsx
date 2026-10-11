@@ -44,7 +44,7 @@ function layout() {
   const viewer = vi.fn((paused: boolean) => <div data-testid="viewer-slot" data-paused={String(paused)} />)
   render(
     <PhoneLayout
-      header={<header>PromptCAD</header>}
+      header={<header>ChatSCAD</header>}
       chat={
         <div className="pc-composer">
           <textarea aria-label="Prompt" />

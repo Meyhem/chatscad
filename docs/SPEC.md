@@ -1,10 +1,10 @@
-# PromptCAD — Technical Spec
+# ChatSCAD — Technical Spec
 
 Oct 11, 2026 · @Michal
 
 ## Overview
 
-PromptCAD is a client-only React PWA where an LLM writes OpenSCAD, the browser compiles it with OpenSCAD WASM, and the user iterates by chat, code, sliders, 3D picking or images, then exports STL. There is no backend: keys, projects and history live on the device.
+ChatSCAD is a client-only React PWA where an LLM writes OpenSCAD, the browser compiles it with OpenSCAD WASM, and the user iterates by chat, code, sliders, 3D picking or images, then exports STL. There is no backend: keys, projects and history live on the device.
 
 **Goals**
 

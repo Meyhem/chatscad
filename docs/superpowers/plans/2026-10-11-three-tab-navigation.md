@@ -171,7 +171,7 @@ Run: `npx vitest run src/workbench/ViewTabs.test.tsx` → PASS.
 - Consumes: `ViewTabs`, `viewPanelId` from Task 1.
 - Produces: `SettingsPage` renders no header and no "Back to project"; it keeps `data-testid="settings"`, gets `role="tabpanel"`, `id={viewPanelId('settings')}`, `aria-labelledby="view-tab-settings"`, and a visually hidden `<h1 className="sr-only">Settings</h1>`. `HistoryControls` renders only Undo and Redo.
 
-Header layout (all three tabs): `PromptCAD` h1 · divider · `ProjectMenu` · `ViewTabs` · divider · contextual · spacer · contextual right · `ExportButtons`.
+Header layout (all three tabs): `ChatSCAD` h1 · divider · `ProjectMenu` · `ViewTabs` · divider · contextual · spacer · contextual right · `ExportButtons`.
 - Project: `StatusPill`, `VariantProgressPill`, `DimsReadout`, `RenderedFromCaption` in the middle; `HistoryControls` (undo/redo) on the right.
 - History: `StatusPill` only.
 - Settings: caption "Applies to every project".

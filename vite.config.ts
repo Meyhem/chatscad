@@ -7,7 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { cspPlugin } from './build/csp'
 import { pwaHeadPlugin, pwaOptions } from './build/pwa'
 
-// Sub-path the app is served from; the Pages workflow sets it (e.g. /promptcad/). Local dev and tests use /.
+// Sub-path the app is served from; the Pages workflow sets it (e.g. /chatscad/). Local dev and tests use /.
 const base = process.env.BASE_PATH ?? '/'
 
 export default defineConfig({

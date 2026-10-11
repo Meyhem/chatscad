@@ -39,7 +39,7 @@ function scriptedWorker(respond: (req: RenderRequest) => RenderResult) {
 
 it('renders the default model, shows dims in the header, and enables STL export', async () => {
   render(<App createWorker={scriptedWorker(() => okResult())} />)
-  expect(screen.getByRole('heading', { name: 'PromptCAD' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'ChatSCAD' })).toBeInTheDocument()
   expect(screen.getByTestId('viewer')).toBeInTheDocument()
   expect(screen.getByRole('tab', { name: 'main.scad' })).toHaveAttribute('aria-selected', 'true')
   await waitFor(() => expect(screen.getByTestId('dims')).toHaveTextContent('20 × 20 × 10 mm'))

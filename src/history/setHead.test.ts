@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { PromptCadDb, type Project } from '../db/db'
+import { ChatScadDb, type Project } from '../db/db'
 import { setHead } from './setHead'
 
 const project: Project = {
@@ -14,7 +14,7 @@ const project: Project = {
 }
 
 it('moves the project head without creating a version', async () => {
-  const database = new PromptCadDb(`head-${crypto.randomUUID()}`)
+  const database = new ChatScadDb(`head-${crypto.randomUUID()}`)
   await database.projects.put(project)
   await setHead('project-1', 'v4', database)
   const stored = await database.projects.get('project-1')

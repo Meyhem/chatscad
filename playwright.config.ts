@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// BASE_PATH is the sub-path the app is served from, e.g. /promptcad/ on GitHub Pages. Tests navigate relative to it.
+// BASE_PATH is the sub-path the app is served from, e.g. /chatscad/ on GitHub Pages. Tests navigate relative to it.
 const basePath = process.env.BASE_PATH ?? '/'
 const baseURL = `http://localhost:4173${basePath}`
 

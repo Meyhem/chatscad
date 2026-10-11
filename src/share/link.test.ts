@@ -32,8 +32,8 @@ it('accepts a link an app has percent-encoded', () => {
 })
 
 it('builds the link on the current page URL, replacing any hash', () => {
-  const link = createShareLink(payload, 'https://meyhem.github.io/promptcad/?x=1#old')
-  expect(link.url).toBe(`https://meyhem.github.io/promptcad/?x=1#s=${encodeShare(payload)}`)
+  const link = createShareLink(payload, 'https://meyhem.github.io/chatscad/?x=1#old')
+  expect(link.url).toBe(`https://meyhem.github.io/chatscad/?x=1#s=${encodeShare(payload)}`)
   expect(link.bytes).toBe(link.url!.length)
   expect(link.level).toBe('ok')
   expect(link.payload).toBe(payload)
@@ -64,9 +64,9 @@ describe('rejects, in plain words', () => {
 
   it('links from a newer format or without a model', () => {
     expect(bad({ v: 2, name: 'x', code: 'cube(1);', params: {} })).toBe(
-      'The link was made by a newer PromptCAD (format 2). Reload the app to update it, then open the link again.',
+      'The link was made by a newer ChatSCAD (format 2). Reload the app to update it, then open the link again.',
     )
-    expect(bad([1, 2])).toBe('The link does not contain a PromptCAD model.')
+    expect(bad([1, 2])).toBe('The link does not contain a ChatSCAD model.')
     expect(bad({ v: 1, name: 'x', code: '   ' })).toBe('The link has no OpenSCAD code.')
     expect(bad({ v: 1, code: 'x'.repeat(200_001) })).toBe('The code in the link is longer than 200,000 characters.')
   })

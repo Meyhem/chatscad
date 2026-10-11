@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Settings tab</title>
 <script src="./support.js"></script>
-<link rel="stylesheet" href="ds/promptcad/components/bundle.css">
+<link rel="stylesheet" href="ds/chatscad/components/bundle.css">
 <link rel="stylesheet" href="screens.css">
 </head>
 <body>
@@ -19,7 +19,7 @@ a{color:#6e9bff}a:hover{color:#8db1ff}
 <div class="app pc-root" data-theme="{{theme}}" style="width: 1440px; height: 900px;">
 
 <header class="topbar">
-  <span class="brand"><span class="brand-dot"></span>PromptCAD</span>
+  <span class="brand"><span class="brand-dot"></span>ChatSCAD</span>
   <span class="sep"></span>
   <button class="project" type="button">18650 holder<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button>
   <nav class="pc-tabs" role="tablist" aria-label="Views">
@@ -65,7 +65,7 @@ a{color:#6e9bff}a:hover{color:#8db1ff}
     <div class="pane-head"><span style="font-weight: 600;">Ollama on this computer</span><span class="grow"></span><button class="pc-btn is-sm is-danger" type="button">Delete profile</button></div>
     <div style="display: flex; flex-direction: column; gap: 20px; padding: 24px; max-width: 640px;">
       <div class="pc-callout is-error"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
-        <div class="pc-callout-body"><strong>Ollama blocked the request from this page (CORS)</strong>Allow this site, then restart Ollama: <code class="pc-mono">OLLAMA_ORIGINS=https://[your PromptCAD domain] ollama serve</code></div>
+        <div class="pc-callout-body"><strong>Ollama blocked the request from this page (CORS)</strong>Allow this site, then restart Ollama: <code class="pc-mono">OLLAMA_ORIGINS=https://[your ChatSCAD domain] ollama serve</code></div>
       </div>
       <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
         <div class="pc-field"><label for="pn">Name</label><div class="pc-input"><input id="pn" value="Ollama on this computer"></div></div>

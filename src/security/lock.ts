@@ -5,7 +5,7 @@ import { useSettingsStore } from '../settings/settingsStore'
 
 export const PBKDF2_ITERATIONS = 310_000
 export const LOCKED_MESSAGE = 'Your API keys are locked. Unlock them in Settings › Security.'
-const VERIFIER = 'promptcad-lock-v1'
+const VERIFIER = 'chatscad-lock-v1'
 
 // Held in memory only: closing the tab forgets them (spec "Security").
 let unlockedKey: CryptoKey | null = null

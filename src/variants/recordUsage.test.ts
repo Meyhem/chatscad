@@ -1,9 +1,9 @@
 import 'fake-indexeddb/auto'
-import { PromptCadDb } from '../db/db'
+import { ChatScadDb } from '../db/db'
 import { recordUsage } from './recordUsage'
 
 it('writes one usage row with an id and a timestamp', async () => {
-  const database = new PromptCadDb(`usage-${crypto.randomUUID()}`)
+  const database = new ChatScadDb(`usage-${crypto.randomUUID()}`)
   const before = Date.now()
   await recordUsage(
     {

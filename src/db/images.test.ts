@@ -1,11 +1,11 @@
 // @vitest-environment node
 import 'fake-indexeddb/auto'
-import { PromptCadDb } from './db'
+import { ChatScadDb } from './db'
 import { loadImage, saveImage } from './images'
 
-let database: PromptCadDb
+let database: ChatScadDb
 beforeEach(() => {
-  database = new PromptCadDb(`images-${crypto.randomUUID()}`)
+  database = new ChatScadDb(`images-${crypto.randomUUID()}`)
 })
 afterEach(async () => {
   await database.delete()

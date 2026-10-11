@@ -1,14 +1,14 @@
-# PromptCAD
+# ChatSCAD
 
-**Try it:** https://meyhem.github.io/promptcad/
+**Try it:** https://meyhem.github.io/chatscad/
 
-Describe a part, tune it, print it. PromptCAD is a CAD workbench that runs entirely in your browser: you write (and soon, describe) a model in OpenSCAD, it compiles on your own device, and you download an STL for your 3D printer. Nothing is uploaded and there is no account.
+Describe a part, tune it, print it. ChatSCAD is a CAD workbench that runs entirely in your browser: you write (and soon, describe) a model in OpenSCAD, it compiles on your own device, and you download an STL for your 3D printer. Nothing is uploaded and there is no account.
 
-![PromptCAD rendering a four-slot 18650 cell holder: the 3D view on the left, the OpenSCAD code on the right, 88.8 × 25.4 × 22 mm in the header](docs/images/workbench.png)
+![ChatSCAD rendering a four-slot 18650 cell holder: the 3D view on the left, the OpenSCAD code on the right, 88.8 × 25.4 × 22 mm in the header](docs/images/workbench.png)
 
 ## What you can do today
 
-PromptCAD is being built in milestones. The first one, the render core, is done:
+ChatSCAD is being built in milestones. The first one, the render core, is done:
 
 - **Write or paste OpenSCAD** in a code editor with syntax highlighting. The model re-renders about half a second after you stop typing.
 - **See it in 3D.** Orbit, pan and zoom. The camera frames the first render and then stays where you put it. The size of the part is always shown in millimetres.
@@ -51,7 +51,7 @@ lid_rail();
 
 Change `slots = 4;` to `slots = 6;` and the holder grows to six cells. When it looks right, press **Export STL** and open the file in your slicer.
 
-If you make a typo, PromptCAD tells you where. Here a `)` is missing after `translate([…]`:
+If you make a typo, ChatSCAD tells you where. Here a `)` is missing after `translate([…]`:
 
 ![The same model with a syntax error: the status pill says "Failed · line 16", line 16 is marked red with "Line 16: Parser error: syntax error" under it, and the last good model stays in the 3D view](docs/images/compile-error.png)
 
@@ -82,7 +82,7 @@ The first run downloads the pinned OpenSCAD WebAssembly build (about 11 MB) into
 npm run build
 ```
 
-The output in `dist/` is plain static files. Set `BASE_PATH` when the app lives under a sub-path, for example `BASE_PATH=/promptcad/ npm run build`.
+The output in `dist/` is plain static files. Set `BASE_PATH` when the app lives under a sub-path, for example `BASE_PATH=/chatscad/ npm run build`.
 
 ## Privacy
 
