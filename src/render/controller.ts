@@ -7,7 +7,8 @@ export const DEFAULT_TIMEOUT_MS = 60_000
 
 export interface RenderControllerOptions {
   createWorker: WorkerFactory
-  onResult(result: RenderResult): void
+  /** `req` is the request that produced `result`, so callers can tell which code it belongs to. */
+  onResult(result: RenderResult, req: RenderRequest): void
   onStart?(): void
   debounceMs?: number
   timeoutMs?: number
@@ -15,7 +16,7 @@ export interface RenderControllerOptions {
 
 export class RenderController {
   private readonly createWorker: WorkerFactory
-  private readonly onResult: (result: RenderResult) => void
+  private readonly onResult: (result: RenderResult, req: RenderRequest) => void
   private readonly onStart: () => void
   private readonly debounceMs: number
   private readonly timeoutMs: number
@@ -36,6 +37,12 @@ export class RenderController {
 
   request(req: RenderRequest, { immediate = false }: { immediate?: boolean } = {}): void {
     this.clearDebounce()
+    // A newer request cancels the in-flight one at once, so a result for superseded code is never delivered.
+    if (this.inFlight) {
+      this.killWorker()
+      this.settle()
+      this.currentId++
+    }
     this.debounceTimer = setTimeout(
       () => {
         this.debounceTimer = null
@@ -72,7 +79,7 @@ export class RenderController {
       done = true
       this.settle()
       if (kill) this.killWorker()
-      this.onResult(result)
+      this.onResult(result, req)
     }
 
     this.timeoutTimer = setTimeout(

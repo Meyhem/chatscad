@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { EditorView } from '@codemirror/view'
 import userEvent from '@testing-library/user-event'
 import type { RenderWorkerHandle } from './render/createRenderWorker'
@@ -62,4 +62,15 @@ it('clicking the failed status pill selects the error line in the editor', async
   view.dispatch({ selection: { anchor: view.state.doc.length } })
   await userEvent.click(pill)
   expect(view.state.selection.main.head).toBe(0)
+})
+
+it('disables STL export as soon as the code is edited, until the new code has rendered', async () => {
+  const { container } = render(<App createWorker={scriptedWorker(() => okResult())} />)
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Export STL' })).toBeEnabled())
+  const view = EditorView.findFromDOM(container.querySelector('.cm-editor') as HTMLElement)!
+  act(() => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: 'cube([1, 1, 1]);' } }))
+  const stl = screen.getByRole('button', { name: 'Export STL' })
+  expect(stl).toBeDisabled()
+  expect(stl).toHaveAttribute('title', 'Wait for the render to finish')
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Export STL' })).toBeEnabled(), { timeout: 3_000 })
 })

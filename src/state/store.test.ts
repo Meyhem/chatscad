@@ -15,7 +15,7 @@ it('stores mesh, STL, logs and timing on success', () => {
   const result = okResult()
   useAppStore.getState().renderStarted()
   expect(useAppStore.getState().status).toBe('rendering')
-  useAppStore.getState().renderFinished(result)
+  useAppStore.getState().renderFinished(result, DEFAULT_CODE)
   const s = useAppStore.getState()
   expect(s.status).toBe('ok')
   expect(s.mesh).toBe(result.ok && result.mesh)
@@ -26,8 +26,8 @@ it('stores mesh, STL, logs and timing on success', () => {
 
 it('keeps the last good mesh when a render fails', () => {
   const good = okResult()
-  useAppStore.getState().renderFinished(good)
-  useAppStore.getState().renderFinished(errorResult())
+  useAppStore.getState().renderFinished(good, DEFAULT_CODE)
+  useAppStore.getState().renderFinished(errorResult(), DEFAULT_CODE)
   const s = useAppStore.getState()
   expect(s.status).toBe('error')
   expect(s.error).toBe('OpenSCAD exited with code 1')
@@ -36,8 +36,8 @@ it('keeps the last good mesh when a render fails', () => {
 })
 
 it('clears the error after the next successful render', () => {
-  useAppStore.getState().renderFinished(errorResult())
-  useAppStore.getState().renderFinished(okResult())
+  useAppStore.getState().renderFinished(errorResult(), DEFAULT_CODE)
+  useAppStore.getState().renderFinished(okResult(), DEFAULT_CODE)
   expect(useAppStore.getState().error).toBeNull()
 })
 
@@ -56,17 +56,28 @@ describe('selectCanExport', () => {
     expect(selectCanExport(useAppStore.getState())).toBe(false)
   })
   it('is true after a successful render', () => {
-    useAppStore.getState().renderFinished(okResult())
+    useAppStore.getState().renderFinished(okResult(), DEFAULT_CODE)
     expect(selectCanExport(useAppStore.getState())).toBe(true)
   })
   it('is false while re-rendering, so the export never mismatches the code', () => {
-    useAppStore.getState().renderFinished(okResult())
+    useAppStore.getState().renderFinished(okResult(), DEFAULT_CODE)
     useAppStore.getState().renderStarted()
     expect(selectCanExport(useAppStore.getState())).toBe(false)
   })
+  it('is false while the editor holds code that has not been rendered yet (debounce window)', () => {
+    useAppStore.getState().renderFinished(okResult(), DEFAULT_CODE)
+    useAppStore.getState().setCode('cube([1, 1, 1]);')
+    expect(useAppStore.getState().status).toBe('ok')
+    expect(selectCanExport(useAppStore.getState())).toBe(false)
+  })
+  it('is false when a late result belongs to older code than the editor holds', () => {
+    useAppStore.getState().setCode('cube(3);')
+    useAppStore.getState().renderFinished(okResult(), DEFAULT_CODE)
+    expect(selectCanExport(useAppStore.getState())).toBe(false)
+  })
   it('is false when the current code failed, even with an older mesh on screen', () => {
-    useAppStore.getState().renderFinished(okResult())
-    useAppStore.getState().renderFinished(errorResult())
+    useAppStore.getState().renderFinished(okResult(), DEFAULT_CODE)
+    useAppStore.getState().renderFinished(errorResult(), DEFAULT_CODE)
     expect(selectCanExport(useAppStore.getState())).toBe(false)
   })
 })

@@ -37,7 +37,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
         <span className="flex-1" />
         <ExportButtons
           canExportStl={canExportStl}
-          disabledReason={exportDisabledReason(status)}
+          disabledReason={exportDisabledReason(canExportStl ? 'ok' : status === 'ok' ? 'rendering' : status)}
           onExportStl={() => {
             const { stl } = useAppStore.getState()
             if (stl) void exportStl(stl)

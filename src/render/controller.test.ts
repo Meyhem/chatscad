@@ -82,7 +82,7 @@ it('delivers the result and reuses the worker for the next render', async () => 
   const result = okResult()
   workers[0].pending[0].resolve(result)
   await vi.advanceTimersByTimeAsync(0)
-  expect(onResult).toHaveBeenCalledWith(result)
+  expect(onResult).toHaveBeenCalledWith(result, { code: 'a' })
 
   controller.request({ code: 'b' }, { immediate: true })
   await vi.advanceTimersByTimeAsync(0)
@@ -107,7 +107,7 @@ it('cancels the in-flight render when a newer one starts, and drops the stale re
   const fresh = okResult()
   workers[1].pending[0].resolve(fresh)
   await vi.advanceTimersByTimeAsync(0)
-  expect(onResult).toHaveBeenCalledExactlyOnceWith(fresh)
+  expect(onResult).toHaveBeenCalledExactlyOnceWith(fresh, { code: 'new' })
 })
 
 it('times out a hung render, kills the worker, and ignores its late result', async () => {
@@ -120,6 +120,7 @@ it('times out a hung render, kills the worker, and ignores its late result', asy
   expect(workers[0].terminate).toHaveBeenCalled()
   expect(onResult).toHaveBeenCalledExactlyOnceWith(
     expect.objectContaining({ ok: false, error: 'Render timed out after 60 s' }),
+    { code: 'for(i=[0:1e9]) cube(1);' },
   )
 
   workers[0].pending[0].resolve(okResult())
@@ -137,7 +138,7 @@ it('spawns a new worker for the next render after a timeout', async () => {
   const result = okResult()
   workers[1].pending[0].resolve(result)
   await vi.advanceTimersByTimeAsync(0)
-  expect(onResult).toHaveBeenLastCalledWith(result)
+  expect(onResult).toHaveBeenLastCalledWith(result, { code: 'cube(1);' })
 })
 
 it('reports a worker crash and replaces the worker', async () => {
@@ -146,7 +147,7 @@ it('reports a worker crash and replaces the worker', async () => {
   await vi.advanceTimersByTimeAsync(0)
   workers[0].pending[0].reject(new Error('worker died'))
   await vi.advanceTimersByTimeAsync(0)
-  expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ ok: false, error: 'Render worker crashed: worker died' }))
+  expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ ok: false, error: 'Render worker crashed: worker died' }), { code: 'a' })
   expect(workers[0].terminate).toHaveBeenCalled()
 
   controller.request({ code: 'b' }, { immediate: true })
@@ -163,4 +164,19 @@ it('dispose cancels pending debounce and terminates the worker', async () => {
   await vi.advanceTimersByTimeAsync(10_000)
   expect(workers[0].terminate).toHaveBeenCalled()
   expect(workers[0].requests).toEqual([{ code: 'a' }])
+})
+
+it('cancels the in-flight render as soon as a newer request arrives, without waiting for the debounce', async () => {
+  const { workers, controller, onResult } = setup()
+  controller.request({ code: 'old' }, { immediate: true })
+  await vi.advanceTimersByTimeAsync(0)
+  controller.request({ code: 'newer' })
+  expect(workers[0].terminate).toHaveBeenCalled()
+
+  workers[0].pending[0].resolve(okResult())
+  await vi.advanceTimersByTimeAsync(0)
+  expect(onResult).not.toHaveBeenCalled()
+
+  await vi.advanceTimersByTimeAsync(600)
+  expect(workers[1].requests).toEqual([{ code: 'newer' }])
 })

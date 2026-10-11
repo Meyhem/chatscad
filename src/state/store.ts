@@ -28,6 +28,8 @@ export interface AppState {
   mesh: MeshData | null
   /** Binary STL matching `mesh`. */
   stl: ArrayBuffer | null
+  /** The code that produced `mesh` and `stl`. */
+  renderedCode: string | null
   logs: LogLine[]
   diagnostics: Diagnostic[]
   error: string | null
@@ -36,7 +38,7 @@ export interface AppState {
   reveal: RevealRequest | null
   setCode(code: string): void
   renderStarted(): void
-  renderFinished(result: RenderResult): void
+  renderFinished(result: RenderResult, code: string): void
   goToLine(line: number): void
 }
 
@@ -47,6 +49,7 @@ export const useAppStore = create<AppState>()((set) => ({
   status: 'idle',
   mesh: null,
   stl: null,
+  renderedCode: null,
   logs: [],
   diagnostics: [],
   error: null,
@@ -54,13 +57,15 @@ export const useAppStore = create<AppState>()((set) => ({
   reveal: null,
   setCode: (code) => set({ code }),
   renderStarted: () => set({ status: 'rendering' }),
-  renderFinished: (r) =>
+  renderFinished: (r, code) =>
     set(
       r.ok
-        ? { status: 'ok', mesh: r.mesh, stl: r.stl, error: null, logs: r.logs, diagnostics: r.diagnostics, renderMs: r.renderMs }
+        ? { status: 'ok', mesh: r.mesh, stl: r.stl, renderedCode: code, error: null, logs: r.logs, diagnostics: r.diagnostics, renderMs: r.renderMs }
         : { status: 'error', error: r.error, logs: r.logs, diagnostics: r.diagnostics, renderMs: r.renderMs },
     ),
   goToLine: (line) => set({ reveal: { line, id: ++revealId } }),
 }))
 
-export const selectCanExport = (s: AppState): boolean => s.status === 'ok' && s.stl !== null
+/** STL export is allowed only when the file on hand was rendered from exactly the code in the editor. */
+export const selectCanExport = (s: AppState): boolean =>
+  s.status === 'ok' && s.stl !== null && s.renderedCode === s.code

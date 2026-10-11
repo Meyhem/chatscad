@@ -15,7 +15,7 @@ export function useRenderLoop(
       debounceMs,
       timeoutMs,
       onStart: renderStarted,
-      onResult: renderFinished,
+      onResult: (result, req) => renderFinished(result, req.code),
     })
     controller.request({ code: useAppStore.getState().code }, { immediate: true })
     const unsubscribe = useAppStore.subscribe((state, prev) => {
