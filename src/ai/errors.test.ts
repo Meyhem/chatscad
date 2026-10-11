@@ -1,3 +1,4 @@
+import { LOCKED_MESSAGE } from '../security/lock'
 import { describeProviderError } from './errors'
 import { ProviderError } from './types'
 
@@ -68,4 +69,11 @@ it('asks for a full address when the base URL is not one', () => {
       body: 'Enter it with http:// or https:// at the start, for example https://api.openai.com/v1, or http://localhost:11434/v1 for Ollama on this computer.',
     })
   }
+})
+
+it('explains locked keys instead of blaming the provider', () => {
+  expect(describeProviderError(new ProviderError('auth', LOCKED_MESSAGE), 'https://api.openai.com/v1')).toEqual({
+    title: 'Your API keys are locked',
+    body: 'Unlock them in Settings › Security, then send again.',
+  })
 })

@@ -1,3 +1,4 @@
+import { sealProfile } from '../security/lock'
 import { db, type ProviderProfile } from './db'
 
 export async function listProfiles(): Promise<ProviderProfile[]> {
@@ -10,7 +11,8 @@ export function getProfile(id: string): Promise<ProviderProfile | undefined> {
 
 export async function saveProfile(profile: ProviderProfile): Promise<ProviderProfile> {
   const saved = { ...profile, updatedAt: Date.now() }
-  await db.providerProfiles.put(saved)
+  await db.providerProfiles.put(await sealProfile(saved))
+  // Callers keep working with the plaintext key in memory; only the stored copy is sealed.
   return saved
 }
 

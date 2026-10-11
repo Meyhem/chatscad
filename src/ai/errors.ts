@@ -1,4 +1,5 @@
 import { errorMessage } from '../render/result'
+import { LOCKED_MESSAGE } from '../security/lock'
 import { ProviderError } from './types'
 import { hostOf, isHttpUrl, isLocalBaseUrl, portOf } from './url'
 
@@ -17,6 +18,9 @@ function siteOrigin(): string {
 }
 
 export function describeProviderError(err: unknown, baseUrl: string): { title: string; body: string } {
+  if (err instanceof ProviderError && err.message === LOCKED_MESSAGE) {
+    return { title: 'Your API keys are locked', body: 'Unlock them in Settings › Security, then send again.' }
+  }
   const host = hostOf(baseUrl)
   if (!(err instanceof ProviderError)) {
     return { title: `Something went wrong talking to ${host}`, body: sentence(errorMessage(err)) }
