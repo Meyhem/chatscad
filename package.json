@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "tokens": "tsx scripts/gen-tokens.ts"
   },
   "repository": {
     "type": "git",
@@ -27,6 +28,9 @@
   "homepage": "https://github.com/Meyhem/promptcad#readme",
   "private": "true",
   "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "lucide-react": "^1.55.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

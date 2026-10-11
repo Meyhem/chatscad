@@ -1,0 +1,182 @@
+/* Generated from design/tokens.json by scripts/gen-tokens.ts. Do not edit; run `npm run tokens`. */
+
+:root {
+  color-scheme: dark;
+  --bg: #0d1015;
+  --panel: #141920;
+  --panel-raised: #1b222b;
+  --inset: #0a0d11;
+  --viewport: #0b0e12;
+  --line: #252d38;
+  --line-strong: #5f6c7d;
+  --ink: #e6eaf0;
+  --ink-muted: #9aa5b4;
+  --ink-disabled: #5a6574;
+  --accent: #6e9bff;
+  --accent-hover: #8db1ff;
+  --on-accent: #0a1430;
+  --accent-soft: #1a2a4d;
+  --focus-ring: var(--accent);
+  --filament: #e9a23b;
+  --pick: var(--accent);
+  --ok: #34c3d4;
+  --ok-soft: #0f2a2e;
+  --warn: #e6c34a;
+  --warn-soft: #2e2810;
+  --error: #ff7a59;
+  --error-soft: #36170f;
+  --grid-minor: #1a2029;
+  --grid-major: #2a3340;
+  --axis-x: #e5534b;
+  --axis-y: #57ab5a;
+  --axis-z: #539bf5;
+  --syn-keyword: #d3a3ff;
+  --syn-builtin: #7cc4ff;
+  --syn-number: #f0b86e;
+  --syn-string: #9ad08a;
+  --syn-comment: #7d8796;
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --font-sans: "Archivo Variable", "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+  --control-sm: 28px;
+  --control-md: 36px;
+  --touch-target: 44px;
+  --header-height: 48px;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #eef1f4;
+  --panel: #ffffff;
+  --panel-raised: #ffffff;
+  --inset: #f6f8fa;
+  --viewport: #e2e7ed;
+  --line: #d9dee5;
+  --line-strong: #7d8999;
+  --ink: #10151c;
+  --ink-muted: #4d5867;
+  --ink-disabled: #9aa3af;
+  --accent: #1f4fd1;
+  --accent-hover: #1a43b3;
+  --on-accent: #ffffff;
+  --accent-soft: #e3ebff;
+  --focus-ring: var(--accent);
+  --filament: #d4861a;
+  --pick: var(--accent);
+  --ok: #0a7381;
+  --ok-soft: #e0f3f5;
+  --warn: #876000;
+  --warn-soft: #fbf3d9;
+  --error: #b8341b;
+  --error-soft: #fde8e2;
+  --grid-minor: #d3d9e1;
+  --grid-major: #b7c0cc;
+  --axis-x: #c93c33;
+  --axis-y: #3f8f43;
+  --axis-z: #2f6fd0;
+  --syn-keyword: #7b3fc4;
+  --syn-builtin: #1c64b8;
+  --syn-number: #9a5b00;
+  --syn-string: #3c7a2c;
+  --syn-comment: #66707d;
+  --shadow-pop: 0 12px 32px rgba(16, 21, 28, 0.16);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #eef1f4;
+    --panel: #ffffff;
+    --panel-raised: #ffffff;
+    --inset: #f6f8fa;
+    --viewport: #e2e7ed;
+    --line: #d9dee5;
+    --line-strong: #7d8999;
+    --ink: #10151c;
+    --ink-muted: #4d5867;
+    --ink-disabled: #9aa3af;
+    --accent: #1f4fd1;
+    --accent-hover: #1a43b3;
+    --on-accent: #ffffff;
+    --accent-soft: #e3ebff;
+    --focus-ring: var(--accent);
+    --filament: #d4861a;
+    --pick: var(--accent);
+    --ok: #0a7381;
+    --ok-soft: #e0f3f5;
+    --warn: #876000;
+    --warn-soft: #fbf3d9;
+    --error: #b8341b;
+    --error-soft: #fde8e2;
+    --grid-minor: #d3d9e1;
+    --grid-major: #b7c0cc;
+    --axis-x: #c93c33;
+    --axis-y: #3f8f43;
+    --axis-z: #2f6fd0;
+    --syn-keyword: #7b3fc4;
+    --syn-builtin: #1c64b8;
+    --syn-number: #9a5b00;
+    --syn-string: #3c7a2c;
+    --syn-comment: #66707d;
+    --shadow-pop: 0 12px 32px rgba(16, 21, 28, 0.16);
+  }
+}
+
+@theme {
+  --color-*: initial;
+  --font-*: initial;
+  --shadow-*: initial;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-raised: var(--panel-raised);
+  --color-inset: var(--inset);
+  --color-viewport: var(--viewport);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-disabled: var(--ink-disabled);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-focus-ring: var(--focus-ring);
+  --color-filament: var(--filament);
+  --color-pick: var(--pick);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
+  --color-grid-minor: var(--grid-minor);
+  --color-grid-major: var(--grid-major);
+  --color-axis-x: var(--axis-x);
+  --color-axis-y: var(--axis-y);
+  --color-axis-z: var(--axis-z);
+  --color-syn-keyword: var(--syn-keyword);
+  --color-syn-builtin: var(--syn-builtin);
+  --color-syn-number: var(--syn-number);
+  --color-syn-string: var(--syn-string);
+  --color-syn-comment: var(--syn-comment);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-pill: var(--radius-pill);
+  --shadow-pop: var(--shadow-pop);
+}
