@@ -5,7 +5,7 @@ import { parseCustomizer } from '../scad/customizer'
 import { useAppStore } from '../state/store'
 import { CodePane } from '../workbench/CodePane'
 import { viewPanelId } from '../workbench/ViewTabs'
-import { DEFAULT_LAYOUT, LIMITS } from './panelLayout'
+import { columnMax, DEFAULT_LAYOUT, LIMITS, resizeColumn } from './panelLayout'
 import { Splitter } from './Splitter'
 import { useElementHeight } from './useElementHeight'
 import { useWorkbenchLayout } from './useWorkbenchLayout'
@@ -15,7 +15,9 @@ const CODE_HEADER = 40
 
 /** The desktop workbench: chat, 3D view with its parameters, and code, with a resize divider between each. */
 export function WorkbenchColumns({ viewer }: { viewer: ReactNode }) {
-  const { layout, columns, change, commit } = useWorkbenchLayout()
+  const { layout, columns, windowWidth, change, commit } = useWorkbenchLayout()
+  const chatTo = (v: number) => resizeColumn('chat', v, windowWidth, columns)
+  const codeTo = (v: number) => resizeColumn('code', v, windowWidth, columns)
   const code = useAppStore((s) => s.code)
   const hasParams = useMemo(() => parseCustomizer(code).length > 0, [code])
   const viewColumn = useRef<HTMLElement>(null)
@@ -34,7 +36,8 @@ export function WorkbenchColumns({ viewer }: { viewer: ReactNode }) {
       id={viewPanelId('workbench')}
       aria-labelledby="view-tab-workbench"
       className="grid min-h-0 flex-1"
-      style={{ gridTemplateColumns: `${columns.chatWidth}px 1px minmax(${LIMITS.minViewerWidth}px, 1fr) 1px ${columns.codeWidth}px` }}
+      // The 3D view may shrink below its usual minimum in a narrow window, so the columns never overflow it.
+      style={{ gridTemplateColumns: `${columns.chatWidth}px 1px minmax(0, 1fr) 1px ${columns.codeWidth}px` }}
     >
       <ChatPanel />
       <Splitter
@@ -42,10 +45,10 @@ export function WorkbenchColumns({ viewer }: { viewer: ReactNode }) {
         label="Resize chat"
         value={columns.chatWidth}
         min={LIMITS.chat[0]}
-        max={LIMITS.chat[1]}
+        max={columnMax('chat', windowWidth)}
         defaultValue={DEFAULT_LAYOUT.chatWidth}
-        onChange={(chatWidth) => change({ chatWidth })}
-        onCommit={(chatWidth) => commit({ chatWidth })}
+        onChange={(v) => change(chatTo(v))}
+        onCommit={(v) => commit(chatTo(v))}
       />
 
       <section ref={viewColumn} aria-label="3D view" className="flex min-h-0 min-w-0 flex-col">
@@ -75,10 +78,10 @@ export function WorkbenchColumns({ viewer }: { viewer: ReactNode }) {
         invert
         value={columns.codeWidth}
         min={LIMITS.code[0]}
-        max={LIMITS.code[1]}
+        max={columnMax('code', windowWidth)}
         defaultValue={DEFAULT_LAYOUT.codeWidth}
-        onChange={(codeWidth) => change({ codeWidth })}
-        onCommit={(codeWidth) => commit({ codeWidth })}
+        onChange={(v) => change(codeTo(v))}
+        onCommit={(v) => commit(codeTo(v))}
       />
       <div ref={codeColumn} className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)]">
         <CodePane

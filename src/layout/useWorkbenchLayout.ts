@@ -20,10 +20,12 @@ export function useWorkbenchLayout() {
   const saved = usePrefs((s) => s.panelLayout)
   const [draft, setDraft] = useState<PanelLayout | null>(null)
   const layout = draft ?? saved
-  const columns = clampColumns(layout, useWindowWidth())
+  const windowWidth = useWindowWidth()
+  const columns = clampColumns(layout, windowWidth)
   return {
     layout,
     columns,
+    windowWidth,
     change: (patch: Partial<PanelLayout>) => setDraft({ ...layout, ...patch }),
     commit: (patch: Partial<PanelLayout>) => {
       setDraft(null)

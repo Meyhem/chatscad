@@ -32,6 +32,27 @@ export function clampColumns(layout: PanelLayout, windowWidth: number): { chatWi
   return { chatWidth, codeWidth }
 }
 
+type Column = 'chat' | 'code'
+type Columns = { chatWidth: number; codeWidth: number }
+
+/** Room for chat and code together while the 3D view keeps its minimum width. */
+const columnRoom = (windowWidth: number) => windowWidth - DIVIDERS - LIMITS.minViewerWidth
+
+/** The widest a column can be dragged: its own limit, or what is left once the other column is at its minimum. */
+export function columnMax(column: Column, windowWidth: number): number {
+  const [min, max] = LIMITS[column]
+  const other = LIMITS[column === 'chat' ? 'code' : 'chat'][0]
+  return Math.max(min, Math.min(max, columnRoom(windowWidth) - other))
+}
+
+/** Widths after dragging one column to `value`: the other column gives way, down to its minimum. */
+export function resizeColumn(column: Column, value: number, windowWidth: number, shown: Columns): Columns {
+  const room = columnRoom(windowWidth)
+  const size = clamp(Math.min(value, columnMax(column, windowWidth)), LIMITS[column])
+  if (column === 'chat') return { chatWidth: size, codeWidth: clamp(Math.min(shown.codeWidth, room - size), LIMITS.code) }
+  return { codeWidth: size, chatWidth: clamp(Math.min(shown.chatWidth, room - size), LIMITS.chat) }
+}
+
 const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
 /** A stored layout, validated: anything malformed gives the defaults, out-of-range sizes are clamped. */

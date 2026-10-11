@@ -56,3 +56,15 @@ test('panel sizes survive a reload and reset from settings', async ({ page }) =>
   await expect(page.getByRole('separator', { name: 'Resize chat' })).toHaveAttribute('aria-valuenow', '360')
   await expect(page.getByRole('separator', { name: 'Resize console' })).toHaveAttribute('aria-valuenow', '176')
 })
+
+test.describe('in a narrow desktop window', () => {
+  test.use({ viewport: { width: 850, height: 800 } })
+
+  test('the columns fit without scrolling sideways', async ({ page }) => {
+    await openWithStarter(page)
+    const main = page.getByRole('tabpanel').filter({ has: page.getByRole('region', { name: 'Code' }) })
+    expect(await main.evaluate((el) => el.scrollWidth)).toBeLessThanOrEqual(850)
+    const code = (await page.getByRole('region', { name: 'Code' }).boundingBox())!
+    expect(Math.round(code.x + code.width)).toBeLessThanOrEqual(850)
+  })
+})

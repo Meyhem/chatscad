@@ -1,4 +1,4 @@
-import { clampColumns, DEFAULT_LAYOUT, layoutFrom } from './panelLayout'
+import { clampColumns, columnMax, DEFAULT_LAYOUT, layoutFrom, resizeColumn } from './panelLayout'
 
 it('keeps stored widths when they fit', () => {
   expect(clampColumns({ ...DEFAULT_LAYOUT, chatWidth: 400, codeWidth: 500 }, 1600)).toEqual({ chatWidth: 400, codeWidth: 500 })
@@ -27,4 +27,13 @@ it('falls back to defaults for a broken stored value, and clamps out-of-range si
     consoleHeight: 200,
   })
   expect(layoutFrom({ ...DEFAULT_LAYOUT, dockHeight: null }).dockHeight).toBeNull()
+})
+
+
+it('lets a dragged column take room from the other one, down to its minimum', () => {
+  // 1100 px window: 738 px for chat and code together while the 3D view keeps 360 px.
+  expect(columnMax('code', 1100)).toBe(458)
+  expect(resizeColumn('code', 450, 1100, { chatWidth: 418, codeWidth: 320 })).toEqual({ chatWidth: 288, codeWidth: 450 })
+  expect(resizeColumn('chat', 500, 1100, { chatWidth: 418, codeWidth: 320 })).toEqual({ chatWidth: 418, codeWidth: 320 })
+  expect(resizeColumn('chat', 400, 1600, { chatWidth: 360, codeWidth: 440 })).toEqual({ chatWidth: 400, codeWidth: 440 })
 })
