@@ -27,8 +27,12 @@ function useNow(ticking: boolean): number {
   return now
 }
 
-function header(message: ChatMessage, streaming: boolean, now: number): string {
-  if (streaming && message.reasoningStartedAt !== undefined) return `Thinking · ${formatDuration(now - message.reasoningStartedAt)}`
+function header(message: ChatMessage, thinking: boolean, now: number): string {
+  const started = message.reasoningStartedAt
+  if (thinking && started !== undefined) return `Thinking · ${formatDuration(now - started)}`
+  if (message.reasoningMs === undefined && started !== undefined && message.reasoningEndedAt !== undefined) {
+    return `Thought for ${formatDuration(message.reasoningEndedAt - started)}`
+  }
   if (message.reasoningMs === undefined) return 'Reasoning'
   const tokens = message.reasoningTokens !== undefined ? ` · ${message.reasoningTokens.toLocaleString('en-US')} tokens` : ''
   return `Thought for ${formatDuration(message.reasoningMs)}${tokens}`
@@ -59,8 +63,10 @@ function ReasoningBody({ text, follow }: { text: string; follow: boolean }) {
 /** The model's reasoning, collapsed. Model output: text nodes only. */
 export function ReasoningBox({ message }: { message: ChatMessage }) {
   const streaming = message.status === 'streaming'
+  // Thinking until the reply text starts; then the model is writing, not reasoning.
+  const thinking = streaming && message.reasoningEndedAt === undefined
   const [open, setOpen] = useState(false)
-  const now = useNow(streaming)
+  const now = useNow(thinking)
   const reasoning = message.reasoning ?? ''
   if (reasoning === '') return null
   return (
@@ -69,11 +75,11 @@ export function ReasoningBox({ message }: { message: ChatMessage }) {
         <summary>
           <IconChevronRight className="pc-i pc-reasoning-chevron" aria-hidden="true" />
           <IconBrain className="pc-i" aria-hidden="true" />
-          {header(message, streaming, now)}
+          {header(message, thinking, now)}
         </summary>
         <ReasoningBody text={reasoning} follow={streaming} />
       </details>
-      {streaming && !open && (
+      {thinking && !open && (
         <div className="pc-reasoning-live pc-shimmer" aria-hidden="true">
           {lastLine(reasoning)}
         </div>

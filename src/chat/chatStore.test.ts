@@ -53,3 +53,17 @@ it('appends reasoning and stamps when it started', () => {
   vi.useRealTimers()
   expect(useChatStore.getState().messages[0]).toMatchObject({ reasoning: 'Wall is 1.6 mm.', reasoningStartedAt: 1_000 })
 })
+
+it('stamps when reasoning ended at the first reply text', () => {
+  vi.useFakeTimers({ now: 1_000 })
+  const id = useChatStore.getState().addMessage({ role: 'assistant', text: '', turnLabel: null, model: 'm', usage: null, status: 'streaming' })
+  useChatStore.getState().appendText(id, 'no reasoning yet ')
+  expect(useChatStore.getState().messages[0]).not.toHaveProperty('reasoningEndedAt')
+  useChatStore.getState().appendReasoning(id, 'Hmm')
+  vi.setSystemTime(9_000)
+  useChatStore.getState().appendText(id, 'Made')
+  vi.setSystemTime(12_000)
+  useChatStore.getState().appendText(id, ' it')
+  vi.useRealTimers()
+  expect(useChatStore.getState().messages[0]).toMatchObject({ reasoningStartedAt: 1_000, reasoningEndedAt: 9_000 })
+})

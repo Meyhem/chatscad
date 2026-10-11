@@ -17,6 +17,7 @@ export interface ChatMessage {
   reasoningMs?: number
   reasoningTokens?: number
   reasoningStartedAt?: number // memory only: the live "Thinking · 38 s" timer
+  reasoningEndedAt?: number // memory only: the first reply text after the reasoning
 }
 
 export interface AutoFixState {
@@ -67,7 +68,16 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     return id
   },
   patchMessage: (id, patch) => set((s) => ({ messages: s.messages.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
-  appendText: (id, delta) => set((s) => ({ messages: s.messages.map((m) => (m.id === id ? { ...m, text: m.text + delta } : m)) })),
+  appendText: (id, delta) =>
+    set((s) => ({
+      messages: s.messages.map((m) =>
+        m.id !== id
+          ? m
+          : m.reasoningStartedAt !== undefined && m.reasoningEndedAt === undefined
+            ? { ...m, text: m.text + delta, reasoningEndedAt: Date.now() }
+            : { ...m, text: m.text + delta },
+      ),
+    })),
   appendReasoning: (id, delta) =>
     set((s) => ({
       messages: s.messages.map((m) =>

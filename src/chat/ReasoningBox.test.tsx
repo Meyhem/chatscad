@@ -68,3 +68,10 @@ it('renders HTML in the reasoning as text', () => {
   expect(document.querySelector('.pc-reasoning img')).toBeNull()
   expect(document.querySelector('.pc-reasoning-body')).toHaveTextContent('<img src=x onerror=alert(1)>')
 })
+
+it('stops the "Thinking" timer and the live line once the reply text starts', () => {
+  vi.useFakeTimers({ now: 50_000 })
+  render(<ReasoningBox message={msg({ status: 'streaming', text: 'Made', reasoning: 'a\nb', reasoningStartedAt: 10_000, reasoningEndedAt: 22_000 })} />)
+  expect(screen.getByText('Thought for 12 s')).toBeInTheDocument()
+  expect(document.querySelector('.pc-reasoning-live')).toBeNull()
+})
