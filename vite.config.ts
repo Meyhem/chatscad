@@ -5,6 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 import { cspPlugin } from './build/csp'
 
 export default defineConfig({
+  // Sub-path the app is served from; the Pages workflow sets it (e.g. /promptcad/). Local dev and tests use /.
+  base: process.env.BASE_PATH ?? '/',
   plugins: [react(), tailwindcss(), cspPlugin()],
   worker: { format: 'es' },
   build: {

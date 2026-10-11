@@ -20,7 +20,7 @@ async function replaceCode(page: Page, code: string) {
 
 test('renders the default model in the real OpenSCAD WASM and exports binary STL', async ({ page }) => {
   const csp = watchCspViolations(page)
-  await page.goto('/')
+  await page.goto('./')
   await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm', { timeout: RENDER_TIMEOUT })
   await expect(page.getByTestId('render-status')).toHaveText(/^Rendered \d+ ms$/)
   await expect(page.getByTestId('dims-axes')).toHaveAttribute('aria-label', '20 × 20 × 10 mm')
@@ -37,14 +37,14 @@ test('renders the default model in the real OpenSCAD WASM and exports binary STL
 })
 
 test('pasted code re-renders with new dimensions', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('./')
   await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm', { timeout: RENDER_TIMEOUT })
   await replaceCode(page, 'cube([30, 10, 5]);')
   await expect(page.getByTestId('dims')).toHaveText('30 × 10 × 5 mm', { timeout: RENDER_TIMEOUT })
 })
 
 test('a compile error shows the pill, gutter and inline callout, keeps the last mesh, and blocks STL export', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('./')
   await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm', { timeout: RENDER_TIMEOUT })
   await replaceCode(page, 'cube([10, 10, 10]')
   await expect(page.getByTestId('render-status')).toHaveText(/^Failed · line \d+$/, { timeout: RENDER_TIMEOUT })
@@ -59,8 +59,20 @@ test('a compile error shows the pill, gutter and inline callout, keeps the last 
 
 test('follows the system colour scheme with the light theme as a full peer', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' })
-  await page.goto('/')
+  await page.goto('./')
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(238, 241, 244)') // bg (light)
   await page.emulateMedia({ colorScheme: 'dark' })
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(13, 16, 21)') // bg (dark)
+})
+
+test('loads every file from under the base path, as GitHub Pages requires', async ({ page, baseURL }) => {
+  const basePath = new URL(baseURL!).pathname
+  const outside: string[] = []
+  page.on('request', (req) => {
+    const url = new URL(req.url())
+    if (url.origin === new URL(baseURL!).origin && !url.pathname.startsWith(basePath)) outside.push(url.pathname)
+  })
+  await page.goto('./')
+  await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm', { timeout: RENDER_TIMEOUT })
+  expect(outside).toEqual([])
 })

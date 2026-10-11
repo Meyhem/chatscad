@@ -1,0 +1,68 @@
+name: Test and deploy to GitHub Pages
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time; never cancel one that is already publishing.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  # A project site is served from /<repo>/; a <user>.github.io repo is served from /.
+  BASE_PATH: ${{ endsWith(github.event.repository.name, '.github.io') && '/' || format('/{0}/', github.event.repository.name) }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # The pinned OpenSCAD WASM (URL and SHA-256 live in scripts/fetch-openscad.ts).
+      - uses: actions/cache@v6
+        with:
+          path: public/openscad
+          key: openscad-${{ hashFiles('scripts/fetch-openscad.ts') }}
+
+      - run: npm run fetch:openscad -- --if-missing
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      - run: npx playwright install --with-deps chromium
+
+      # Builds dist/ with BASE_PATH and runs the end-to-end tests against it, so the
+      # site that gets deployed is the one that was tested.
+      - run: npm run e2e
+
+      - if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
