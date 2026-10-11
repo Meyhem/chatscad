@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { useImageDropAndPaste } from '../images/useImageDropAndPaste'
+import { useVisionSupport } from '../refine/useVisionSupport'
 import { useProvidersStore } from '../settings/providersStore'
 import { useAppStore } from '../state/store'
 import { IconInfo, IconSpinner } from '../ui/icons'
@@ -49,6 +51,8 @@ export function ChatPanel() {
   const appStatus = useAppStore((s) => s.status)
   const codeSource = useAppStore((s) => s.codeSource)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const column = useRef<HTMLElement>(null)
+  useImageDropAndPaste(column, useVisionSupport())
 
   useEffect(() => {
     const el = scrollRef.current
@@ -63,7 +67,7 @@ export function ChatPanel() {
   const showBack = backTo !== null && (fixing !== null || (!busy && (lastReply?.compileStatus === 'error' || aiCodeFails)))
 
   return (
-    <section aria-label="Chat" className="flex min-h-0 min-w-0 flex-col border-b border-line bg-panel md:border-b-0">
+    <section ref={column} aria-label="Chat" className="flex min-h-0 min-w-0 flex-col border-b border-line bg-panel md:border-b-0">
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
         <span className="pc-label">Chat</span>
         <span className="flex-1" />

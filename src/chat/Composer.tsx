@@ -1,3 +1,12 @@
+import { useState } from 'react'
+import { AttachButton } from '../images/AttachButton'
+import { AttachmentTray } from '../images/AttachmentTray'
+import { useAttachments } from '../images/attachments'
+import { PickChip } from '../refine/PickChip'
+import { useRefineStore } from '../refine/refineStore'
+import { useVisionSupport } from '../refine/useVisionSupport'
+import { attachSketch } from '../sketch/exportSketch'
+import { SketchDialog } from '../sketch/SketchDialog'
 import { usePrefs } from '../settings/prefsStore'
 import { startVariants } from '../variants/startVariants'
 import { VariantCountButton } from '../variants/VariantCountButton'
@@ -17,6 +26,8 @@ export function Composer() {
   const busy = useChatStore((s) => s.busy)
   const profile = useProvidersStore(selectActiveProfile)
   const model = useProvidersStore(selectActiveModel)
+  const vision = useVisionSupport()
+  const [sketching, setSketching] = useState(false)
   const dictation = useComposerDictation({
     value: draft,
     onChange: setDraft,
@@ -29,7 +40,9 @@ export function Composer() {
     if (!canSend) return
     // Taken on every send, so a transcript never sticks to a later, typed message.
     const audioTranscript = useVoiceStore.getState().takeTranscript()
-    if (usePrefs.getState().variantCount === 3) {
+    // Variants take a plain-text prompt; images and a picked part go with one scoped turn.
+    const withExtras = useAttachments.getState().items.length > 0 || useRefineStore.getState().pick !== null
+    if (usePrefs.getState().variantCount === 3 && !withExtras) {
       if (startVariants(draft)) setDraft('')
       return
     }
@@ -39,6 +52,8 @@ export function Composer() {
   return (
     <>
       <div className="pc-composer">
+        <PickChip />
+        <AttachmentTray />
         <textarea
           rows={2}
           aria-label="Prompt"
@@ -53,6 +68,7 @@ export function Composer() {
           }}
         />
         <div className="pc-composer-bar">
+          <AttachButton vision={vision} onSketch={() => setSketching(true)} />
           <ModelPicker />
           <span className="pc-spacer" />
           {dictation.mode && (
@@ -80,6 +96,15 @@ export function Composer() {
             </button>
           )}
         </div>
+        {sketching && (
+          <SketchDialog
+            onCancel={() => setSketching(false)}
+            onAttach={(result) => {
+              setSketching(false)
+              void attachSketch(result)
+            }}
+          />
+        )}
       </div>
       <DictationCaption state={dictation.state} mode={dictation.mode} />
     </>

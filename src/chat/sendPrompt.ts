@@ -7,7 +7,11 @@ import type { LlmProvider } from '../ai/types'
 import type { ProviderProfile } from '../db/db'
 import { addUsage } from '../db/usage'
 import { calloutHeadline } from '../editor/diagnosticsExtension'
+import { useAttachments } from '../images/attachments'
+import { useRefineStore } from '../refine/refineStore'
+import { prepareTurnInput, type TurnInput, type TurnInputDeps } from '../refine/turnInput'
 import { awaitRender } from '../render/awaitRender'
+import { errorMessage } from '../render/result'
 import type { RenderResult } from '../render/types'
 import { selectActiveModel, selectActiveProfile, useProvidersStore } from '../settings/providersStore'
 import { DEFAULT_CODE, useAppStore } from '../state/store'
@@ -19,6 +23,8 @@ export interface SendDeps {
   render?(code: string, signal: AbortSignal): Promise<RenderResult>
   /** The dictated transcript behind this prompt, kept on the user message. */
   audioTranscript?: string | null
+  /** M5: how images are stored, encoded and captured; the browser's by default. */
+  turnInput?: TurnInputDeps
 }
 
 let inFlight: AbortController | null = null
@@ -44,6 +50,21 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
   const model = selectActiveModel(providers)
   if (userText === '' || chat.busy || !profile || !model) return
 
+  // M5: images, sketches and the picked part travel with the prompt.
+  useChatStore.setState({ busy: true })
+  let input: TurnInput
+  try {
+    input = await prepareTurnInput(
+      { text: userText, attachments: useAttachments.getState().items, pick: useRefineStore.getState().pick, vision: profile.capabilities.vision },
+      deps.turnInput,
+    )
+  } catch (err) {
+    useAttachments.getState().setError(errorMessage(err))
+    useChatStore.setState({ busy: false })
+    return
+  }
+  useAttachments.getState().clear()
+
   const startCode = useAppStore.getState().code
   const controller = new AbortController()
   inFlight = controller
@@ -67,6 +88,7 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
     usage: null,
     status: 'done',
     ...(deps.audioTranscript ? { audioTranscript: deps.audioTranscript } : {}),
+    ...(input.imageBlobIds.length > 0 ? { imageBlobIds: input.imageBlobIds } : {}),
   })
   const openReply = () => chat.addMessage({ role: 'assistant', text: '', turnLabel: null, model, usage: null, status: 'streaming' })
   let current = openReply()
@@ -127,8 +149,13 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
       provider: (deps.createProvider ?? defaultCreateProvider)(profile),
       model,
       history: chat.history,
-      userText,
-      ctx: { code: startCode === DEFAULT_CODE ? '' : startCode, libraries: currentLibraries() },
+      userText: input.userText,
+      // A selection's line numbers refer to the real code, even when it is the sample.
+      ctx: {
+        code: startCode === DEFAULT_CODE && !input.selection ? '' : startCode,
+        libraries: currentLibraries(),
+        ...(input.selection ? { selection: input.selection } : {}),
+      },
       maxFixAttempts: providers.settings.autoFixAttempts,
       render: deps.render ?? awaitRender,
       apply: (code, source) => useAppStore.getState().setCode(code, source),

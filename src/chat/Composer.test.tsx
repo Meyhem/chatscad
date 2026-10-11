@@ -112,3 +112,42 @@ it('hides the mic without speech recognition or a provider that can transcribe',
   render(<Composer />)
   expect(screen.queryByRole('button', { name: 'Dictate' })).toBeNull()
 })
+
+describe('M5: attachments and the picked part', () => {
+  beforeEach(async () => {
+    const { useAttachments } = await import('../images/attachments')
+    const { useRefineStore } = await import('../refine/refineStore')
+    useAttachments.setState({ items: [], error: null })
+    useRefineStore.setState({ pick: null })
+    usePrefs.setState({ variantCount: 1 })
+    vi.mocked(startVariants).mockClear()
+  })
+
+  it('has the attach button, disabled with the reason when the profile cannot take images', () => {
+    useProvidersStore.setState({ settings: { ...DEFAULT_SETTINGS, activeProfileId: profile.id, activeModel: 'm1' } })
+    render(<Composer />)
+    const attach = screen.getByRole('button', { name: 'Attach image or sketch' })
+    expect(attach).toBeDisabled()
+    expect(attach.getAttribute('title')).toMatch(/image/i)
+  })
+
+  it('shows the picked part as a chip in the composer', async () => {
+    const { useRefineStore } = await import('../refine/refineStore')
+    const { partPickFixture } = await import('../test/picks')
+    useRefineStore.setState({ pick: partPickFixture() })
+    render(<Composer />)
+    expect(screen.getByText('Only this part will change')).toBeInTheDocument()
+  })
+
+  it('sends one scoped turn instead of variants while a part is picked', async () => {
+    const { useRefineStore } = await import('../refine/refineStore')
+    const { partPickFixture } = await import('../test/picks')
+    useProvidersStore.setState({ settings: { ...DEFAULT_SETTINGS, activeProfileId: profile.id, activeModel: 'm1' } })
+    useRefineStore.setState({ pick: partPickFixture() })
+    usePrefs.setState({ variantCount: 3 })
+    render(<Composer />)
+    await userEvent.type(screen.getByRole('textbox', { name: 'Prompt' }), 'Wider{Enter}')
+    expect(startVariants).not.toHaveBeenCalled()
+    expect(sendPrompt).toHaveBeenCalledWith('Wider')
+  })
+})

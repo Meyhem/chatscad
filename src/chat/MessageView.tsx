@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { MessageImages } from '../images/MessageImages'
 import { formatCost, formatTokens } from '../ui/format'
 import { IconSparkle, IconSpinner, IconWarning, IconX } from '../ui/icons'
 import type { ChatMessage } from './chatStore'
@@ -44,6 +45,7 @@ export function MessageView({ message }: { message: ChatMessage }) {
   if (message.role === 'user') {
     return (
       <div className="pc-msg is-user">
+        {message.imageBlobIds && message.imageBlobIds.length > 0 && <MessageImages ids={message.imageBlobIds} />}
         <div className="pc-msg-body whitespace-pre-wrap">{message.text}</div>
       </div>
     )

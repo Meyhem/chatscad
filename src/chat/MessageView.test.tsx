@@ -69,3 +69,18 @@ it('shows a note as a centred caption', () => {
   render(<MessageView message={{ id: 'n', role: 'note', text: 'Stopped.', turnLabel: null, model: null, usage: null, status: 'done' }} />)
   expect(screen.getByTestId('chat-note')).toHaveTextContent('Stopped.')
 })
+
+vi.mock('../images/MessageImages', () => ({
+  MessageImages: ({ ids }: { ids: string[] }) => <div data-testid="message-images">{ids.join(',')}</div>,
+}))
+
+it('shows the images sent with a prompt above its bubble', () => {
+  const { container } = render(
+    <MessageView
+      message={{ id: 'u', role: 'user', text: 'Like this', turnLabel: null, model: null, usage: null, status: 'done', imageBlobIds: ['i1', 'i2'] }}
+    />,
+  )
+  const images = screen.getByTestId('message-images')
+  expect(images).toHaveTextContent('i1,i2')
+  expect(images.nextElementSibling).toBe(container.querySelector('.pc-msg-body'))
+})

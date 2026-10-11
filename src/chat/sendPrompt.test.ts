@@ -159,3 +159,57 @@ it('keeps the dictated transcript on the user message', async () => {
   await sendPrompt('A block', { createProvider: () => provider, render: async () => okResult(), audioTranscript: 'a block' })
   expect(chat().messages[0]).toMatchObject({ role: 'user', text: 'A block', audioTranscript: 'a block' })
 })
+
+describe('M5: images and the picked part', () => {
+  const turnInput = {
+    saveImage: vi.fn(async () => 'blob-1'),
+    toBase64: vi.fn(async () => 'QUJD'),
+    captureViewport: vi.fn(async () => null),
+  }
+  const visionProfile = { ...profile, capabilities: { ...profile.capabilities, vision: true } }
+
+  beforeEach(async () => {
+    const { useAttachments } = await import('../images/attachments')
+    const { useRefineStore } = await import('../refine/refineStore')
+    useAttachments.setState({ items: [], error: null })
+    useRefineStore.setState({ pick: null })
+    useProvidersStore.setState({ profiles: [visionProfile] })
+  })
+
+  it('sends attached images as image parts, stores them on the user message and clears the tray', async () => {
+    const { useAttachments } = await import('../images/attachments')
+    const image = new Blob(['png'], { type: 'image/png' })
+    useAttachments.setState({ items: [{ id: 'a1', blob: image, mediaType: 'image/png', name: 'hook.png', note: '', url: 'blob:x' }] })
+    const { provider, requests } = scriptedProvider({ text: FULL })
+    await sendPrompt('Like this', { createProvider: () => provider, render: async () => okResult(), turnInput })
+
+    expect(chat().messages[0]).toMatchObject({ role: 'user', text: 'Like this', imageBlobIds: ['blob-1'] })
+    const last = requests[0].messages.at(-1)!
+    expect(JSON.stringify(last.content)).toContain('"type":"image"')
+    expect(useAttachments.getState().items).toEqual([])
+  })
+
+  it('scopes the turn to the picked part', async () => {
+    const { useRefineStore } = await import('../refine/refineStore')
+    const { partPickFixture } = await import('../test/picks')
+    useAppStore.setState({ code: 'a();\nb();\nc();\n' })
+    useRefineStore.setState({ pick: { ...partPickFixture(), scope: { startLine: 2, endLine: 2 } } })
+    const { provider, requests } = scriptedProvider({ text: 'Done.\n\n```openscad\na();\nB();\nc();\n```\n' })
+    await sendPrompt('Make it bigger', { createProvider: () => provider, render: async () => okResult(), turnInput })
+    expect(requests[0].system).toContain('line 2')
+    expect(useAppStore.getState().code).toBe('a();\nB();\nc();\n')
+  })
+
+  it('keeps the attachments and says why when the profile cannot take images', async () => {
+    const { useAttachments } = await import('../images/attachments')
+    useProvidersStore.setState({ profiles: [profile] })
+    useAttachments.setState({ items: [{ id: 'a1', blob: new Blob(['x']), mediaType: 'image/png', name: 'hook.png', note: '', url: 'blob:x' }] })
+    const { provider, requests } = scriptedProvider({ text: FULL })
+    await sendPrompt('Like this', { createProvider: () => provider, render: async () => okResult(), turnInput })
+    expect(requests).toHaveLength(0)
+    expect(chat().messages).toEqual([])
+    expect(chat().busy).toBe(false)
+    expect(useAttachments.getState().items).toHaveLength(1)
+    expect(useAttachments.getState().error).toMatch(/image/i)
+  })
+})
