@@ -12,7 +12,7 @@ import { describeChatTurn, startRecorder, type Recorder, type TurnInfo } from '.
 const CODE = 'w = 10; // [1:1:50]\ncube(w);'
 const EDITED = 'w = 10; // [1:1:50]\ncube(w + 1);'
 const turn: TurnInfo = { prompt: 'Make it taller', reply: 'Raised the height.\nNothing else changed.', model: 'gpt-x' }
-const capture = vi.fn(async () => new Blob(['png'], { type: 'image/png' }))
+const capture = vi.fn(async (): Promise<Blob | null> => new Blob(['png'], { type: 'image/png' }))
 const onCommit = vi.fn()
 let recorder: Recorder
 
@@ -51,6 +51,23 @@ it('fills in the status, time and thumbnail of a pending head when its render fi
   expect(labels()).toEqual(['v1 manual ok New project'])
   expect(project().head).toMatchObject({ renderMs: 12, thumbnailBlobId: expect.any(String) })
   expect(capture).toHaveBeenCalledTimes(1)
+})
+
+it('takes the missing thumbnail of an ok head on its next successful render', async () => {
+  await start()
+  capture.mockResolvedValueOnce(null)
+  rendered()
+  await recorder.settled()
+  expect(project().head).toMatchObject({ compileStatus: 'ok', thumbnailBlobId: null })
+
+  rendered()
+  await recorder.settled()
+  expect(project().head).toMatchObject({ compileStatus: 'ok', thumbnailBlobId: expect.any(String) })
+  expect(capture).toHaveBeenCalledTimes(2)
+
+  rendered()
+  await recorder.settled()
+  expect(capture).toHaveBeenCalledTimes(2)
 })
 
 it('coalesces manual edits into one version on the next successful render', async () => {

@@ -212,6 +212,9 @@ export function startRecorder(deps: RecorderDeps = {}): Recorder {
         renderMs: lr.result.renderMs,
       })
       if (lr.result.ok) await attachThumbnail(head)
+    } else if (head && lr.result.ok && head.compileStatus === 'ok' && !head.thumbnailBlobId && matchesHead(s.code, s.params, head)) {
+      // The capture at commit time found no viewer to read (another tab was showing); take it now.
+      await attachThumbnail(head)
     }
   }
 
