@@ -143,3 +143,13 @@ it('does nothing without text or without a model', async () => {
   expect(requests).toHaveLength(0)
   expect(chat().messages).toEqual([])
 })
+
+it('a slider move stops the turn, so the turn is never judged on the person\'s parameter values', async () => {
+  const { provider } = scriptedProvider(FULL)
+  const turn = sendPrompt('A block', { createProvider: () => provider })
+  await vi.waitFor(() => expect(useAppStore.getState().code).toBe('cube([30, 20, 10]);\n'))
+  useAppStore.getState().setParams({ width: 30 })
+  await turn
+  expect(chat().messages.at(-1)).toMatchObject({ role: 'note', text: 'Stopped: you changed a parameter.' })
+  expect(chat().busy).toBe(false)
+})

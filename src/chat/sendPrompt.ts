@@ -45,10 +45,14 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
   const startCode = useAppStore.getState().code
   const controller = new AbortController()
   inFlight = controller
-  let stoppedByEdit = false
+  let stoppedBy: 'edit' | 'param' | null = null
   const unsubscribe = useAppStore.subscribe((s, prev) => {
     if (s.code !== prev.code && s.codeSource === 'manual') {
-      stoppedByEdit = true
+      stoppedBy = 'edit'
+      controller.abort()
+    } else if (s.params !== prev.params && s.code === prev.code) {
+      // A slider render would stand in for the turn's own render of the model's defaults.
+      stoppedBy = 'param'
       controller.abort()
     }
   })
@@ -128,7 +132,9 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
       if (message?.status === 'streaming') {
         store.patchMessage(current, { status: 'done', text: streamingText(message.text).prose || 'Stopped before the reply finished.' })
       }
-      store.addMessage(note(stoppedByEdit ? 'Stopped: you edited the code.' : 'Stopped.'))
+      store.addMessage(
+        note(stoppedBy === 'edit' ? 'Stopped: you edited the code.' : stoppedBy === 'param' ? 'Stopped: you changed a parameter.' : 'Stopped.'),
+      )
     } else {
       store.patchMessage(current, { status: 'error', text: '', error: describeProviderError(err, profile.baseUrl) })
     }
