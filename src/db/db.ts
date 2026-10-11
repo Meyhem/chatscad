@@ -47,6 +47,11 @@ export interface Settings {
   lockSalt: string | null
   /** Base64 AES-GCM ciphertext of a fixed text; decrypting it checks the passphrase. */
   lockVerifier: string | null
+  // M4
+  variantCount: 1 | 3
+  lowQualityPreview: boolean
+  /** Model for `POST {baseUrl}/audio/transcriptions` when dictation falls back to recording. */
+  transcriptionModel: string
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -61,6 +66,9 @@ export const DEFAULT_SETTINGS: Settings = {
   lockMode: false,
   lockSalt: null,
   lockVerifier: null,
+  variantCount: 1,
+  lowQualityPreview: false,
+  transcriptionModel: 'whisper-1',
 }
 
 export type VersionSource = 'ai' | 'manual' | 'slider' | 'autofix' | 'restore' | 'gallery' | 'import'

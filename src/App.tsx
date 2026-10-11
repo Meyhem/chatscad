@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { GlobalOverlays } from './app/GlobalOverlays'
 import { ChatPanel } from './chat/ChatPanel'
 import { ComposerBridge } from './chat/promptRequest'
 import { CustomizerDock } from './customizer/CustomizerDock'
@@ -102,6 +103,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
       </div>
 
       <ComposerBridge />
+      <GlobalOverlays />
     </div>
   )
 }

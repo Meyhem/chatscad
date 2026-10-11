@@ -73,5 +73,8 @@ it('creates a fresh database at version 2 with M3 settings defaults', () => {
     lockMode: false,
     lockSalt: null,
     lockVerifier: null,
+    variantCount: 1,
+    lowQualityPreview: false,
+    transcriptionModel: 'whisper-1',
   })
 })
