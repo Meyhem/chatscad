@@ -110,14 +110,16 @@ function PoseReporter() {
   const size = useThree((s) => s.size)
   useEffect(() => {
     if (!controls) return
-    const save = () => setViewerPose(poseFromCamera(camera, controls.target, size))
+    const save = () => {
+      const pose = poseFromCamera(camera, controls.target, size)
+      if (pose) setViewerPose(pose)
+    }
     save()
     controls.addEventListener('change', save)
-    return () => {
-      controls.removeEventListener('change', save)
-      setViewerPose(null)
-    }
+    return () => controls.removeEventListener('change', save)
   }, [camera, controls, size])
+  // Forget the pose only when the viewer goes away, not when it is hidden or resized.
+  useEffect(() => () => setViewerPose(null), [])
   return null
 }
 

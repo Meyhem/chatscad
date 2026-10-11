@@ -22,7 +22,7 @@ it('records the fov and the canvas aspect with the pose', () => {
   })
 })
 
-it('leaves the aspect out while the canvas has no height', () => {
+it('reports no pose while the canvas is hidden, so the last framed one is kept', () => {
   const camera = new PerspectiveCamera(45, 1, 0.1, 1000)
-  expect(poseFromCamera(camera, new Vector3(), { width: 800, height: 0 }).aspect).toBeUndefined()
+  expect(poseFromCamera(camera, new Vector3(), { width: 800, height: 0 })).toBeNull()
 })
