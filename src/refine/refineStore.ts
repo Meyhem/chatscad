@@ -25,6 +25,8 @@ export interface RefineState {
   /** Called after each successful normal render; true means "request a tagged render now". */
   baseRendered(code: string, mesh: MeshData): boolean
   taggedFinished(result: RenderResult, code: string): void
+  /** A newer render superseded the running tagged preview. */
+  cancelPending(): void
   setPick(pick: PickResult | null): void
   setCapture(capture: (() => string) | null): void
 }
@@ -51,6 +53,7 @@ export const useRefineStore = create<RefineState>()((set, get) => ({
     if (!result.ok || !result.mesh.faceTags || base === null || useAppStore.getState().mesh !== base) return
     set({ tags: { baseMesh: base, code, mesh: result.mesh, statements: listTaggableStatements(code) } })
   },
+  cancelPending: () => set({ pendingBase: null }),
   setPick: (pick) => set({ pick }),
   setCapture: (capture) => set({ capture }),
 }))

@@ -81,3 +81,26 @@ it('a failed tagged preview leaves the app as it was and no tags', async () => {
   expect(useAppStore.getState().error).toBeNull()
   expect(useRefineStore.getState().tags).toBeNull()
 })
+
+it('runs tagged previews on their own worker, so an edit during one never restarts the main worker', async () => {
+  const handles: Array<{ render: ReturnType<typeof vi.fn>; terminate: ReturnType<typeof vi.fn> }> = []
+  const createWorker = () => {
+    const handle = {
+      render: vi.fn(async (req: RenderRequest) => (req.preview ? new Promise<RenderResult>(() => {}) : okResult())),
+      terminate: vi.fn(),
+    }
+    handles.push(handle)
+    return handle
+  }
+  renderHook(() => useRenderLoop(createWorker, 600, 60_000))
+  await act(() => vi.advanceTimersByTimeAsync(10))
+  const main = handles.find((h) => h.render.mock.calls.some(([r]) => !(r as RenderRequest).preview))!
+  expect(handles.some((h) => h !== main && h.render.mock.calls.some(([r]) => (r as RenderRequest).preview))).toBe(true)
+  expect(useRefineStore.getState().pendingBase).not.toBeNull()
+
+  act(() => useAppStore.getState().setCode(`${TWO_PARTS}// edited\n`))
+  expect(useRefineStore.getState().pendingBase).toBeNull()
+  await act(() => vi.advanceTimersByTimeAsync(600))
+  expect(main.terminate).not.toHaveBeenCalled()
+  expect(main.render).toHaveBeenCalledTimes(2)
+})

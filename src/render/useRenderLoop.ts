@@ -35,21 +35,27 @@ export function useRenderLoop(
         if (!req.preview) renderStarted()
       },
       onResult: (result, req) => {
-        // M5: a tagged preview only feeds picking; it never touches mesh, stl, status or lastRender.
-        if (req.preview) {
-          useRefineStore.getState().taggedFinished(result, req.code)
-          return
-        }
         renderFinished(result, req.code, paramsOf.get(req) ?? {})
         if (result.ok && useRefineStore.getState().baseRendered(req.code, result.mesh)) {
-          controller.request({ ...req, preview: { tagged: true } }, { immediate: true })
+          previews.request({ ...req, preview: { tagged: true } }, { immediate: true })
         }
       },
+    })
+    // M5: tagged previews run on their own worker, so an edit while one runs never restarts the main worker.
+    // A preview only feeds picking; it never touches mesh, stl, status or lastRender.
+    const previews = new RenderController({
+      createWorker,
+      debounceMs,
+      timeoutMs,
+      onResult: (result, req) => useRefineStore.getState().taggedFinished(result, req.code),
     })
     const send = (immediate: boolean) => {
       const { code, params, libraries } = useAppStore.getState()
       const req = buildRenderRequest(code, params, libraries)
       paramsOf.set(req, params)
+      // The running preview belongs to the outgoing mesh; drop it so "finding parts…" never sticks.
+      previews.cancel()
+      useRefineStore.getState().cancelPending()
       controller.request(req, { immediate })
     }
     send(true)
@@ -60,6 +66,7 @@ export function useRenderLoop(
     return () => {
       unsubscribe()
       controller.dispose()
+      previews.dispose()
     }
   }, [createWorker, debounceMs, timeoutMs])
 }
