@@ -1,0 +1,95 @@
+import { DEFAULT_SETTINGS } from '../db/db'
+import { getProfile, newProfile, saveProfile } from '../db/profiles'
+import { getSettings, updateSettings } from '../db/settings'
+import { resetDb } from '../test/db'
+import { PROVIDER_PRESETS } from './presets'
+import { selectActiveModel, selectActiveProfile, useProvidersStore } from './providersStore'
+
+beforeEach(async () => {
+  await resetDb()
+  useProvidersStore.setState(useProvidersStore.getInitialState(), true)
+})
+
+const preset = (id: string) => PROVIDER_PRESETS.find((p) => p.id === id)!
+
+it('ships the seven presets from the design doc', () => {
+  expect(PROVIDER_PRESETS.map((p) => [p.label, p.adapter, p.baseUrl])).toEqual([
+    ['OpenAI', 'openai-compatible', 'https://api.openai.com/v1'],
+    ['OpenRouter', 'openai-compatible', 'https://openrouter.ai/api/v1'],
+    ['DeepInfra', 'openai-compatible', 'https://api.deepinfra.com/v1/openai'],
+    ['Ollama', 'openai-compatible', 'http://localhost:11434/v1'],
+    ['LM Studio', 'openai-compatible', 'http://localhost:1234/v1'],
+    ['Anthropic', 'anthropic', 'https://api.anthropic.com'],
+    ['Custom', 'openai-compatible', ''],
+  ])
+})
+
+it('loads profiles and settings from the database', async () => {
+  const p = await saveProfile(newProfile({ name: 'A', adapter: 'anthropic', baseUrl: 'https://api.anthropic.com' }))
+  await updateSettings({ activeProfileId: p.id, activeModel: 'claude-x' })
+  await useProvidersStore.getState().load()
+  const s = useProvidersStore.getState()
+  expect(s.loaded).toBe(true)
+  expect(s.profiles).toEqual([p])
+  expect(s.settings).toMatchObject({ activeProfileId: p.id, activeModel: 'claude-x' })
+})
+
+it('adds a profile from a preset, saves it, and makes the first one active', async () => {
+  const p = await useProvidersStore.getState().addProfile(preset('ollama'))
+  expect(p).toMatchObject({ name: 'Ollama on this computer', adapter: 'openai-compatible', baseUrl: 'http://localhost:11434/v1' })
+  expect(await getProfile(p.id)).toEqual(p)
+  expect(useProvidersStore.getState().settings.activeProfileId).toBe(p.id)
+  const second = await useProvidersStore.getState().addProfile(preset('openai'))
+  expect(useProvidersStore.getState().settings.activeProfileId).toBe(p.id)
+  expect(useProvidersStore.getState().profiles.map((x) => x.id)).toEqual([p.id, second.id])
+})
+
+it('updates state at once, persists the change, and clears the stale connection status', async () => {
+  const p = await useProvidersStore.getState().addProfile(preset('custom'))
+  useProvidersStore.getState().setStatus(p.id, 'ok')
+  const saving = useProvidersStore.getState().updateProfile(p.id, { baseUrl: 'https://llm.test/v1' })
+  expect(useProvidersStore.getState().profiles[0].baseUrl).toBe('https://llm.test/v1')
+  expect(useProvidersStore.getState().status[p.id]).toBeUndefined()
+  await saving
+  expect((await getProfile(p.id))?.baseUrl).toBe('https://llm.test/v1')
+})
+
+it('removes a profile and forgets it as the active one', async () => {
+  const p = await useProvidersStore.getState().addProfile(preset('anthropic'))
+  await useProvidersStore.getState().removeProfile(p.id)
+  expect(useProvidersStore.getState().profiles).toEqual([])
+  expect(useProvidersStore.getState().settings.activeProfileId).toBeNull()
+  expect(await getProfile(p.id)).toBeUndefined()
+})
+
+it('remembers the model chosen in the composer', async () => {
+  const p = await useProvidersStore.getState().addProfile(preset('openrouter'))
+  await useProvidersStore.getState().chooseModel(p.id, 'qwen/qwen3-coder')
+  expect(selectActiveModel(useProvidersStore.getState())).toBe('qwen/qwen3-coder')
+  expect(await getSettings()).toMatchObject({ activeProfileId: p.id, activeModel: 'qwen/qwen3-coder' })
+})
+
+describe('active profile and model', () => {
+  const a = newProfile({ name: 'A', adapter: 'openai-compatible', baseUrl: 'https://a.test/v1', defaultModel: 'a-default' })
+  const b = newProfile({ name: 'B', adapter: 'openai-compatible', baseUrl: 'https://b.test/v1', defaultModel: '' })
+  const state = (settings: Partial<typeof DEFAULT_SETTINGS>) => ({
+    ...useProvidersStore.getInitialState(),
+    profiles: [a, b],
+    settings: { ...DEFAULT_SETTINGS, ...settings },
+  })
+
+  it('falls back to the first profile and its default model', () => {
+    expect(selectActiveProfile(state({}))).toBe(a)
+    expect(selectActiveModel(state({}))).toBe('a-default')
+  })
+
+  it('uses the chosen model only for the profile it was chosen with', () => {
+    expect(selectActiveModel(state({ activeProfileId: a.id, activeModel: 'a-other' }))).toBe('a-other')
+    expect(selectActiveModel(state({ activeProfileId: b.id, activeModel: null }))).toBeNull()
+  })
+
+  it('is empty without profiles', () => {
+    expect(selectActiveProfile(useProvidersStore.getInitialState())).toBeNull()
+    expect(selectActiveModel(useProvidersStore.getInitialState())).toBeNull()
+  })
+})
