@@ -48,7 +48,7 @@ function harness(scripts: Array<(o: TurnOpts) => Promise<void>>) {
 }
 
 const reply = (o: TurnOpts, code: string | null, attempt = 0) =>
-  o.onEvent({ type: 'reply', result: { code, prose: 'Made it.', usage: { inputTokens: 1_000, outputTokens: 500 }, model: o.model }, attempt })
+  o.onEvent({ type: 'reply', result: { code, prose: 'Made it.', usage: { inputTokens: 1_000, outputTokens: 500 }, model: o.model, reasoning: '', reasoningMs: null, stopReason: 'end' }, attempt })
 
 const success = (code: string) => async (o: TurnOpts) => {
   reply(o, code)

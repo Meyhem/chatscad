@@ -3,6 +3,7 @@ import type { RenderResult } from '../render/types'
 import { scriptedProvider } from '../test/providers'
 import { errorResult, okResult } from '../test/results'
 import { generateCode, runTurn, type TurnEvent } from './runTurn'
+import type { LlmProvider } from './types'
 
 const FULL = 'Made a block.\n\n```openscad\ncube([30, 20, 10]);\n```\n'
 const BROKEN = 'Here.\n\n```openscad\ncube([12, 12, 12]\n```\n'
@@ -20,6 +21,9 @@ describe('generateCode', () => {
       prose: 'Made a block.',
       usage: { inputTokens: 1000, outputTokens: 310, costUsd: 0.011 },
       model: 'm',
+      reasoning: '',
+      reasoningMs: null,
+      stopReason: 'end',
     })
     expect(deltas.join('')).toBe(FULL)
     expect(requests[0]).toMatchObject({ model: 'm' })
@@ -189,5 +193,90 @@ describe('runTurn', () => {
     controller.abort()
     await expect(done).rejects.toMatchObject({ name: 'AbortError' })
     expect(requests).toHaveLength(1)
+  })
+})
+
+describe('reasoning', () => {
+  const turn = (provider: LlmProvider, events: TurnEvent[] = [], extra: Partial<Parameters<typeof runTurn>[0]> = {}) =>
+    runTurn({
+      provider,
+      model: 'm',
+      history: [],
+      userText: 'A cube',
+      ctx: { code: '' },
+      maxFixAttempts: 0,
+      render: async () => okResult(),
+      apply: () => {},
+      onEvent: (e) => events.push(e),
+      signal: new AbortController().signal,
+      ...extra,
+    })
+
+  it('forwards reasoning deltas and puts the reasoning, its duration and the stop reason on the result', async () => {
+    const events: TurnEvent[] = []
+    vi.useFakeTimers({ now: 0 })
+    const provider: LlmProvider = {
+      listModels: async () => [],
+      async *streamChat() {
+        yield { type: 'reasoning', delta: 'Wall ' }
+        vi.setSystemTime(4_000)
+        yield { type: 'reasoning', delta: 'is 1.6 mm.' }
+        vi.setSystemTime(7_500)
+        yield { type: 'text', delta: FULL }
+        yield { type: 'usage', usage: { inputTokens: 1, outputTokens: 2 }, stopReason: 'end' }
+      },
+    }
+    await turn(provider, events)
+    vi.useRealTimers()
+    expect(events.filter((e) => e.type === 'reasoning')).toEqual([
+      { type: 'reasoning', text: 'Wall ' },
+      { type: 'reasoning', text: 'is 1.6 mm.' },
+    ])
+    expect(events.find((e) => e.type === 'reply')).toMatchObject({
+      result: { reasoning: 'Wall is 1.6 mm.', reasoningMs: 7_500, stopReason: 'end', code: 'cube([30, 20, 10]);\n' },
+    })
+  })
+
+  it('reports no reasoning when the model sends none', async () => {
+    const events: TurnEvent[] = []
+    await turn(scriptedProvider(FULL).provider, events)
+    expect(events.find((e) => e.type === 'reply')).toMatchObject({ result: { reasoning: '', reasoningMs: null, stopReason: 'end' } })
+  })
+
+  it('sends the reasoning effort on the first reply and on every auto-fix request', async () => {
+    const { provider, requests } = scriptedProvider(BROKEN, FIX)
+    await turn(provider, [], {
+      maxFixAttempts: 1,
+      reasoningEffort: 'high',
+      render: async (code: string): Promise<RenderResult> => (code.includes(');') ? okResult() : errorResult()),
+    })
+    expect(requests.map((r) => r.reasoningEffort)).toEqual(['high', 'high'])
+  })
+
+  it('sends no effort field when the turn has none', async () => {
+    const { provider, requests } = scriptedProvider(FULL)
+    await turn(provider)
+    expect(requests[0]).not.toHaveProperty('reasoningEffort')
+  })
+
+  it('forwards provider notices as turn events', async () => {
+    const events: TurnEvent[] = []
+    const provider: LlmProvider = {
+      listModels: async () => [],
+      async *streamChat() {
+        yield { type: 'notice', text: 'This model ignored the reasoning setting.' }
+        yield { type: 'text', delta: FULL }
+        yield { type: 'usage', usage: { inputTokens: 1, outputTokens: 2 }, stopReason: 'end' }
+      },
+    }
+    await turn(provider, events)
+    expect(events).toContainEqual({ type: 'notice', text: 'This model ignored the reasoning setting.' })
+  })
+
+  it('reports a length stop without code', async () => {
+    const events: TurnEvent[] = []
+    const { provider } = scriptedProvider({ text: '', reasoning: 'Thinking hard', stopReason: 'length', usage: { inputTokens: 1, outputTokens: 16000 } })
+    await turn(provider, events)
+    expect(events.find((e) => e.type === 'reply')).toMatchObject({ result: { code: null, stopReason: 'length', reasoning: 'Thinking hard' } })
   })
 })
