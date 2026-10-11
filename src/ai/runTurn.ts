@@ -124,6 +124,8 @@ export async function runTurn(opts: {
       if (attempt > 0) onEvent({ type: 'gave-up', attempts: attempt })
       return
     }
+    // An abort (e.g. a manual edit) may land after the reply finished; never overwrite the user's code then.
+    signal.throwIfAborted()
     apply(result.code, attempt === 0 ? 'ai' : 'autofix')
     const rendered = await render(result.code, signal)
     onEvent({ type: 'rendered', result: rendered, attempt })

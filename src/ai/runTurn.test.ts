@@ -100,6 +100,20 @@ describe('runTurn', () => {
     expect(t.events.find((e) => e.type === 'reply')).toMatchObject({ attempt: 0 })
   })
 
+  it('does not apply a finished reply when the turn was aborted before it could be applied', async () => {
+    // A manual edit can land between the end of the stream and apply(); the user's code must win.
+    const { provider } = scriptedProvider(FULL)
+    const t = setup([okResult()])
+    const controller = new AbortController()
+    const onEvent = (e: TurnEvent) => {
+      t.events.push(e)
+      if (e.type === 'reply') controller.abort()
+    }
+    await expect(runTurn({ ...t.base, provider, onEvent, signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' })
+    expect(t.apply).not.toHaveBeenCalled()
+    expect(t.render).not.toHaveBeenCalled()
+  })
+
   it('forwards streamed text as delta events', async () => {
     const { provider } = scriptedProvider(FULL)
     const t = setup([okResult()])
