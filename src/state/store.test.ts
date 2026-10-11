@@ -121,3 +121,56 @@ describe('M2 additions', () => {
     expect(useAppStore.getState().view).toBe('settings')
   })
 })
+
+describe('parameters (M3)', () => {
+  it('stores parameters and keeps them across manual edits', () => {
+    useAppStore.getState().setParams({ width: 30 })
+    useAppStore.getState().setCode('cube(1);')
+    expect(useAppStore.getState().params).toEqual({ width: 30 })
+    expect(useAppStore.getState().codeSource).toBe('manual')
+  })
+
+  it('clears parameters when the AI or auto-fix replaces the code', () => {
+    useAppStore.getState().setParams({ width: 30 })
+    useAppStore.getState().setCode('cube(2);', 'ai')
+    expect(useAppStore.getState().params).toEqual({})
+    useAppStore.getState().setParams({ width: 31 })
+    useAppStore.getState().setCode('cube(3);', 'autofix')
+    expect(useAppStore.getState().params).toEqual({})
+  })
+
+  it('keeps parameters for a restore, so the caller can set the version params after it', () => {
+    useAppStore.getState().setParams({ width: 30 })
+    useAppStore.getState().setCode('cube(2);', 'restore')
+    expect(useAppStore.getState().params).toEqual({ width: 30 })
+  })
+
+  it('records the parameters of a successful render and the last result of any render', () => {
+    const ok = okResult()
+    useAppStore.getState().renderFinished(ok, DEFAULT_CODE, { width: 30 })
+    expect(useAppStore.getState().renderedParams).toEqual({ width: 30 })
+    expect(useAppStore.getState().lastRender).toEqual({ code: DEFAULT_CODE, result: ok })
+    const failed = errorResult()
+    useAppStore.getState().renderFinished(failed, DEFAULT_CODE, { width: 31 })
+    expect(useAppStore.getState().renderedParams).toEqual({ width: 30 })
+    expect(useAppStore.getState().lastRender).toEqual({ code: DEFAULT_CODE, result: failed })
+  })
+
+  it('allows STL export only when the rendered parameters equal the current ones', () => {
+    useAppStore.getState().setParams({ width: 30 })
+    useAppStore.getState().renderFinished(okResult(), DEFAULT_CODE, { width: 30 })
+    expect(selectCanExport(useAppStore.getState())).toBe(true)
+    useAppStore.getState().setParams({ width: 31 })
+    expect(selectCanExport(useAppStore.getState())).toBe(false)
+    useAppStore.getState().renderFinished(okResult(), DEFAULT_CODE, { width: 31 })
+    expect(selectCanExport(useAppStore.getState())).toBe(true)
+  })
+
+  it('stores the enabled libraries and accepts the history and gallery views', () => {
+    useAppStore.getState().setLibraries(['BOSL2'])
+    useAppStore.getState().setView('history')
+    expect(useAppStore.getState()).toMatchObject({ libraries: ['BOSL2'], view: 'history' })
+    useAppStore.getState().setView('gallery')
+    expect(useAppStore.getState().view).toBe('gallery')
+  })
+})

@@ -3,7 +3,7 @@ import { DEFAULT_CODE, useAppStore } from '../state/store'
 import { okResult } from '../test/results'
 import type { RenderWorkerHandle } from './createRenderWorker'
 import type { RenderRequest } from './types'
-import { useRenderLoop } from './useRenderLoop'
+import { buildRenderRequest, useRenderLoop } from './useRenderLoop'
 
 beforeEach(() => {
   useAppStore.setState(useAppStore.getInitialState(), true)
@@ -44,4 +44,35 @@ it('terminates the worker on unmount', async () => {
   await act(() => vi.advanceTimersByTimeAsync(0))
   unmount()
   expect(handle.terminate).toHaveBeenCalled()
+})
+
+it('sends only the parameters that differ from the source defaults, and records what it rendered', async () => {
+  const { requests, createWorker } = instantWorker()
+  renderHook(() => useRenderLoop(createWorker, 600, 60_000))
+  await act(() => vi.advanceTimersByTimeAsync(0))
+
+  act(() => useAppStore.getState().setParams({ width: 30, depth: 20, nope: 1 }))
+  await act(() => vi.advanceTimersByTimeAsync(600))
+  expect(requests[1]).toEqual({ code: DEFAULT_CODE, params: { width: 30 } })
+  expect(useAppStore.getState().renderedParams).toEqual({ width: 30, depth: 20, nope: 1 })
+  expect(useAppStore.getState().lastRender?.code).toBe(DEFAULT_CODE)
+})
+
+it('re-renders at once with the libraries when they change', async () => {
+  const { requests, createWorker } = instantWorker()
+  renderHook(() => useRenderLoop(createWorker, 600, 60_000))
+  await act(() => vi.advanceTimersByTimeAsync(0))
+
+  act(() => useAppStore.getState().setLibraries(['BOSL2']))
+  await act(() => vi.advanceTimersByTimeAsync(0))
+  expect(requests[1]).toEqual({ code: DEFAULT_CODE, libraries: ['BOSL2'] })
+})
+
+it('builds requests without empty params or libraries', () => {
+  expect(buildRenderRequest('w = 1; // [0:5]\ncube(w);', { w: 1 }, [])).toEqual({ code: 'w = 1; // [0:5]\ncube(w);' })
+  expect(buildRenderRequest('w = 1; // [0:5]', { w: 2 }, ['MCAD'])).toEqual({
+    code: 'w = 1; // [0:5]',
+    params: { w: 2 },
+    libraries: ['MCAD'],
+  })
 })
