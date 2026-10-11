@@ -13,6 +13,7 @@ import { VariantCountButton } from '../variants/VariantCountButton'
 import { selectActiveModel, selectActiveProfile, useProvidersStore } from '../settings/providersStore'
 import { IconSend, IconStop } from '../ui/icons'
 import { useChatStore } from './chatStore'
+import { EffortPicker } from './EffortPicker'
 import { ModelPicker } from './ModelPicker'
 import { sendPrompt, stopTurn } from './sendPrompt'
 import { DictationCaption } from '../voice/DictationCaption'
@@ -70,6 +71,7 @@ export function Composer() {
         <div className="pc-composer-bar">
           <AttachButton vision={vision} onSketch={() => setSketching(true)} />
           <ModelPicker />
+          <EffortPicker />
           <span className="pc-spacer" />
           {dictation.mode && (
             <MicButton

@@ -119,3 +119,15 @@ describe('passphrase lock in the open tab', () => {
     expect(useProvidersStore.getState().profiles[0]!.apiKey).toBe(sealed)
   })
 })
+
+it('stores the reasoning effort per model, clears it back to Default, and keeps the connection status', async () => {
+  const p = await saveProfile(newProfile({ name: 'OR', adapter: 'openai-compatible', baseUrl: 'https://openrouter.ai/api/v1' }))
+  await useProvidersStore.getState().load()
+  useProvidersStore.getState().setStatus(p.id, 'ok')
+  await useProvidersStore.getState().setReasoningEffort(p.id, 'r1', 'high')
+  expect(useProvidersStore.getState().profiles[0]!.reasoningEffort).toEqual({ r1: 'high' })
+  expect((await getProfile(p.id))?.reasoningEffort).toEqual({ r1: 'high' })
+  expect(useProvidersStore.getState().status[p.id]).toBe('ok')
+  await useProvidersStore.getState().setReasoningEffort(p.id, 'r1', null)
+  expect((await getProfile(p.id))?.reasoningEffort).toEqual({})
+})

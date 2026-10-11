@@ -1,6 +1,6 @@
 import type { PanelLayout } from '../layout/panelLayout'
 import Dexie, { type Table } from 'dexie'
-import type { AdapterKind, ModelInfo, ModelPrice, ProviderCapabilities } from '../ai/types'
+import type { AdapterKind, ModelInfo, ModelPrice, ProviderCapabilities, ReasoningEffort } from '../ai/types'
 import type { ParamValue } from '../render/types'
 
 export interface ProviderProfile {
@@ -14,6 +14,7 @@ export interface ProviderProfile {
   cachedModels: ModelInfo[]
   capabilities: ProviderCapabilities
   priceTable: Record<string, ModelPrice> // model id → price, user-editable
+  reasoningEffort?: Record<string, ReasoningEffort> // model id → choice; missing = Default
   createdAt: number
   updatedAt: number
 }

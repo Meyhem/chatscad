@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { withEffort } from '../ai/effort'
+import type { ReasoningEffort } from '../ai/types'
 import { DEFAULT_SETTINGS, type ProviderProfile, type Settings } from '../db/db'
 import { deleteProfile, listProfiles, newProfile, saveProfile } from '../db/profiles'
 import { getSettings, updateSettings } from '../db/settings'
@@ -20,6 +22,8 @@ export interface ProvidersState {
   removeProfile(id: string): Promise<void>
   setStatus(id: string, status: ConnectionStatus): void
   chooseModel(profileId: string, model: string): Promise<void>
+  /** null goes back to Default. */
+  setReasoningEffort(profileId: string, model: string, effort: ReasoningEffort | null): Promise<void>
 }
 
 function without(status: Record<string, ConnectionStatus>, id: string): Record<string, ConnectionStatus> {
@@ -77,6 +81,15 @@ export const useProvidersStore = create<ProvidersState>()((set, get) => ({
   chooseModel: async (profileId, model) => {
     set((s) => ({ settings: { ...s.settings, activeProfileId: profileId, activeModel: model } }))
     await updateSettings({ activeProfileId: profileId, activeModel: model })
+  },
+
+  // Not through updateProfile: an effort choice must not clear the profile's Test connection result.
+  setReasoningEffort: async (profileId, model, effort) => {
+    const current = get().profiles.find((p) => p.id === profileId)
+    if (!current) return
+    const next: ProviderProfile = { ...current, reasoningEffort: withEffort(current, model, effort), updatedAt: Date.now() }
+    set((s) => ({ profiles: s.profiles.map((p) => (p.id === profileId ? next : p)) }))
+    await saveProfile(next)
   },
 }))
 

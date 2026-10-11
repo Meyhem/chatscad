@@ -163,3 +163,10 @@ it('renders each variant with the project libraries the model was told about', a
     { code: 'cube(30);', libraries: ['BOSL2'] },
   ])
 })
+
+it('sends the effort chosen for the slot model', async () => {
+  const h = harness([success('cube(10);'), success('cube(20);'), success('cube(30);')])
+  const withEffort = { ...request, profile: { ...profile, reasoningEffort: { 'fake-model': 'medium' as const } } }
+  await runVariants(withEffort, h.slots, { signal: new AbortController().signal, onSlot: h.onSlot }, h.deps)
+  for (const [opts] of h.turns.mock.calls) expect(opts).toMatchObject({ reasoningEffort: 'medium' })
+})

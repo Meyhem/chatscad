@@ -356,3 +356,10 @@ it('keeps the partial reasoning when the user stops mid-reasoning', async () => 
   await done
   expect(chat().messages[1]).toMatchObject({ status: 'done', reasoning: 'Halfway there', text: 'Stopped before the reply finished.' })
 })
+
+it('sends the stored effort for the active model', async () => {
+  useProvidersStore.setState((s) => ({ profiles: s.profiles.map((p) => ({ ...p, reasoningEffort: { 'test-model': 'low' as const } })) }))
+  const { provider, requests } = scriptedProvider(FULL)
+  await sendPrompt('A block', { createProvider: () => provider, render: async () => okResult() })
+  expect(requests[0].reasoningEffort).toBe('low')
+})

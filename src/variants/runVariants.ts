@@ -35,6 +35,7 @@ export async function runVariants(
         await deps.runTurn({
           provider: withTemperature(req.provider, slot.temperature),
           model: slot.model,
+          ...(req.profile.reasoningEffort?.[slot.model] ? { reasoningEffort: req.profile.reasoningEffort[slot.model] } : {}),
           history: req.history,
           userText: variantPrompt(req.userText, i),
           ctx: req.ctx,

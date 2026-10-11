@@ -1,4 +1,5 @@
 import { computeCost, priceFor } from '../ai/cost'
+import { effortFor } from '../ai/effort'
 import { currentLibraries } from '../history/projectStore'
 import { createProvider as defaultCreateProvider } from '../ai/createProvider'
 import { describeProviderError } from '../ai/errors'
@@ -204,9 +205,11 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
   }
 
   try {
+    const reasoningEffort = effortFor(profile, model)
     await runTurn({
       provider,
       model,
+      ...(reasoningEffort ? { reasoningEffort } : {}),
       history: chat.history,
       userText: input.userText,
       // A selection's line numbers refer to the real code, even when it is the sample.
