@@ -27,3 +27,18 @@ Feature ideas not yet scheduled into a plan. Each entry says what the user gets 
 - No render request goes to the worker while the code is empty.
 
 **Touches.** `DEFAULT_CODE` in `src/state/store.ts` (initial `code` and the "New project" action in `src/workbench/ProjectMenu.tsx`). `src/chat/sendPrompt.ts` and `src/variants/startVariants.ts` compare against `DEFAULT_CODE` to treat the starter as "no code yet"; that check becomes "code is empty". Existing tests and e2e specs that rely on the starter cube need a fixture of their own.
+
+## Resizable panels on desktop
+
+**Idea.** The user can resize every desktop panel by dragging the border between panels: chat, 3D view, code, sliders (customizer) and console. The layout stays the way they leave it.
+
+**Behaviour.**
+
+- Vertical splitters between the three columns: chat, 3D view, code. Today they are fixed at 360 px, flexible and 440 px (`md:grid-cols-[360px_minmax(0,1fr)_440px]` in `src/App.tsx`).
+- Horizontal splitters inside columns: 3D view against the sliders dock, and code editor against the console. The console is a fixed `h-44` in `src/workbench/CodePane.tsx`.
+- Every panel has a sensible minimum size, so dragging can't make it vanish or overlap another panel. Double-clicking a splitter resets that split to its default.
+- Content that doesn't fit scrolls inside its own panel and never grows the page. This matters most for long chats and projects with many sliders.
+- Sizes are stored per device (layout preference, not project data) and restored on reload. A "Reset layout" action restores the defaults.
+- Splitters work from the keyboard and with screen readers (`role="separator"`, `aria-valuenow`, arrow keys to resize), and are wide enough to grab with a pointer. Splitter colours use tokens only.
+- When a panel resizes, the 3D viewer resizes with it, without reloading the scene.
+- The phone layout (`src/layout/PhoneLayout.tsx`) keeps its own sheet-based layout and is out of scope.
