@@ -1,10 +1,12 @@
 export {
   ArrowRight as IconSend,
   Box as IconBox,
+  Brain as IconBrain,
   Check as IconCheck,
   ChevronDown as IconChevronDown,
   ChevronDown as IconChevron,
   ChevronLeft as IconBack,
+  ChevronRight as IconChevronRight,
   Clock as IconClock,
   Code as IconCode,
   Copy as IconCopy,

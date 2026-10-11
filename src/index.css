@@ -32,3 +32,21 @@
     text-decoration: underline;
   }
 }
+
+@layer components {
+  .pc-reasoning { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--inset); min-width: 0; }
+  .pc-reasoning summary { display: flex; align-items: center; gap: var(--space-2); padding: 6px var(--space-3); font-size: 12px; line-height: 16px; color: var(--ink-muted); cursor: pointer; list-style: none; user-select: none; }
+  .pc-reasoning summary::-webkit-details-marker { display: none; }
+  .pc-reasoning summary:hover { color: var(--ink); }
+  .pc-reasoning summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; border-radius: var(--radius-md); }
+  .pc-reasoning-chevron { transition: transform 150ms ease; }
+  .pc-reasoning details[open] .pc-reasoning-chevron { transform: rotate(90deg); }
+  .pc-reasoning-body { border-top: 1px solid var(--line); padding: var(--space-2) var(--space-3); font: 400 12px/18px var(--font-mono); color: var(--ink-muted); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 216px; overflow-y: auto; }
+  .pc-reasoning-live { padding: 0 var(--space-3) var(--space-2) 34px; font: 400 12px/18px var(--font-mono); color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pc-shimmer { background: linear-gradient(90deg, var(--ink-muted) 40%, var(--ink) 50%, var(--ink-muted) 60%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: pc-shimmer 2.2s linear infinite; }
+  @keyframes pc-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .pc-shimmer { animation: none; background: none; color: var(--ink-muted); }
+    .pc-reasoning-chevron { transition: none; }
+  }
+}

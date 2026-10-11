@@ -84,3 +84,32 @@ it('shows the images sent with a prompt above its bubble', () => {
   expect(images).toHaveTextContent('i1,i2')
   expect(images.nextElementSibling).toBe(container.querySelector('.pc-msg-body'))
 })
+
+it('shows the reasoning box above the reply text', () => {
+  render(<MessageView message={reply({ reasoning: 'Wall is 1.6 mm.', reasoningMs: 7_000 })} />)
+  const box = screen.getByText('Thought for 7 s').closest('.pc-reasoning')!
+  const body = screen.getByText('Made a 4-slot holder.')
+  expect(box.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
+
+it('drops the "Thinking…" status row once reasoning streams, and keeps "Writing code…"', () => {
+  const streaming = { status: 'streaming' as const, usage: null, turnLabel: null, reasoning: 'Hmm', reasoningStartedAt: Date.now() }
+  const { rerender } = render(<MessageView message={reply({ ...streaming, text: '' })} />)
+  expect(screen.queryByText('Thinking…')).toBeNull()
+  rerender(<MessageView message={reply({ ...streaming, text: 'Made a hook.\n\n```openscad\nmodule h' })} />)
+  expect(screen.getByText('Writing code…')).toBeInTheDocument()
+})
+
+it('shows the cut-off callout', () => {
+  render(
+    <MessageView
+      message={reply({
+        text: '',
+        turnLabel: null,
+        compileStatus: undefined,
+        error: { title: 'The reply was cut off before it wrote any code', body: 'The model reached its output limit (4,096 tokens).' },
+      })}
+    />,
+  )
+  expect(screen.getByRole('alert')).toHaveTextContent('The reply was cut off before it wrote any code')
+})

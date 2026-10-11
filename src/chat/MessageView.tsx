@@ -3,6 +3,7 @@ import { MessageImages } from '../images/MessageImages'
 import { formatCost, formatTokens } from '../ui/format'
 import { IconSparkle, IconSpinner, IconWarning, IconX } from '../ui/icons'
 import type { ChatMessage } from './chatStore'
+import { ReasoningBox } from './ReasoningBox'
 import { streamingText } from './streamingText'
 
 /** Splits `code` spans out of model text as React nodes. Never parses HTML: everything else stays a text node. */
@@ -55,12 +56,16 @@ export function MessageView({ message }: { message: ChatMessage }) {
   const { prose, writing } = streaming ? streamingText(message.text) : { prose: message.text, writing: false }
   return (
     <div className="pc-msg is-assistant" data-testid="chat-reply">
+      <ReasoningBox message={message} />
       {prose !== '' && <div className="pc-msg-body whitespace-pre-wrap">{inlineCode(prose)}</div>}
       {streaming ? (
-        <div className="pc-row pc-caption">
-          <IconSpinner className="pc-i motion-safe:animate-spin" aria-hidden="true" />
-          {writing ? 'Writing code…' : 'Thinking…'}
-        </div>
+        // Once reasoning streams, its box says the model is thinking.
+        (writing || !message.reasoning) && (
+          <div className="pc-row pc-caption">
+            <IconSpinner className="pc-i motion-safe:animate-spin" aria-hidden="true" />
+            {writing ? 'Writing code…' : 'Thinking…'}
+          </div>
+        )
       ) : (
         message.status === 'done' && <MetaLine message={message} />
       )}
