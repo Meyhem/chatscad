@@ -42,3 +42,15 @@ Feature ideas not yet scheduled into a plan. Each entry says what the user gets 
 - Splitters work from the keyboard and with screen readers (`role="separator"`, `aria-valuenow`, arrow keys to resize), and are wide enough to grab with a pointer. Splitter colours use tokens only.
 - When a panel resizes, the 3D viewer resizes with it, without reloading the scene.
 - The phone layout (`src/layout/PhoneLayout.tsx`) keeps its own sheet-based layout and is out of scope.
+
+## The PromptCAD title goes home
+
+**Idea.** The "PromptCAD" title at the top left is a link to the workbench (the current project) on every view, so the user doesn't have to find "Back to project" at the top right of settings.
+
+**Behaviour.**
+
+- On settings and the gallery, clicking the title does the same as "Back to project". "Back to project" stays where it is.
+- On the workbench the title does nothing visible (or is plain text), so clicking it never discards anything or reloads the page.
+- It is a real button or link, reachable from the keyboard, with an accessible name such as "PromptCAD, back to project" and a visible focus ring. The title looks the same as today apart from hover and focus states.
+
+**Touches.** The title in `src/App.tsx`, `src/settings/SettingsPage.tsx` and `src/gallery/GalleryView.tsx`. Easiest as one shared header-title component.
