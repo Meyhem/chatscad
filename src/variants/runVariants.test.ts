@@ -56,14 +56,15 @@ const success = (code: string) => async (o: TurnOpts) => {
   o.onEvent({ type: 'rendered', result: await o.render(code, o.signal), attempt: 0 })
 }
 
-it('asks three times in parallel with the same model and prompt, and renders in the background queue', async () => {
+it('asks three times in parallel with the same model and request, and renders in the background queue', async () => {
   const h = harness([success('cube(10);'), success('cube(20);'), success('cube(30);')])
   const controller = new AbortController()
   await runVariants(request, h.slots, { signal: controller.signal, onSlot: h.onSlot }, h.deps)
 
   expect(h.turns).toHaveBeenCalledTimes(3)
   for (const [opts] of h.turns.mock.calls) {
-    expect(opts).toMatchObject({ model: 'fake-model', userText: request.userText, history: request.history, ctx: request.ctx, maxFixAttempts: 2 })
+    expect(opts).toMatchObject({ model: 'fake-model', history: request.history, ctx: request.ctx, maxFixAttempts: 2 })
+    expect(opts.userText).toContain(request.userText)
     expect(opts.signal).toBe(controller.signal)
   }
   expect(h.turns.mock.calls[0][0].provider).toBe(provider)
