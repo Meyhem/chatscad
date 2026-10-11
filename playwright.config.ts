@@ -7,6 +7,10 @@ const baseURL = `http://localhost:4173${basePath}`
 export default defineConfig({
   testDir: 'e2e',
   timeout: 120_000,
+  // CI runners are slower and less predictable. Retries keep one slow run from blocking a deploy; the github
+  // reporter turns failures and flaky passes into run annotations that are readable without signing in.
+  retries: process.env.CI ? 2 : 0,
+  reporter: process.env.CI ? [['github'], ['list']] : 'list',
   // Service workers would answer requests before page.route sees them; pwa.spec.ts turns them on for itself.
   use: { baseURL, acceptDownloads: true, serviceWorkers: 'block' },
   webServer: {
