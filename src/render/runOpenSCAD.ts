@@ -21,6 +21,17 @@ export interface OpenSCADFactoryOptions {
 
 export type OpenSCADFactory = (opts: OpenSCADFactoryOptions) => Promise<OpenSCADInstance>
 
+/** OpenSCAD reports these without an ERROR: prefix and exits 1 before writing any output. */
+const NO_GEOMETRY: [RegExp, string][] = [
+  [/Current top level object is empty/, 'The model produced no 3D geometry'],
+  [/Current top level object is not a 3D object/, 'The model is 2D only; STL needs a 3D object'],
+]
+
+function explainExit(logs: LogLine[], exitCode: number): string {
+  for (const [pattern, message] of NO_GEOMETRY) if (logs.some((l) => pattern.test(l.text))) return message
+  return `OpenSCAD exited with code ${exitCode}`
+}
+
 function isExitStatus(e: unknown): e is { status: number } {
   return typeof e === 'object' && e !== null && typeof (e as { status?: unknown }).status === 'number'
 }
@@ -57,7 +68,7 @@ export async function runOpenSCAD(factory: OpenSCADFactory, req: RenderRequest):
     if (!isExitStatus(e)) return fail(`OpenSCAD crashed: ${errorMessage(e)}`)
     exitCode = e.status
   }
-  if (exitCode !== 0) return fail(`OpenSCAD exited with code ${exitCode}`)
+  if (exitCode !== 0) return fail(explainExit(logs, exitCode))
 
   let bytes: Uint8Array
   try {

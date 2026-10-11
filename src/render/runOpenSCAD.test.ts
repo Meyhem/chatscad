@@ -116,3 +116,25 @@ it('uses a fresh instance for every render', async () => {
   await runOpenSCAD(factory, { code: 'cube(2);' })
   expect(created).toHaveLength(2)
 })
+
+it('explains an empty model in plain words, using the real OpenSCAD stderr text', async () => {
+  const { factory } = fakeFactory((inst) => {
+    inst.opts.printErr('Current top level object is empty.')
+    return 1
+  })
+  expect(await runOpenSCAD(factory, { code: 'echo("hi");' })).toMatchObject({
+    ok: false,
+    error: 'The model produced no 3D geometry',
+  })
+})
+
+it('explains a 2D-only model in plain words', async () => {
+  const { factory } = fakeFactory((inst) => {
+    inst.opts.printErr('Current top level object is not a 3D object.')
+    return 1
+  })
+  expect(await runOpenSCAD(factory, { code: 'square(10);' })).toMatchObject({
+    ok: false,
+    error: 'The model is 2D only; STL needs a 3D object',
+  })
+})
