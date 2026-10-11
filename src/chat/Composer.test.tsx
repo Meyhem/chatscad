@@ -7,8 +7,11 @@ import { resetDb } from '../test/db'
 import { useChatStore } from './chatStore'
 import { Composer } from './Composer'
 import { sendPrompt, stopTurn } from './sendPrompt'
+import { usePrefs } from '../settings/prefsStore'
+import { startVariants } from '../variants/startVariants'
 
 vi.mock('./sendPrompt', () => ({ sendPrompt: vi.fn(async () => {}), stopTurn: vi.fn() }))
+vi.mock('../variants/startVariants', () => ({ startVariants: vi.fn(() => true) }))
 
 const profile = newProfile({ name: 'P', adapter: 'openai-compatible', baseUrl: 'https://llm.test/v1', defaultModel: 'm1' })
 
@@ -63,4 +66,17 @@ it('offers Stop instead of Send while a turn runs', async () => {
   expect(screen.queryByRole('button', { name: 'Send' })).toBeNull()
   await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
   expect(stopTurn).toHaveBeenCalled()
+})
+
+it('with 3 variants per prompt, Enter starts the variants instead of a single reply and clears the draft', async () => {
+  usePrefs.setState({ variantCount: 3 })
+  try {
+    render(<Composer />)
+    await userEvent.type(screen.getByLabelText('Prompt'), 'A hook{Enter}')
+    expect(startVariants).toHaveBeenCalledWith('A hook')
+    expect(sendPrompt).not.toHaveBeenCalled()
+    expect(screen.getByLabelText('Prompt')).toHaveValue('')
+  } finally {
+    usePrefs.setState({ variantCount: 1 })
+  }
 })

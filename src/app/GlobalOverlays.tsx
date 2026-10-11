@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { ExportDialog } from '../export/ExportDialog'
+import { VariantPicker } from '../variants/VariantPicker'
 import { usePrefs } from '../settings/prefsStore'
 import { listenForShareLinks } from '../share/importShared'
 import { ShareNotice } from '../share/ShareNotice'
@@ -12,6 +13,7 @@ export function GlobalOverlays() {
   useEffect(() => listenForShareLinks(), [])
   return (
     <>
+      <VariantPicker />
       <ExportDialog />
       <ShareNotice />
     </>

@@ -21,6 +21,7 @@ import { selectCanExport, selectDisplayMesh, selectShowingPreview, useAppStore }
 import { DimsReadout } from './ui/DimsReadout'
 import { IconSettings } from './ui/icons'
 import { StatusPill } from './ui/StatusPill'
+import { VariantProgressPill } from './variants/VariantProgressPill'
 import { Viewer } from './viewer/Viewer'
 import { CodePane } from './workbench/CodePane'
 import { HistoryControls } from './workbench/HistoryControls'
@@ -75,6 +76,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
           <span aria-hidden="true" className="h-5 w-px bg-line" />
           <ProjectMenu />
           <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
+          <VariantProgressPill />
           {bounds && <DimsReadout bounds={bounds} />}
           {stale && <RenderedFromCaption />}
           <span className="flex-1" />

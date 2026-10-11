@@ -1,3 +1,6 @@
+import { usePrefs } from '../settings/prefsStore'
+import { startVariants } from '../variants/startVariants'
+import { VariantCountButton } from '../variants/VariantCountButton'
 import { selectActiveModel, selectActiveProfile, useProvidersStore } from '../settings/providersStore'
 import { IconSend, IconStop } from '../ui/icons'
 import { useChatStore } from './chatStore'
@@ -14,7 +17,12 @@ export function Composer() {
   const blocked = profile === null ? 'Add a provider first' : model === null ? 'Choose a model first' : null
   const canSend = !busy && blocked === null && draft.trim() !== ''
   const send = () => {
-    if (canSend) void sendPrompt(draft)
+    if (!canSend) return
+    if (usePrefs.getState().variantCount === 3) {
+      if (startVariants(draft)) setDraft('')
+      return
+    }
+    void sendPrompt(draft)
   }
 
   return (
@@ -35,6 +43,7 @@ export function Composer() {
       <div className="pc-composer-bar">
         <ModelPicker />
         <span className="pc-spacer" />
+        <VariantCountButton />
         {busy ? (
           <button type="button" className="pc-btn is-icon is-sm" aria-label="Stop" title="Stop" onClick={stopTurn}>
             <IconStop className="pc-i" aria-hidden="true" />
