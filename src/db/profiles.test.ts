@@ -1,4 +1,5 @@
 import { resetDb } from '../test/db'
+import { DEFAULT_SETTINGS } from './db'
 import { deleteProfile, getProfile, listProfiles, newProfile, saveProfile } from './profiles'
 import { getSettings, updateSettings } from './settings'
 
@@ -35,7 +36,7 @@ it('deleting the active profile clears the active profile and model', async () =
 })
 
 it('merges defaults into stored settings', async () => {
-  expect(await getSettings()).toEqual({ id: 'app', activeProfileId: null, activeModel: null, autoFixAttempts: 2 })
+  expect(await getSettings()).toEqual(DEFAULT_SETTINGS)
   await updateSettings({ autoFixAttempts: 3 })
   expect((await getSettings()).autoFixAttempts).toBe(3)
 })
