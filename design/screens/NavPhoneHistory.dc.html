@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone history tab</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/promptcad/components/bundle.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6e9bff}a:hover{color:#8db1ff}
+</style>
+</helmet>
+<div class="app phone pc-root" data-theme="{{theme}}">
+  <header class="topbar">
+    <button class="project" type="button" style="padding-left: 0;">18650 holder<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button>
+    <span class="grow"></span>
+    <span class="pc-status is-ok"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>Rendered</span>
+    <button class="pc-btn is-icon is-ghost" type="button" aria-label="Share"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8 M4.5 6L8 2.5 11.5 6 M3 9.5v4h10v-4"/></svg></button>
+    <button class="pc-btn is-icon is-ghost" type="button" aria-label="Export STL"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8 M4.5 7L8 10.5 11.5 7 M3 13.5h10"/></svg></button>
+  </header>
+  <div style="flex: none; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line);">
+    <nav class="pc-tabs" role="tablist" aria-label="Views" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%;">
+      <button class="pc-tab" role="tab" aria-selected="false" type="button" style="justify-content: center; height: 40px;"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l5.5 3v6L8 14l-5.5-3V5z M2.5 5L8 8l5.5-3 M8 8v6"/></svg>Project</button>
+      <button class="pc-tab" role="tab" aria-selected="true" type="button" style="justify-content: center; height: 40px;"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11z M8 5v3.5l2.5 1.5"/></svg>History</button>
+      <button class="pc-tab" role="tab" aria-selected="false" type="button" style="justify-content: center; height: 40px;"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z M8 1.5v2 M8 12.5v2 M1.5 8h2 M12.5 8h2 M3.4 3.4l1.4 1.4 M11.2 11.2l1.4 1.4 M3.4 12.6l1.4-1.4 M11.2 4.8l1.4-1.4"/></svg>Settings</button>
+    </nav>
+  </div>
+  <div class="phone-body">
+    <div class="pc-row" style="padding: 12px 16px 4px;"><span class="pc-label">Versions</span><span class="grow"></span><span class="pc-caption">7 versions · 1 branch</span></div>
+    <div style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 4px; padding: 4px 8px;">
+      <button class="pc-version" type="button" style="min-height: 56px;"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span><span class="pc-version-text"><span class="t">v6 · current</span><span class="m">slots 4 → 5</span></span><span class="pc-caption">now</span></button>
+      <button class="pc-version" type="button" aria-current="true" style="min-height: 56px;"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span><span class="pc-version-text"><span class="t">v5</span><span class="m">Auto-fix: closed translate() on line 16</span></span><span class="pc-caption">4 min</span></button>
+      <button class="pc-version is-failed" type="button" style="min-height: 56px;"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/></svg></span><span class="pc-version-text"><span class="t">v4</span><span class="m">Failed · Make it hold 21700 cells</span></span><span class="pc-caption">5 min</span></button>
+      <button class="pc-version" type="button" style="min-height: 56px;"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span><span class="pc-version-text"><span class="t">v3</span><span class="m">height 18 → 22</span></span><span class="pc-caption">12 min</span></button>
+      <button class="pc-version is-branch" type="button" style="min-height: 56px;"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="26,30 50,42 50,88 26,76"/><polygon class="f-r" points="50,42 74,30 74,76 50,88"/><polygon class="f-top" points="50,18 74,30 50,42 26,30"/><ellipse class="f-hole" cx="50" cy="30" rx="8" ry="4"/></svg></span><span class="pc-version-text"><span class="t">v3.1</span><span class="m">Manual: single tall slot</span></span><span class="pc-caption">10 min</span></button>
+      <button class="pc-version" type="button" style="min-height: 56px;"><span class="pc-thumb"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="f-l" points="14,36 50,54 50,82 14,64"/><polygon class="f-r" points="50,54 86,36 86,64 50,82"/><polygon class="f-top" points="50,18 86,36 50,54 14,36"/><ellipse class="f-hole" cx="50" cy="36" rx="12" ry="6"/></svg></span><span class="pc-version-text"><span class="t">v2</span><span class="m">Walls 2.4 mm, chamfer the top edge</span></span><span class="pc-caption">18 min</span></button>
+    </div>
+    <div class="sheet" style="position: relative;">
+      <span class="grabber"></span>
+      <div class="pc-stack" style="gap: 4px;">
+        <span style="font-weight: 600;">v5 · Auto-fix</span>
+        <span class="pc-caption">4 min ago · rendered in 431 ms · $0.002</span>
+      </div>
+      <div class="pc-row">
+        <button class="pc-btn is-primary" type="button" style="flex: 1; height: 44px;">Restore v5</button>
+        <button class="pc-btn" type="button" style="flex: 1; height: 44px;">Compare with v6</button>
+      </div>
+      <span class="pc-caption">Restoring makes a new version. Nothing is deleted.</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'dark' };
+  }
+}
+</script>
+</body>
+</html>
