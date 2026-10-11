@@ -10,7 +10,7 @@ Client-only React PWA: an LLM (from M2) writes OpenSCAD, the browser compiles it
 
 - **After every completed feature or fix, commit and push the current branch to `origin` automatically, without asking.** A feature or fix is complete when `npm run typecheck`, `npm test` and `npm run e2e` pass. Never push with failing checks.
 - Never force-push, and never rewrite history that has been pushed.
-- Push the branch you are on. Do not merge into or push to `main` unless the user asks; every push to `main` deploys the site to GitHub Pages.
+- Push the branch you are on, including `main`, without asking. Every push to `main` deploys the site to GitHub Pages, so the checks above must pass first.
 - One logical change per commit, with a conventional message (`feat:`, `fix:`, `build:`, `docs:`, `chore:`, `test:`).
 
 ## Commands
