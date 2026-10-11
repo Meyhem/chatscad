@@ -1,7 +1,7 @@
 import type { RenderResult } from '../render/types'
 import { applyEdits, parseReply } from './edits'
 import { buildMessages, buildSystemPrompt, formatCompileErrors, type PromptContext } from './prompt'
-import { DEFAULT_MAX_TOKENS, type ChatRequest, type ContentPart, type LlmMessage, type LlmProvider, type Usage } from './types'
+import { type ChatRequest, type ContentPart, type LlmMessage, type LlmProvider, type Usage } from './types'
 import { addUsage, changedOutsideRange, scopeCorrection, scopeRejected, withCorrection } from './scope'
 
 export interface GenerateResult {
@@ -38,7 +38,7 @@ async function streamText(
     if (event.type === 'text') {
       text += event.delta
       onDelta?.(event.delta)
-    } else {
+    } else if (event.type === 'usage') {
       usage = event.usage
     }
   }
@@ -72,7 +72,6 @@ async function generateUnscoped(opts: {
     model,
     system,
     messages: msgs,
-    maxTokens: DEFAULT_MAX_TOKENS,
     ...(temperature !== undefined ? { temperature } : {}),
   })
 

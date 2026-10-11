@@ -1,7 +1,6 @@
 import { errorMessage } from '../render/result'
 import { parseSse } from './sse'
 import {
-  DEFAULT_MAX_TOKENS,
   ProviderError,
   type ChatEvent,
   type ChatRequest,
@@ -10,6 +9,7 @@ import {
   type ModelInfo,
   type ModelPrice,
   type ProviderErrorKind,
+  type StopReason,
   type Usage,
 } from './types'
 import { joinUrl, type FetchLike } from './url'
@@ -28,14 +28,20 @@ interface OpenAiUsage {
   prompt_tokens?: number
   completion_tokens?: number
   cost?: number
+  completion_tokens_details?: { reasoning_tokens?: number } | null
+}
+interface OpenAiDelta {
+  content?: string | null
+  reasoning?: string | null // OpenRouter
+  reasoning_content?: string | null // DeepSeek, vLLM, llama.cpp
 }
 interface OpenAiChunk {
-  choices?: Array<{ delta?: { content?: string | null } }>
+  choices?: Array<{ delta?: OpenAiDelta; finish_reason?: string | null }>
   usage?: OpenAiUsage | null
   error?: unknown
 }
 interface OpenAiCompletion {
-  choices?: Array<{ message?: { content?: string | null } }>
+  choices?: Array<{ message?: OpenAiDelta; finish_reason?: string | null }>
   usage?: OpenAiUsage | null
 }
 interface OpenAiModel {
@@ -83,11 +89,18 @@ export function relaxRequest(body: Body, errorText: string): Body | null {
   return null
 }
 
+export function toStopReason(finish: string | null | undefined): StopReason {
+  if (finish === 'length') return 'length'
+  return finish === 'stop' || finish === null || finish === undefined ? 'end' : 'other'
+}
+
 function toUsage(u: OpenAiUsage): Usage {
+  const reasoning = u.completion_tokens_details?.reasoning_tokens
   return {
     inputTokens: u.prompt_tokens ?? 0,
     outputTokens: u.completion_tokens ?? 0,
     ...(typeof u.cost === 'number' ? { costUsd: u.cost } : {}),
+    ...(typeof reasoning === 'number' ? { reasoningTokens: reasoning } : {}),
   }
 }
 
@@ -194,7 +207,7 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): L
       const body: Body = {
         model: req.model,
         messages: [{ role: 'system', content: req.system }, ...req.messages.map(toOpenAiMessage)],
-        max_tokens: req.maxTokens ?? DEFAULT_MAX_TOKENS,
+        ...(req.maxTokens !== undefined ? { max_tokens: req.maxTokens } : {}),
         ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
         ...(streaming ? { stream: true, stream_options: { include_usage: true } } : {}),
       }
@@ -208,14 +221,16 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): L
         } catch (err) {
           throw transportError(err, url, signal)
         }
-        const text = reply.choices?.[0]?.message?.content ?? ''
+        const choice = reply.choices?.[0]
+        const text = choice?.message?.content ?? ''
         if (text) yield { type: 'text', delta: text }
         if (reply.usage) usage = toUsage(reply.usage)
-        yield { type: 'usage', usage }
+        yield { type: 'usage', usage, stopReason: toStopReason(choice?.finish_reason) }
         return
       }
 
       if (!res.body) throw new ProviderError('server', `${url} answered without a body`)
+      let finish: string | null | undefined
       try {
         for await (const event of parseSse(res.body)) {
           if (event.data === '[DONE]') break
@@ -226,7 +241,9 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): L
             continue
           }
           if (chunk.error) throw new ProviderError('server', messageFrom(JSON.stringify(chunk)))
-          const text = chunk.choices?.[0]?.delta?.content
+          const choice = chunk.choices?.[0]
+          if (choice?.finish_reason) finish = choice.finish_reason
+          const text = choice?.delta?.content
           if (typeof text === 'string' && text !== '') yield { type: 'text', delta: text }
           if (chunk.usage) usage = toUsage(chunk.usage)
         }
@@ -234,7 +251,7 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): L
         if (err instanceof ProviderError) throw err
         throw transportError(err, url, signal)
       }
-      yield { type: 'usage', usage }
+      yield { type: 'usage', usage, stopReason: toStopReason(finish) }
     },
   }
 }

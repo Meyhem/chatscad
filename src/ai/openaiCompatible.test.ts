@@ -52,7 +52,7 @@ describe('streamChat', () => {
     expect(await collect(provider(fetch).streamChat(REQ))).toEqual([
       { type: 'text', delta: 'Made ' },
       { type: 'text', delta: 'a cube.' },
-      { type: 'usage', usage: { inputTokens: 1000, outputTokens: 310, costUsd: 0.011 } },
+      { type: 'usage', usage: { inputTokens: 1000, outputTokens: 310, costUsd: 0.011 }, stopReason: 'end' },
     ])
     expect(calls[0].url).toBe('https://api.example.com/v1/chat/completions')
     expect(calls[0].init.method).toBe('POST')
@@ -63,10 +63,39 @@ describe('streamChat', () => {
         { role: 'system', content: 'Be brief.' },
         { role: 'user', content: 'Hi' },
       ],
-      max_tokens: 16000,
       stream: true,
       stream_options: { include_usage: true },
     })
+  })
+
+  it('omits max_tokens unless the request sets one', async () => {
+    const { fetch, calls } = fakeFetch(sse('[DONE]'))
+    await collect(provider(fetch).streamChat(REQ))
+    expect(calls[0].body).not.toHaveProperty('max_tokens')
+  })
+
+  it('reports finish_reason "length" as a length stop and the reasoning tokens', async () => {
+    const { fetch } = fakeFetch(
+      sse(
+        { choices: [{ index: 0, delta: { content: '' }, finish_reason: 'length' }] },
+        { choices: [], usage: { prompt_tokens: 900, completion_tokens: 16000, completion_tokens_details: { reasoning_tokens: 16000 } } },
+        '[DONE]',
+      ),
+    )
+    expect((await collect(provider(fetch).streamChat(REQ))).at(-1)).toEqual({
+      type: 'usage',
+      usage: { inputTokens: 900, outputTokens: 16000, reasoningTokens: 16000 },
+      stopReason: 'length',
+    })
+  })
+
+  it('maps finish reasons', async () => {
+    const { toStopReason } = await import('./openaiCompatible')
+    expect(toStopReason('stop')).toBe('end')
+    expect(toStopReason(null)).toBe('end')
+    expect(toStopReason(undefined)).toBe('end')
+    expect(toStopReason('length')).toBe('length')
+    expect(toStopReason('content_filter')).toBe('other')
   })
 
   it('sends temperature only when the request sets it', async () => {
@@ -84,13 +113,13 @@ describe('streamChat', () => {
   it('yields zero usage when the provider sends none', async () => {
     const { fetch } = fakeFetch(sse(delta('ok'), '[DONE]'))
     const events = await collect(provider(fetch).streamChat(REQ))
-    expect(events.at(-1)).toEqual({ type: 'usage', usage: { inputTokens: 0, outputTokens: 0 } })
+    expect(events.at(-1)).toEqual({ type: 'usage', usage: { inputTokens: 0, outputTokens: 0 }, stopReason: 'end' })
   })
 
   it('takes usage that arrives on the last content chunk (DeepInfra style)', async () => {
     const { fetch } = fakeFetch(sse({ ...delta('x'), usage: { prompt_tokens: 7, completion_tokens: 2 } }, '[DONE]'))
     const events = await collect(provider(fetch).streamChat(REQ))
-    expect(events.at(-1)).toEqual({ type: 'usage', usage: { inputTokens: 7, outputTokens: 2 } })
+    expect(events.at(-1)).toEqual({ type: 'usage', usage: { inputTokens: 7, outputTokens: 2 }, stopReason: 'end' })
   })
 
   it('retries once without stream_options when the server rejects it', async () => {
@@ -110,9 +139,9 @@ describe('streamChat', () => {
       json(400, { error: { message: "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead." } }),
       sse('[DONE]'),
     )
-    await collect(provider(fetch).streamChat(REQ))
+    await collect(provider(fetch).streamChat({ ...REQ, maxTokens: 16 }))
     expect(calls[1].body).not.toHaveProperty('max_tokens')
-    expect(calls[1].body).toMatchObject({ max_completion_tokens: 16000 })
+    expect(calls[1].body).toMatchObject({ max_completion_tokens: 16 })
   })
 
   it('reports any other 400 without retrying', async () => {
@@ -160,7 +189,7 @@ describe('streamChat', () => {
     )
     expect(await collect(provider(fetch, 'k', false).streamChat(REQ))).toEqual([
       { type: 'text', delta: 'All at once.' },
-      { type: 'usage', usage: { inputTokens: 3, outputTokens: 4 } },
+      { type: 'usage', usage: { inputTokens: 3, outputTokens: 4 }, stopReason: 'end' },
     ])
     expect(calls[0].body).not.toHaveProperty('stream')
     expect(calls[0].body).not.toHaveProperty('stream_options')

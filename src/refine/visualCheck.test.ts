@@ -15,7 +15,7 @@ function scriptedProvider(reply: string | Error): LlmProvider & { requests: Chat
       requests.push(req)
       if (reply instanceof Error) throw reply
       yield { type: 'text', delta: reply }
-      yield { type: 'usage', usage: { inputTokens: 900, outputTokens: 20 } }
+      yield { type: 'usage', usage: { inputTokens: 900, outputTokens: 20 }, stopReason: 'end' }
     },
   }
 }

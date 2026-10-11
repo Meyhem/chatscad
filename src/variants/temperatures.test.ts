@@ -17,7 +17,7 @@ it('sets the temperature on every request that has none', async () => {
     listModels: vi.fn(async () => []),
     async *streamChat(req) {
       seen.push(req)
-      yield { type: 'usage', usage: { inputTokens: 0, outputTokens: 0 } }
+      yield { type: 'usage', usage: { inputTokens: 0, outputTokens: 0 }, stopReason: 'end' }
     },
   }
   const hot = withTemperature(base, 0.7)

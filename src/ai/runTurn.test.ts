@@ -22,7 +22,8 @@ describe('generateCode', () => {
       model: 'm',
     })
     expect(deltas.join('')).toBe(FULL)
-    expect(requests[0]).toMatchObject({ model: 'm', maxTokens: 16000 })
+    expect(requests[0]).toMatchObject({ model: 'm' })
+    expect(requests[0]).not.toHaveProperty('maxTokens')
     expect(requests[0].system).toContain('valid OpenSCAD')
     expect(requests[0]).not.toHaveProperty('temperature')
   })

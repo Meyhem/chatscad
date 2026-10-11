@@ -18,7 +18,7 @@ function scriptedProvider(replies: string[]): LlmProvider & { requests: ChatRequ
     async *streamChat(req: ChatRequest): AsyncIterable<ChatEvent> {
       requests.push(req)
       yield { type: 'text', delta: replies.shift() ?? '' }
-      yield { type: 'usage', usage: { inputTokens: 10, outputTokens: 5 } }
+      yield { type: 'usage', usage: { inputTokens: 10, outputTokens: 5 }, stopReason: 'end' }
     },
   }
 }

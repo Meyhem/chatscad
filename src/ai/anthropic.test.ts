@@ -71,11 +71,11 @@ it('streams text deltas and reports input tokens from message_start and output t
   expect(await collect(provider(fetch).streamChat(REQ))).toEqual([
     { type: 'text', delta: 'Made a ' },
     { type: 'text', delta: 'cube.' },
-    { type: 'usage', usage: { inputTokens: 812, outputTokens: 498 } },
+    { type: 'usage', usage: { inputTokens: 812, outputTokens: 498 }, stopReason: 'end' },
   ])
 })
 
-it('posts to /v1/messages with the browser-access header, max_tokens 16000, and no thinking or temperature', async () => {
+it('posts to /v1/messages with the browser-access header, max_tokens 64000 when the model is unknown, and no thinking or temperature', async () => {
   const { fetch, calls } = fakeFetch(sse(RECORDED_SSE))
   await collect(provider(fetch).streamChat({ ...REQ, temperature: 0.9 }))
   expect(calls[0].url).toBe('https://api.anthropic.com/v1/messages')
@@ -83,10 +83,15 @@ it('posts to /v1/messages with the browser-access header, max_tokens 16000, and 
   expect(headers.get('x-api-key')).toBe('sk-ant-test')
   expect(headers.get('anthropic-dangerous-direct-browser-access')).toBe('true')
   const body = JSON.parse(String(calls[0].init.body))
-  expect(body).toMatchObject({ model: 'claude-test', max_tokens: 16000, system: 'Be brief.', stream: true })
+  expect(body).toMatchObject({ model: 'claude-test', max_tokens: 64000, system: 'Be brief.', stream: true })
   expect(body.messages).toEqual([{ role: 'user', content: 'A cube' }])
   expect(body).not.toHaveProperty('temperature')
   expect(body).not.toHaveProperty('thinking')
+})
+
+it('reports stop_reason max_tokens as a length stop', async () => {
+  const { fetch } = fakeFetch(sse(RECORDED_SSE.replace('"stop_reason":"end_turn"', '"stop_reason":"max_tokens"')))
+  expect((await collect(provider(fetch).streamChat(REQ))).at(-1)).toMatchObject({ type: 'usage', stopReason: 'length' })
 })
 
 it('sends image parts as base64 image blocks', async () => {

@@ -10,7 +10,7 @@ function failing(listError: Error | null, chatError: Error | null = null): LlmPr
     },
     async *streamChat() {
       if (chatError) throw chatError
-      yield { type: 'usage', usage: { inputTokens: 1, outputTokens: 1 } }
+      yield { type: 'usage', usage: { inputTokens: 1, outputTokens: 1 }, stopReason: 'end' }
     },
   }
 }

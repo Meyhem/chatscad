@@ -47,7 +47,7 @@ export async function runVisualCheck(opts: {
   )
   for await (const event of events) {
     if (event.type === 'text') text += event.delta
-    else usage = event.usage
+    else if (event.type === 'usage') usage = event.usage
   }
   const answer = text.replace(/\s+/g, ' ').trim().slice(0, MAX_ANSWER_CHARS)
   return { answer: answer === '' ? 'No answer.' : answer, usage }

@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { DEFAULT_MAX_TOKENS, ProviderError, type ChatEvent, type ChatRequest, type LlmMessage, type LlmProvider, type ModelInfo, type Usage } from './types'
+import { ProviderError, type ChatEvent, type ChatRequest, type LlmMessage, type LlmProvider, type ModelInfo, type StopReason, type Usage } from './types'
 import type { FetchLike } from './url'
 
 export interface AnthropicOptions {
@@ -8,6 +8,14 @@ export interface AnthropicOptions {
   fetch?: FetchLike
   /** SDK retries for 408/409/429/5xx and connection errors. Default 2; tests pass 0. */
   maxRetries?: number
+}
+
+/** `max_tokens` is required; used when the model list did not report the model's limit. */
+export const ANTHROPIC_FALLBACK_MAX_TOKENS = 64000
+
+export function anthropicStopReason(r: string | null | undefined): StopReason {
+  if (r === 'max_tokens') return 'length'
+  return r === 'end_turn' || r === null || r === undefined ? 'end' : 'other'
 }
 
 function apiMessage(err: InstanceType<typeof Anthropic.APIError>): string {
@@ -72,12 +80,13 @@ export function createAnthropicProvider(opts: AnthropicOptions): LlmProvider {
 
     async *streamChat(req: ChatRequest, signal?: AbortSignal): AsyncGenerator<ChatEvent> {
       const usage: Usage = { inputTokens: 0, outputTokens: 0 }
+      let stopReason: StopReason = 'end'
       try {
         // No `thinking` and no `temperature`: current Claude models reject sampling parameters.
         const stream = getClient().messages.stream(
           {
             model: req.model,
-            max_tokens: req.maxTokens ?? DEFAULT_MAX_TOKENS,
+            max_tokens: req.maxTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS,
             system: req.system,
             messages: req.messages.map(toAnthropicMessage),
           },
@@ -91,13 +100,14 @@ export function createAnthropicProvider(opts: AnthropicOptions): LlmProvider {
             yield { type: 'text', delta: event.delta.text }
           } else if (event.type === 'message_delta') {
             usage.outputTokens = event.usage.output_tokens
+            stopReason = anthropicStopReason(event.delta.stop_reason)
             if (typeof event.usage.input_tokens === 'number') usage.inputTokens = event.usage.input_tokens
           }
         }
       } catch (err) {
         throw toProviderError(err, signal)
       }
-      yield { type: 'usage', usage }
+      yield { type: 'usage', usage, stopReason }
     },
   }
 }

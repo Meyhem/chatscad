@@ -7,12 +7,19 @@ export interface LlmMessage {
   content: string | ContentPart[]
 }
 
+/** How hard a reasoning model thinks. Absent means the model's own default. */
+export type ReasoningEffort = 'off' | 'low' | 'medium' | 'high'
+
+/** Why a reply ended: finished, hit the output limit, or anything else (filters, tools). */
+export type StopReason = 'end' | 'length' | 'other'
+
 export interface ChatRequest {
   model: string
   system: string
   messages: LlmMessage[]
-  maxTokens?: number // default 16000
+  maxTokens?: number // only when the caller needs a cap; adapters send none otherwise (Anthropic: the model's limit)
   temperature?: number // omitted unless set (variants in M4 may set it)
+  reasoningEffort?: ReasoningEffort
 }
 
 export interface Usage {
@@ -20,9 +27,15 @@ export interface Usage {
   outputTokens: number
   /** Provider-reported cost in USD, when the provider sends one (OpenRouter). */
   costUsd?: number
+  /** Output tokens spent on reasoning, when the provider reports them. */
+  reasoningTokens?: number
 }
 
-export type ChatEvent = { type: 'text'; delta: string } | { type: 'usage'; usage: Usage }
+export type ChatEvent =
+  | { type: 'text'; delta: string }
+  | { type: 'reasoning'; delta: string }
+  | { type: 'notice'; text: string } // the adapter adjusted the request (effort dropped or lowered)
+  | { type: 'usage'; usage: Usage; stopReason: StopReason }
 
 export interface ModelPrice {
   inputPerMTok: number
@@ -36,6 +49,19 @@ export interface ModelInfo {
   price?: ModelPrice
   /** Input kinds the provider reports for the model (OpenRouter's input_modalities). */
   capabilities?: { vision: boolean; audio: boolean }
+  /** Output limit the provider reports for the model (Anthropic's max_tokens). */
+  maxOutputTokens?: number
+  /** Reasoning support the provider reports; absent when unknown. */
+  reasoning?: ModelReasoning
+}
+
+export interface ModelReasoning {
+  /** Accepts an effort setting: the effort picker shows. */
+  efforts: boolean
+  /** Can turn reasoning off: the picker offers Off. */
+  canDisable: boolean
+  /** Claude adaptive thinking: Default asks for a reasoning summary. */
+  adaptive: boolean
 }
 
 export interface ProviderCapabilities {
@@ -48,7 +74,7 @@ export type AdapterKind = 'openai-compatible' | 'anthropic'
 
 export interface LlmProvider {
   listModels(signal?: AbortSignal): Promise<ModelInfo[]>
-  /** Yields text deltas, then exactly one usage event (zeros if the provider sent none). Throws ProviderError. */
+  /** Yields text and reasoning deltas and notices, then exactly one usage event with the stop reason (zeros if the provider sent no usage). Throws ProviderError. */
   streamChat(req: ChatRequest, signal?: AbortSignal): AsyncIterable<ChatEvent>
 }
 
@@ -64,6 +90,3 @@ export class ProviderError extends Error {
     this.name = 'ProviderError'
   }
 }
-
-/** `ChatRequest.maxTokens` when the caller leaves it out. */
-export const DEFAULT_MAX_TOKENS = 16000
