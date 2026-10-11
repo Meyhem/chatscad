@@ -89,6 +89,8 @@ function CameraFitter({ bounds, fitToken }: { bounds: Bounds | null; fitToken: n
     camera.updateProjectionMatrix()
     controls.target.set(...fit.target)
     controls.update()
+    // A tap right after Fit view raycasts before the next frame; give it the fitted camera now.
+    camera.updateMatrixWorld()
     invalidate()
   }, [bounds, fitToken, controls, camera, size, invalidate])
 
