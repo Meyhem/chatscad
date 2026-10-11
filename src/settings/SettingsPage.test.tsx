@@ -23,11 +23,17 @@ it('is a full page with a Back to project button, not a dialog', async () => {
   expect(useAppStore.getState().view).toBe('workbench')
 })
 
-it('shows AI providers as the current section; later sections are not available yet', () => {
+it('shows AI providers as the current section and switches to the other sections', async () => {
   render(<SettingsPage />)
   const nav = screen.getByRole('navigation', { name: 'Settings sections' })
   expect(within(nav).getByRole('button', { name: 'AI providers' })).toHaveAttribute('aria-current', 'page')
-  expect(within(nav).getByRole('button', { name: 'Usage and cost' })).toBeDisabled()
+  await userEvent.click(within(nav).getByRole('button', { name: 'Rendering' }))
+  expect(within(nav).getByRole('button', { name: 'Rendering' })).toHaveAttribute('aria-current', 'page')
+  expect(within(nav).getByRole('button', { name: 'AI providers' })).not.toHaveAttribute('aria-current')
+  expect(screen.getByRole('heading', { name: 'Rendering' })).toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'Profiles' })).toBeNull()
+  await userEvent.click(within(nav).getByRole('button', { name: 'AI providers' }))
+  expect(screen.getByRole('region', { name: 'Profiles' })).toBeInTheDocument()
 })
 
 it('adds a profile from a preset and opens it', async () => {
