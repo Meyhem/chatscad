@@ -11,6 +11,8 @@ import { useAppStore } from './state/store'
 import { resetDb } from './test/db'
 import { errorResult, okResult } from './test/results'
 import { App } from './App'
+import { useRefineStore } from './refine/refineStore'
+import { partPickFixture } from './test/picks'
 import { useExportStore } from './export/exportStore'
 import { emitLoadProgress } from './render/loadProgress'
 import { usePrefs } from './settings/prefsStore'
@@ -257,4 +259,19 @@ it('shows the settings page on a phone too, so a provider can be added', () => {
   render(<App createWorker={scriptedWorker(() => okResult())} />)
   act(() => useAppStore.getState().setView('settings'))
   expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+})
+
+it('highlights the picked part in the editor and clears it when the code changes', async () => {
+  useRefineStore.setState(useRefineStore.getInitialState(), true)
+  const { container } = render(<App createWorker={scriptedWorker(() => okResult())} />)
+  await waitFor(() => expect(screen.getByTestId('dims')).toBeInTheDocument())
+  const view = EditorView.findFromDOM(container.querySelector('.cm-editor') as HTMLElement)!
+  act(() => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: 'a();\nb();\nc();\n' } }))
+
+  act(() => useRefineStore.setState({ pick: { ...partPickFixture(), scope: { startLine: 2, endLine: 2 } } }))
+  expect([...container.querySelectorAll('.cm-pick-line')].map((el) => el.textContent)).toEqual(['b();'])
+
+  act(() => view.dispatch({ changes: { from: 0, insert: '// edited\n' } }))
+  await waitFor(() => expect(container.querySelectorAll('.cm-pick-line')).toHaveLength(0))
+  expect(useRefineStore.getState().pick).toBeNull()
 })

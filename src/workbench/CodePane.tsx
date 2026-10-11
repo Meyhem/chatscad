@@ -5,6 +5,8 @@ import { useProjectStore } from '../history/projectStore'
 import { flushRecorder } from '../history/recorder'
 import { versionCaption } from '../history/sources'
 import { ConsolePanel } from '../panels/ConsolePanel'
+import { pickScope } from '../refine/pick'
+import { useRefineStore } from '../refine/refineStore'
 import { engineLabel, loadEngineVersion } from '../render/engineVersion'
 import { useAppStore } from '../state/store'
 import { problemItems, ProblemsPanel } from './ProblemsPanel'
@@ -17,6 +19,7 @@ export function CodePane({ actions }: { actions?: React.ReactNode }) {
   const setCode = useAppStore((s) => s.setCode)
   const goToLine = useAppStore((s) => s.goToLine)
   const reveal = useAppStore((s) => s.reveal)
+  const pick = useRefineStore((s) => pickScope(s.pick))
   const status = useAppStore((s) => s.status)
   const logs = useAppStore((s) => s.logs)
   const diagnostics = useAppStore((s) => s.diagnostics)
@@ -60,7 +63,7 @@ export function CodePane({ actions }: { actions?: React.ReactNode }) {
       </div>
       <div className="relative min-h-0 flex-1">
         <div className={tab === 'code' ? 'h-full' : 'hidden'}>
-          <CodeEditor value={code} onChange={setCode} diagnostics={diagnostics} reveal={reveal} onBlur={flushRecorder} insert={insert} />
+          <CodeEditor value={code} onChange={setCode} diagnostics={diagnostics} reveal={reveal} onBlur={flushRecorder} insert={insert} pick={pick} />
         </div>
         {tab === 'problems' && (
           <ProblemsPanel

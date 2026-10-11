@@ -5,6 +5,8 @@ import { basicSetup } from 'codemirror'
 import { useEffect, useRef } from 'react'
 import type { Diagnostic } from '../render/types'
 import type { InsertRequest, RevealRequest } from '../state/store'
+import type { LineRange } from '../scad/statements'
+import { pickExtension, setPickLines } from './pickExtension'
 import { calloutHeadline, diagnosticsByLine, diagnosticsExtension, setAppDiagnostics } from './diagnosticsExtension'
 import { openscad } from './openscadLanguage'
 import { tokenTheme } from './theme'
@@ -27,9 +29,11 @@ interface Props {
   onBlur?(): void
   /** From the phone key row; each new id inserts once at the cursor. */
   insert?: InsertRequest | null
+  /** M5: the picked part's lines, highlighted like the Refine screen. */
+  pick?: LineRange | null
 }
 
-export function CodeEditor({ value, onChange, diagnostics, reveal = null, onBlur, insert = null }: Props) {
+export function CodeEditor({ value, onChange, diagnostics, reveal = null, onBlur, insert = null, pick = null }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
@@ -47,6 +51,7 @@ export function CodeEditor({ value, onChange, diagnostics, reveal = null, onBlur
           openscad(),
           tokenTheme,
           diagnosticsExtension,
+          pickExtension,
           EditorView.updateListener.of((u) => {
             if (u.docChanged && !u.transactions.some((t) => t.annotation(external))) onChangeRef.current(u.state.doc.toString())
           }),
@@ -94,6 +99,10 @@ export function CodeEditor({ value, onChange, diagnostics, reveal = null, onBlur
     view.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: 'center' }) })
     view.focus()
   }, [reveal])
+
+  useEffect(() => {
+    viewRef.current?.dispatch({ effects: setPickLines.of(pick) })
+  }, [pick])
 
   // Keyed on the id, so re-rendering with an equal request never inserts twice; a request that was already
   // there when the editor mounted (the phone tabs remount it) was consumed by an earlier editor.

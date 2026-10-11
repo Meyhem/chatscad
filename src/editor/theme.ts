@@ -27,6 +27,8 @@ const chrome = EditorView.theme({
   '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': { backgroundColor: 'var(--accent-soft)', outline: '1px solid var(--line-strong)' },
   '.cm-lintRange-error': { backgroundImage: 'none', textDecoration: 'underline wavy var(--error)' },
   '.cm-lintRange-warning': { backgroundImage: 'none', textDecoration: 'underline wavy var(--warn)' },
+  // pickExtension (M5): screens.css `.cl.is-pick`
+  '.cm-pick-line': { backgroundColor: 'var(--accent-soft)', boxShadow: 'inset 2px 0 0 var(--accent)' },
   '.cm-tooltip': {
     backgroundColor: 'var(--panel-raised)',
     color: 'var(--ink)',
