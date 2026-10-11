@@ -72,7 +72,10 @@ export function VariantPicker() {
   return (
     <Modal
       labelledBy="variants-title"
-      onClose={discard}
+      // Once a reply has code, only Discard all or Close throws the variants away; Esc is too easy to hit.
+      onClose={() => {
+        if (!slots.some((s) => s.code !== null)) discard()
+      }}
       closeOnScrim={false}
       className="flex w-full max-w-[1180px] flex-col gap-5 rounded-lg border border-line bg-panel p-6 shadow-pop"
     >

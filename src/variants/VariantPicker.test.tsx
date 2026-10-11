@@ -108,3 +108,11 @@ it('shows why saving failed', () => {
   render(<VariantPicker />)
   expect(screen.getByRole('alert')).toHaveTextContent('Could not save the variants: No project is open')
 })
+
+it('ignores Esc once a variant has code, so a stray key never throws away paid replies', async () => {
+  const actions = seed([{ status: 'ok', code: 'cube(1);' }, {}, {}])
+  render(<VariantPicker />)
+  await userEvent.keyboard('{Escape}')
+  expect(actions.discard).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'Discard all' })).toBeInTheDocument()
+})
