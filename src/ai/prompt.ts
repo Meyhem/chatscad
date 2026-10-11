@@ -1,4 +1,5 @@
 import type { RenderResult } from '../render/types'
+import { librarySection } from './libraryPrompt'
 import type { ContentPart, LlmMessage } from './types'
 
 export interface PromptContext {
@@ -30,10 +31,7 @@ replacement lines
 - When you are asked to fix compiler errors, change only what is needed to make the file compile.`
 
 export function buildSystemPrompt(ctx: PromptContext): string {
-  const libraries =
-    ctx.libraries && ctx.libraries.length > 0
-      ? `Libraries available: ${ctx.libraries.join(', ')}. Include them with include <…> or use <…> only where they help.`
-      : 'No external libraries are available: do not use include <…> or use <…>.'
+  const libraries = librarySection(ctx.libraries ?? []) || 'No external libraries are available: do not use include <…> or use <…>.'
   return `${SYSTEM_PROMPT}\n\n${libraries}`
 }
 

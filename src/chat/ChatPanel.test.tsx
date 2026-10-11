@@ -30,7 +30,7 @@ beforeEach(async () => {
 it('is the Chat region with a pane head', () => {
   render(<ChatPanel />)
   expect(screen.getByRole('region', { name: 'Chat' })).toHaveTextContent('Chat')
-  expect(screen.queryByTestId('chat-cost')).toBeNull()
+  expect(screen.queryByTestId('project-cost')).toBeNull()
 })
 
 it('on first run explains how to connect a model; its buttons open settings or the editor', async () => {
@@ -68,8 +68,8 @@ it('shows the messages and the cost of this chat, without suggestions', () => {
   render(<ChatPanel />)
   expect(screen.queryByText('Try asking for')).toBeNull()
   expect(screen.getAllByTestId('chat-reply')).toHaveLength(2)
-  expect(screen.getByTestId('chat-cost')).toHaveTextContent('$0.026 this chat')
-  expect(screen.getByTestId('chat-cost')).toHaveClass('pc-mono')
+  expect(screen.getByTestId('project-cost')).toHaveTextContent('$0.026 this project')
+  expect(screen.getByTestId('project-cost')).toHaveClass('pc-mono')
 })
 
 it('during auto-fix shows the busy pill, what is happening, Stop auto-fix and Back to vN', async () => {

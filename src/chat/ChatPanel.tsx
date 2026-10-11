@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { useProvidersStore } from '../settings/providersStore'
 import { useAppStore } from '../state/store'
-import { formatCost } from '../ui/format'
 import { IconInfo, IconSpinner } from '../ui/icons'
 import { selectChatCost, useChatStore } from './chatStore'
+import { ProjectCostCaption } from './ProjectCostCaption'
 import { Composer } from './Composer'
 import { MessageView } from './MessageView'
 import { goBack, stopTurn } from './sendPrompt'
@@ -68,9 +68,7 @@ export function ChatPanel() {
         <span className="pc-label">Chat</span>
         <span className="flex-1" />
         {cost !== undefined && (
-          <span className="pc-caption pc-mono" data-testid="chat-cost">
-            {formatCost(cost)} this chat
-          </span>
+          <ProjectCostCaption />
         )}
       </div>
 

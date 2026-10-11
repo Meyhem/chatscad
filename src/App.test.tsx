@@ -142,7 +142,7 @@ it('sends a prompt: the code of the reply reaches the editor, renders, and the c
   expect(useAppStore.getState().codeSource).toBe('ai')
   expect(screen.getByTestId('chat-reply')).toHaveTextContent('Made a block.')
   expect(screen.getByTestId('msg-cost')).toHaveTextContent('1,310 tok · $0.011')
-  expect(screen.getByTestId('chat-cost')).toHaveTextContent('$0.011 this chat')
+  expect(screen.getByTestId('project-cost')).toHaveTextContent('$0.011 this project')
   expect(screen.queryByTestId('chat-note')).toBeNull()
   expect(screen.getByRole('button', { name: 'Export STL' })).toBeEnabled()
 })

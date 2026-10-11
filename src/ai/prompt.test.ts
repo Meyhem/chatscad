@@ -15,7 +15,6 @@ it('fixes the contract in the system prompt', () => {
 
 it('forbids libraries unless some are enabled', () => {
   expect(buildSystemPrompt({ code: '' })).toBe(`${SYSTEM_PROMPT}\n\nNo external libraries are available: do not use include <…> or use <…>.`)
-  expect(buildSystemPrompt({ code: '', libraries: ['BOSL2'] })).toContain('Libraries available: BOSL2.')
 })
 
 it('asks for the whole file on the first turn, with the current code', () => {
@@ -76,4 +75,9 @@ describe('formatCompileErrors', () => {
   it('is empty for a successful render', () => {
     expect(formatCompileErrors(okResult())).toBe('')
   })
+})
+
+it('mentions only the enabled libraries', () => {
+  expect(buildSystemPrompt({ code: '', libraries: ['BOSL2'] })).toContain('include <BOSL2/std.scad>')
+  expect(buildSystemPrompt({ code: '' })).not.toContain('BOSL2')
 })

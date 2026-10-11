@@ -1,4 +1,5 @@
 import { computeCost, priceFor } from '../ai/cost'
+import { currentLibraries } from '../history/projectStore'
 import { createProvider as defaultCreateProvider } from '../ai/createProvider'
 import { describeProviderError } from '../ai/errors'
 import { runTurn, type TurnEvent } from '../ai/runTurn'
@@ -113,7 +114,7 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<voi
       model,
       history: chat.history,
       userText,
-      ctx: { code: startCode === DEFAULT_CODE ? '' : startCode },
+      ctx: { code: startCode === DEFAULT_CODE ? '' : startCode, libraries: currentLibraries() },
       maxFixAttempts: providers.settings.autoFixAttempts,
       render: deps.render ?? awaitRender,
       apply: (code, source) => useAppStore.getState().setCode(code, source),
