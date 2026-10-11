@@ -55,16 +55,16 @@ export function ProjectMenu() {
   }
 
   return (
-    <div className="relative" ref={rootRef}>
+    <div className="relative min-w-0" ref={rootRef}>
       <button
         type="button"
-        className="inline-flex h-(--control-sm) items-center gap-1 rounded-sm px-2 text-[14px] font-semibold text-ink hover:bg-panel-raised"
+        className="inline-flex h-(--control-sm) max-w-full items-center gap-1 rounded-sm px-2 whitespace-nowrap text-[14px] font-semibold text-ink hover:bg-panel-raised"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => (open ? close() : setOpen(true))}
       >
-        {project.name}
-        <IconChevronDown className="pc-i" aria-hidden="true" />
+        <span className="truncate">{project.name}</span>
+        <IconChevronDown className="pc-i shrink-0" aria-hidden="true" />
       </button>
       {open && (
         <div role="menu" aria-label="Project" className="absolute top-full left-0 z-20 mt-1 flex w-72 flex-col gap-1 rounded-lg border border-line bg-panel-raised p-2 shadow-pop">

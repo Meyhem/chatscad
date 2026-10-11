@@ -77,8 +77,9 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
   const phoneHeader = isPhone && (
     <>
       <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-line bg-panel pr-2 pl-4">
-        <ProjectMenu />
-        <span className="flex-1" />
+        <div className="flex min-w-0 flex-1">
+          <ProjectMenu />
+        </div>
         <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
         <button type="button" className="pc-btn is-icon is-ghost" aria-label="Share" onClick={() => useExportStore.getState().openAt('link')}>
           <IconShare className="pc-i" aria-hidden="true" />
@@ -135,7 +136,12 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
           <>
             <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
             <VariantProgressPill />
-            {bounds && <DimsReadout bounds={bounds} />}
+            {/* The viewer shows the dims too, so the header copy gives way on narrow screens. */}
+            {bounds && (
+              <span className="hidden xl:contents">
+                <DimsReadout bounds={bounds} />
+              </span>
+            )}
             {stale && <RenderedFromCaption />}
           </>
         )}
