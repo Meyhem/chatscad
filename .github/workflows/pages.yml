@@ -38,6 +38,14 @@ jobs:
 
       - run: npm run fetch:openscad -- --if-missing
 
+      # The pinned BOSL2 and MCAD bundles (URLs and SHA-256 live in scripts/fetch-libraries.ts).
+      - uses: actions/cache@v6
+        with:
+          path: public/libraries
+          key: libraries-${{ hashFiles('scripts/fetch-libraries.ts') }}
+
+      - run: npm run fetch:libraries -- --if-missing
+
       - run: npm run typecheck
 
       - run: npm test

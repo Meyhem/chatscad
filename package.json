@@ -14,8 +14,10 @@
     "typecheck": "tsc --noEmit",
     "tokens": "tsx scripts/gen-tokens.ts",
     "fetch:openscad": "tsx scripts/fetch-openscad.ts",
-    "predev": "tsx scripts/fetch-openscad.ts --if-missing",
-    "prebuild": "tsx scripts/fetch-openscad.ts --if-missing",
+    "fetch:libraries": "tsx scripts/fetch-libraries.ts",
+    "predev": "tsx scripts/fetch-openscad.ts --if-missing && tsx scripts/fetch-libraries.ts --if-missing",
+    "prebuild": "tsx scripts/fetch-openscad.ts --if-missing && tsx scripts/fetch-libraries.ts --if-missing",
+    "pretest": "tsx scripts/fetch-openscad.ts --if-missing && tsx scripts/fetch-libraries.ts --if-missing",
     "e2e": "playwright test"
   },
   "repository": {
