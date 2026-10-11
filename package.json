@@ -12,7 +12,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "tokens": "tsx scripts/gen-tokens.ts"
+    "tokens": "tsx scripts/gen-tokens.ts",
+    "fetch:openscad": "tsx scripts/fetch-openscad.ts",
+    "predev": "tsx scripts/fetch-openscad.ts --if-missing",
+    "prebuild": "tsx scripts/fetch-openscad.ts --if-missing"
   },
   "repository": {
     "type": "git",
@@ -43,6 +46,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "fflate": "^0.8.3",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
