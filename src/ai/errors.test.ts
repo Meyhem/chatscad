@@ -59,3 +59,13 @@ it('handles errors that are not provider errors', () => {
     body: 'boom.',
   })
 })
+
+it('asks for a full address when the base URL is not one', () => {
+  const err = new ProviderError('bad-request', 'The base URL is not a full http(s) address')
+  for (const baseUrl of ['', 'api.openai.com/v1']) {
+    expect(describeProviderError(err, baseUrl)).toEqual({
+      title: 'The base URL is not a full address',
+      body: 'Enter it with http:// or https:// at the start, for example https://api.openai.com/v1, or http://localhost:11434/v1 for Ollama on this computer.',
+    })
+  }
+})

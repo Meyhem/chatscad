@@ -27,3 +27,17 @@ it('uses the Anthropic adapter for anthropic profiles', async () => {
 it('never throws while building a provider, even with no key', () => {
   expect(() => createProvider(newProfile({ name: 'x', adapter: 'anthropic', baseUrl: '' }))).not.toThrow()
 })
+
+it.each(['', 'api.openai.com/v1', '/v1', 'ftp://llm.test/v1'])(
+  'sends nothing, and above all no key, when the base URL %j is not a full http(s) address',
+  async (baseUrl) => {
+    const fetch = stubFetch({ data: [] })
+    for (const adapter of ['openai-compatible', 'anthropic'] as const) {
+      const provider = createProvider(newProfile({ name: 'x', adapter, baseUrl, apiKey: 'secret-key' }))
+      await expect(provider.listModels()).rejects.toMatchObject({ name: 'ProviderError', kind: 'bad-request' })
+      const stream = provider.streamChat({ model: 'm', system: '', messages: [{ role: 'user', content: 'hi' }] })
+      await expect(stream[Symbol.asyncIterator]().next()).rejects.toMatchObject({ kind: 'bad-request' })
+    }
+    expect(fetch).not.toHaveBeenCalled()
+  },
+)

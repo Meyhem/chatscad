@@ -1,6 +1,6 @@
 import { errorMessage } from '../render/result'
 import { ProviderError } from './types'
-import { hostOf, isLocalBaseUrl, portOf } from './url'
+import { hostOf, isHttpUrl, isLocalBaseUrl, portOf } from './url'
 
 function sentence(text: string): string {
   const t = text.trim()
@@ -20,6 +20,12 @@ export function describeProviderError(err: unknown, baseUrl: string): { title: s
   const host = hostOf(baseUrl)
   if (!(err instanceof ProviderError)) {
     return { title: `Something went wrong talking to ${host}`, body: sentence(errorMessage(err)) }
+  }
+  if (!isHttpUrl(baseUrl)) {
+    return {
+      title: 'The base URL is not a full address',
+      body: 'Enter it with http:// or https:// at the start, for example https://api.openai.com/v1, or http://localhost:11434/v1 for Ollama on this computer.',
+    }
   }
   const detail = sentence(err.message)
   switch (err.kind) {

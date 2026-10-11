@@ -30,3 +30,13 @@ export function isLocalBaseUrl(url: string): boolean {
     return false
   }
 }
+
+/** True only for an absolute http(s) address. Anything else would resolve against this site, taking the key with it. */
+export function isHttpUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url.trim())
+    return protocol === 'https:' || protocol === 'http:'
+  } catch {
+    return false
+  }
+}
