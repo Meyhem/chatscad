@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { ProviderError, type ChatEvent, type ChatRequest, type LlmMessage, type LlmProvider, type ModelInfo, type ReasoningEffort, type StopReason, type Usage } from './types'
+import { ProviderError, type ChatEvent, type ChatRequest, type LlmMessage, type LlmProvider, type ModelInfo, type StopReason, type Usage } from './types'
 import type { FetchLike } from './url'
 
 export interface AnthropicOptions {
@@ -22,11 +22,19 @@ export function anthropicStopReason(r: string | null | undefined): StopReason {
 
 export const EFFORT_OFF_UNSUPPORTED = "This model can't turn reasoning off, so it used Low."
 
-function thinkingParams(effort: ReasoningEffort | undefined, info: ModelInfo | undefined): Record<string, unknown> {
+function thinkingParams(req: ChatRequest, info: ModelInfo | undefined): Record<string, unknown> {
+  const effort = req.reasoningEffort
   if (effort === 'off') return { thinking: { type: 'disabled' } }
   if (effort) return { thinking: { type: 'adaptive', display: 'summarized' }, output_config: { effort } }
-  // Current models return empty thinking text unless asked for a summary.
-  return info?.reasoning?.adaptive ? { thinking: { type: 'adaptive', display: 'summarized' } } : {}
+  // Current models return empty thinking text unless asked for a summary. Capped requests
+  // (Test connection, the visual check) stay as they were: thinking would eat their few tokens.
+  return info?.reasoning?.adaptive && req.maxTokens === undefined ? { thinking: { type: 'adaptive', display: 'summarized' } } : {}
+}
+
+/** The limit in "max_tokens: 64000 > 32000, which is the maximum allowed…", or null. */
+export function maxTokensLimit(message: string): number | null {
+  const m = /max_tokens:\s*\d+\s*>\s*(\d+)/.exec(message)
+  return m ? Number(m[1]) : null
 }
 
 /** True when the untyped capabilities tree has `supported: true` at `path`. */
@@ -116,7 +124,7 @@ export function createAnthropicProvider(opts: AnthropicOptions): LlmProvider {
         max_tokens: req.maxTokens ?? info?.maxOutputTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS,
         system: req.system,
         messages: req.messages.map(toAnthropicMessage),
-        ...thinkingParams(req.reasoningEffort, info),
+        ...thinkingParams(req, info),
       }
       const stream = getClient().messages.stream(params as unknown as Anthropic.MessageStreamParams, { signal })
       for await (const event of stream) {
@@ -154,10 +162,19 @@ export function createAnthropicProvider(opts: AnthropicOptions): LlmProvider {
       try {
         yield* streamOnce(req, signal)
       } catch (err) {
-        // Some models (Opus 5.5, Sonnet 5.5) cannot turn thinking off; the 400 comes before any event.
-        if (req.reasoningEffort === 'off' && err instanceof ProviderError && err.kind === 'bad-request' && /thinking/i.test(err.message)) {
+        // Both rejections come as a 400 before any event, so nothing has been yielded yet.
+        if (!(err instanceof ProviderError) || err.kind !== 'bad-request') throw err
+        // Some models (Opus 5.5, Sonnet 5.5) cannot turn thinking off.
+        if (req.reasoningEffort === 'off' && /thinking/i.test(err.message)) {
           yield { type: 'notice', text: EFFORT_OFF_UNSUPPORTED }
           yield* streamOnce({ ...req, reasoningEffort: 'low' }, signal)
+          return
+        }
+        // A model the cached list does not know may have a lower limit than the fallback.
+        const limit = maxTokensLimit(err.message)
+        const known = req.maxTokens !== undefined || opts.models?.some((m) => m.id === req.model && m.maxOutputTokens !== undefined)
+        if (limit !== null && !known) {
+          yield* streamOnce({ ...req, maxTokens: limit }, signal)
           return
         }
         throw err

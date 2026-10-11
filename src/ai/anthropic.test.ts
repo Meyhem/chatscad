@@ -276,3 +276,27 @@ it('does not retry other 400s for off', async () => {
   await expect(collect(withModels(fetch).streamChat({ ...REQ, reasoningEffort: 'off' }))).rejects.toMatchObject({ kind: 'bad-request' })
   expect(calls).toHaveLength(1)
 })
+
+it('asks for summarized thinking by default only on uncapped requests (not Test connection or the visual check)', async () => {
+  const { fetch, calls } = fakeFetch(sse(RECORDED_SSE))
+  await collect(withModels(fetch).streamChat({ ...REQ, maxTokens: 200 }))
+  expect(bodyOf(calls[0])).not.toHaveProperty('thinking')
+  expect(bodyOf(calls[0]).max_tokens).toBe(200)
+})
+
+it('retries once at the limit the API names when the fallback max_tokens is too high', async () => {
+  const { fetch, calls } = fakeFetch(
+    apiError(400, 'invalid_request_error', 'max_tokens: 64000 > 32000, which is the maximum allowed number of output tokens for claude-opus-4'),
+    sse(RECORDED_SSE),
+  )
+  const events = await collect(provider(fetch).streamChat(REQ))
+  expect(calls).toHaveLength(2)
+  expect(bodyOf(calls[1]).max_tokens).toBe(32000)
+  expect(events.at(-1)).toMatchObject({ type: 'usage' })
+})
+
+it('does not second-guess a max_tokens the caller chose', async () => {
+  const { fetch, calls } = fakeFetch(apiError(400, 'invalid_request_error', 'max_tokens: 99999 > 32000, which is the maximum allowed'))
+  await expect(collect(provider(fetch).streamChat({ ...REQ, maxTokens: 99999 }))).rejects.toMatchObject({ kind: 'bad-request' })
+  expect(calls).toHaveLength(1)
+})
