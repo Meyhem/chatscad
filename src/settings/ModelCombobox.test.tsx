@@ -82,3 +82,9 @@ it('shows at most 50 matches', async () => {
   expect(options()).toHaveLength(50)
   expect(screen.getByText('50 of 342 models · prices per 1M input / output tokens')).toBeInTheDocument()
 })
+
+it('shows the id once for a model the provider gives no name', async () => {
+  render(<Harness />)
+  await userEvent.type(box(), 'coder')
+  expect(within(options()[0]).getAllByText('example/sonnet-coder-32b')).toHaveLength(1)
+})

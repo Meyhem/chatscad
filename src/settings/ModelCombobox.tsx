@@ -119,7 +119,7 @@ export function ModelCombobox({ id, value, models, priceTable, onChange, onPick 
                   ) : (
                     <span className="pc-caption text-right">No price listed</span>
                   )}
-                  <span className="pc-caption pc-mono truncate">{m.id}</span>
+                  <span className="pc-caption pc-mono truncate">{m.name ? m.id : ''}</span>
                   <span className="flex justify-end gap-1">
                     {m.capabilities?.vision && <span className="pc-chip">vision</span>}
                     {m.capabilities?.audio && <span className="pc-chip">audio</span>}
