@@ -1,13 +1,18 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
 import { cspPlugin } from './build/csp'
+import { pwaHeadPlugin, pwaOptions } from './build/pwa'
+
+// Sub-path the app is served from; the Pages workflow sets it (e.g. /promptcad/). Local dev and tests use /.
+const base = process.env.BASE_PATH ?? '/'
 
 export default defineConfig({
-  // Sub-path the app is served from; the Pages workflow sets it (e.g. /promptcad/). Local dev and tests use /.
-  base: process.env.BASE_PATH ?? '/',
-  plugins: [react(), tailwindcss(), cspPlugin()],
+  base,
+  plugins: [react(), tailwindcss(), cspPlugin(), pwaHeadPlugin(base), VitePWA(pwaOptions(base))],
   worker: { format: 'es' },
   build: {
     // Never inline fonts as data: URIs; the CSP allows fonts from 'self' only.
@@ -18,5 +23,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts', 'build/**/*.test.ts'],
+    // The PWA plugin's virtual module only exists in a Vite build or dev server; unit tests use a stand-in.
+    alias: { 'virtual:pwa-register/react': fileURLToPath(new URL('./src/test/pwaRegisterStub.ts', import.meta.url)) },
   },
 })
