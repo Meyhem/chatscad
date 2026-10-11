@@ -83,3 +83,12 @@ it('calls onBlur when the editor loses focus', () => {
   fireEvent.blur(container.querySelector('.cm-content')!)
   expect(onBlur).toHaveBeenCalledTimes(1)
 })
+
+it('keeps a value it was given out of its own undo history, so undo never brings back another project or version', async () => {
+  const { undo } = await import('@codemirror/commands')
+  const { container, rerender } = render(<CodeEditor value="project A" onChange={() => {}} diagnostics={[]} />)
+  rerender(<CodeEditor value="project B" onChange={() => {}} diagnostics={[]} />)
+  const view = EditorView.findFromDOM(container.querySelector('.cm-editor') as HTMLElement)!
+  undo(view)
+  expect(view.state.doc.toString()).toBe('project B')
+})

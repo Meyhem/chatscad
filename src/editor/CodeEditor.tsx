@@ -1,5 +1,5 @@
 import { setDiagnostics, type Diagnostic as CmDiagnostic } from '@codemirror/lint'
-import { Annotation, EditorState, type Text } from '@codemirror/state'
+import { Annotation, EditorState, Transaction, type Text } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { basicSetup } from 'codemirror'
 import { useEffect, useRef } from 'react'
@@ -68,7 +68,11 @@ export function CodeEditor({ value, onChange, diagnostics, reveal = null, onBlur
   useEffect(() => {
     const view = viewRef.current
     if (view && view.state.doc.toString() !== value) {
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value }, annotations: external.of(true) })
+      // Kept out of the undo history: undo must never bring back another project's or version's code.
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: value },
+        annotations: [external.of(true), Transaction.addToHistory.of(false)],
+      })
     }
   }, [value])
 
