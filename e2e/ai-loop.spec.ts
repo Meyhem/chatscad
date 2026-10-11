@@ -57,7 +57,7 @@ async function addFakeProfile(page: Page) {
 }
 
 async function prompt(page: Page, text: string) {
-  await page.getByLabel('Prompt').fill(text)
+  await page.getByRole('textbox', { name: 'Prompt' }).fill(text)
   await page.getByRole('button', { name: 'Send' }).click()
 }
 

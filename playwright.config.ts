@@ -7,13 +7,17 @@ const baseURL = `http://localhost:4173${basePath}`
 export default defineConfig({
   testDir: 'e2e',
   timeout: 120_000,
-  use: { baseURL, acceptDownloads: true },
+  // Service workers would answer requests before page.route sees them; pwa.spec.ts turns them on for itself.
+  use: { baseURL, acceptDownloads: true, serviceWorkers: 'block' },
   webServer: {
-    // Production build, so the CSP meta tag is active during the test.
+    // Production build, so the CSP meta tag and the service worker are the deployed ones.
     command: 'npm run build && npm run preview -- --port 4173 --strictPort',
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /phone\.spec\.ts/ },
+    { name: 'phone', use: { ...devices['Pixel 7'] }, testMatch: /phone\.spec\.ts/ },
+  ],
 })
