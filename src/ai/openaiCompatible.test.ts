@@ -205,6 +205,25 @@ describe('listModels', () => {
     expect(calls[0].init.method ?? 'GET').toBe('GET')
   })
 
+  it('reads vision and audio input from the modalities OpenRouter reports', async () => {
+    const { fetch } = fakeFetch(
+      json(200, {
+        data: [
+          { id: 'a', architecture: { input_modalities: ['text', 'image'] } },
+          { id: 'b', architecture: { input_modalities: ['text', 'audio'] } },
+          { id: 'c', architecture: { input_modalities: 'text' } },
+          { id: 'd' },
+        ],
+      }),
+    )
+    expect(await provider(fetch).listModels()).toEqual([
+      { id: 'a', capabilities: { vision: true, audio: false } },
+      { id: 'b', capabilities: { vision: false, audio: true } },
+      { id: 'c' },
+      { id: 'd' },
+    ])
+  })
+
   it('throws a typed error when the key is rejected', async () => {
     const { fetch } = fakeFetch(json(401, { error: { message: 'Incorrect API key provided' } }))
     await expect(provider(fetch).listModels()).rejects.toMatchObject({ kind: 'auth', status: 401 })

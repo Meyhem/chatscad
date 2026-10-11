@@ -34,6 +34,8 @@ export interface ModelInfo {
   name?: string
   /** Prices the provider's /models reports (OpenRouter), USD per million tokens. */
   price?: ModelPrice
+  /** Input kinds the provider reports for the model (OpenRouter's input_modalities). */
+  capabilities?: { vision: boolean; audio: boolean }
 }
 
 export interface ProviderCapabilities {

@@ -1,13 +1,15 @@
 import { Fragment, useState, type ReactNode } from 'react'
 import { createProvider } from '../ai/createProvider'
-import type { AdapterKind, ProviderCapabilities } from '../ai/types'
+import type { AdapterKind, ModelInfo, ProviderCapabilities } from '../ai/types'
 import { isLocalBaseUrl } from '../ai/url'
 import type { ProviderProfile } from '../db/db'
 import { IconCheck, IconWarning } from '../ui/icons'
+import { ModelCombobox } from './ModelCombobox'
 import { PriceTable } from './PriceTable'
 import { useProvidersStore, type ProfilePatch } from './providersStore'
 import { TranscriptionModelField } from './TranscriptionModelField'
 import { testConnection, type ConnectionResult } from './testConnection'
+import { useModelList, type ModelListState } from './useModelList'
 
 const CAPABILITIES: Array<[keyof ProviderCapabilities, string]> = [
   ['streaming', 'Streaming'],
@@ -23,6 +25,21 @@ function Field({ id, label, hint, children }: { id: string; label: string; hint?
       {hint && <span className="pc-hint">{hint}</span>}
     </div>
   )
+}
+
+function modelHint(state: ModelListState, profile: ProviderProfile): string {
+  const name = profile.name || 'the provider'
+  switch (state.phase) {
+    case 'loading':
+      return `Loading the model list from ${name}…`
+    case 'error':
+      return `Couldn't load the model list: ${state.reason}. Type a model name instead.`
+    case 'loaded':
+    case 'idle':
+      return profile.cachedModels.length > 0
+        ? `${profile.cachedModels.length} models from ${name}. Type to search, or enter any model name.`
+        : 'Enter the API key to load the model list, or type a model name.'
+  }
 }
 
 function ResultCallout({ result }: { result: ConnectionResult }) {
@@ -45,6 +62,9 @@ export function ProfileForm({ profile }: { profile: ProviderProfile }) {
   const [testing, setTesting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showPrices, setShowPrices] = useState(false)
+  const models = useModelList(profile)
+  /** Capabilities last set from the picked model's listing; the caption goes away once the person changes one. */
+  const [fromList, setFromList] = useState<Array<keyof ProviderCapabilities>>([])
 
   const patch = (p: ProfilePatch) => void updateProfile(profile.id, p)
   const id = (name: string) => `${profile.id}-${name}`
@@ -59,12 +79,11 @@ export function ProfileForm({ profile }: { profile: ProviderProfile }) {
     setTesting(false)
   }
 
-  const modelHint =
-    profile.cachedModels.length > 0
-      ? `${profile.cachedModels.length} models from the provider. Type to search, or enter any model name.`
-      : result && result.models === null
-        ? "Couldn't load the model list. Type a model name instead."
-        : 'Test the connection to load the model list, or type a model name.'
+  const pickModel = (m: ModelInfo) => {
+    if (!m.capabilities) return
+    patch({ capabilities: { ...profile.capabilities, vision: m.capabilities.vision, audio: m.capabilities.audio } })
+    setFromList(['vision', 'audio'])
+  }
 
   return (
     <section aria-label="Profile" className="flex min-h-0 min-w-0 flex-col bg-panel md:overflow-y-auto md:border-l md:border-line">
@@ -141,21 +160,15 @@ export function ProfileForm({ profile }: { profile: ProviderProfile }) {
           </div>
         </Field>
 
-        <Field id={id('model')} label="Default model" hint={modelHint}>
-          <div className="pc-input is-mono">
-            <input
-              id={id('model')}
-              list={id('models')}
-              spellCheck={false}
-              value={profile.defaultModel}
-              onChange={(e) => patch({ defaultModel: e.target.value })}
-            />
-          </div>
-          <datalist id={id('models')}>
-            {profile.cachedModels.map((m) => (
-              <option key={m.id} value={m.id} />
-            ))}
-          </datalist>
+        <Field id={id('model')} label="Default model" hint={modelHint(models, profile)}>
+          <ModelCombobox
+            id={id('model')}
+            value={profile.defaultModel}
+            models={profile.cachedModels}
+            priceTable={profile.priceTable}
+            onChange={(defaultModel) => patch({ defaultModel })}
+            onPick={pickModel}
+          />
         </Field>
 
         <div className="pc-stack">
@@ -166,17 +179,19 @@ export function ProfileForm({ profile }: { profile: ProviderProfile }) {
                 <input
                   type="checkbox"
                   checked={profile.capabilities[key]}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setFromList([])
                     patch({
                       capabilities: {
                         ...profile.capabilities,
                         [key]: e.target.checked,
                       },
                     })
-                  }
+                  }}
                 />
                 <span className="pc-track" />
                 {label}
+                {fromList.includes(key) && profile.capabilities[key] && <span className="pc-caption ml-2">From the model list</span>}
               </label>
               {key === 'audio' && profile.capabilities.audio && <TranscriptionModelField />}
             </Fragment>

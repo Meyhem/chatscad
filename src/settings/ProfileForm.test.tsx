@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { getProfile } from '../db/profiles'
 import { resetDb } from '../test/db'
@@ -93,9 +93,61 @@ it('loads the model list on success, offers it for the default model, and marks 
   expect(screen.getByText('qwen3-coder on localhost:11434 replied · 2 models listed.')).toBeInTheDocument()
   expect(useProvidersStore.getState().status[p.id]).toBe('ok')
   await vi.waitFor(async () => expect((await getProfile(p.id))?.cachedModels).toEqual([{ id: 'llama3' }, { id: 'qwen3-coder' }]))
-  const list = document.getElementById(screen.getByLabelText('Default model').getAttribute('list')!)!
-  expect([...list.querySelectorAll('option')].map((o) => o.value)).toEqual(['llama3', 'qwen3-coder'])
-  expect(screen.getByText(/2 models from the provider/)).toBeInTheDocument()
+  await userEvent.clear(screen.getByRole('combobox', { name: 'Default model' }))
+  expect(within(screen.getByRole('listbox', { name: 'Models' })).getAllByRole('option').map((o) => o.textContent)).toEqual([expect.stringContaining('llama3'), expect.stringContaining('qwen3-coder')])
+  expect(await screen.findByText('2 models from Ollama on this computer. Type to search, or enter any model name.', {}, { timeout: 3_000 })).toBeInTheDocument()
+})
+
+const OPENROUTER_MODELS = {
+  data: [
+    {
+      id: 'anthropic/claude-sonnet-5-5',
+      name: 'Claude Sonnet 5.5',
+      pricing: { prompt: '0.000003', completion: '0.000015' },
+      architecture: { input_modalities: ['text', 'image'] },
+    },
+    { id: 'example/coder', architecture: { input_modalities: ['text'] } },
+  ],
+}
+
+it('loads the model list on its own for OpenRouter, with prices, and prefills the capabilities of the picked model', async () => {
+  const fetch = vi.fn(async (_input: string | URL | Request) => Response.json(OPENROUTER_MODELS))
+  vi.stubGlobal('fetch', fetch)
+  const p = await setup('openrouter')
+  expect(await screen.findByText('2 models from OpenRouter. Type to search, or enter any model name.', {}, { timeout: 3_000 })).toBeInTheDocument()
+  expect(String(fetch.mock.calls[0][0])).toBe('https://openrouter.ai/api/v1/models')
+
+  await userEvent.type(screen.getByRole('combobox', { name: 'Default model' }), 'sonnet')
+  const option = screen.getByRole('option', { name: /Claude Sonnet 5\.5/ })
+  expect(option).toHaveTextContent('$3.00 / $15.00')
+  expect(option).toHaveTextContent('vision')
+  await userEvent.keyboard('{ArrowDown}{Enter}')
+
+  expect(screen.getByRole('checkbox', { name: /Vision \(images and sketches\)/ })).toBeChecked()
+  expect(screen.getByText('From the model list')).toBeInTheDocument()
+  await vi.waitFor(async () =>
+    expect(await getProfile(p.id)).toMatchObject({
+      defaultModel: 'anthropic/claude-sonnet-5-5',
+      capabilities: { streaming: true, vision: true, audio: false },
+    }),
+  )
+  await userEvent.click(screen.getByRole('checkbox', { name: /Vision \(images and sketches\)/ }))
+  expect(screen.queryByText('From the model list')).toBeNull()
+})
+
+it('says why the model list could not be loaded and keeps the field free to type in', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ error: { message: 'No auth credentials found' } }, { status: 401 })))
+  const p = await setup('openrouter')
+  expect(
+    await screen.findByText("Couldn't load the model list: openrouter.ai rejected the API key. Type a model name instead.", {}, { timeout: 3_000 }),
+  ).toBeInTheDocument()
+  await userEvent.type(screen.getByRole('combobox', { name: 'Default model' }), 'my/model')
+  await vi.waitFor(async () => expect((await getProfile(p.id))?.defaultModel).toBe('my/model'))
+})
+
+it('asks for the key before it can list models from a provider that needs one', async () => {
+  await setup('openai')
+  expect(screen.getByText('Enter the API key to load the model list, or type a model name.')).toBeInTheDocument()
 })
 
 it('asks for confirmation before deleting', async () => {

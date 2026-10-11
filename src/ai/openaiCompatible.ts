@@ -42,6 +42,7 @@ interface OpenAiModel {
   id?: unknown
   name?: unknown
   pricing?: { prompt?: unknown; completion?: unknown }
+  architecture?: { input_modalities?: unknown }
 }
 
 export function kindForStatus(status: number): ProviderErrorKind {
@@ -174,7 +175,16 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): L
       const models = rows.flatMap((m): ModelInfo[] => {
         if (typeof m.id !== 'string' || m.id === '') return []
         const price = toPrice(m.pricing)
-        return [{ id: m.id, ...(typeof m.name === 'string' && m.name !== m.id ? { name: m.name } : {}), ...(price ? { price } : {}) }]
+        const modalities = m.architecture?.input_modalities
+        const capabilities = Array.isArray(modalities) ? { vision: modalities.includes('image'), audio: modalities.includes('audio') } : null
+        return [
+          {
+            id: m.id,
+            ...(typeof m.name === 'string' && m.name !== m.id ? { name: m.name } : {}),
+            ...(price ? { price } : {}),
+            ...(capabilities ? { capabilities } : {}),
+          },
+        ]
       })
       return models.sort((a, b) => a.id.localeCompare(b.id))
     },
