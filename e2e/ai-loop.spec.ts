@@ -73,7 +73,8 @@ test('a prompt becomes code that renders, with the cost shown', async ({ page })
   await expect(page.getByTestId('render-status')).toHaveText(/^Rendered \d+ ms$/)
   await expect(page.locator('.cm-content')).toContainText('cube([30, 20, 10]);')
   await expect(page.getByTestId('chat-reply')).toContainText('Made a 30 × 20 × 10 mm block.')
-  await expect(page.getByTestId('chat-reply')).toContainText('v1')
+  // A new project starts at v1 (M3), so the first AI version is v2.
+  await expect(page.getByTestId('chat-reply')).toContainText('v2')
   await expect(page.getByTestId('msg-cost')).toHaveText('1,310 tok · $0.011')
   await expect(page.getByTestId('project-cost')).toHaveText('$0.011 this project')
   await expect(page.getByRole('button', { name: 'Export STL' })).toBeEnabled()
@@ -103,7 +104,7 @@ test('a reply that fails to compile is sent back with the error, and the fixed r
   await expect(replies.nth(0)).toContainText('Failed')
   await expect(replies.nth(0).getByRole('alert')).toContainText(/^Line \d+: /)
   await expect(replies.nth(1)).toContainText('Closed the bracket.')
-  await expect(replies.nth(1)).toContainText('v2')
+  await expect(replies.nth(1)).toContainText('v3')
   await expect(page.getByTestId('project-cost')).toHaveText('$0.022 this project')
   await expect(page.getByTestId('autofix')).toHaveCount(0)
 

@@ -51,7 +51,7 @@ test('a compile error shows the pill, gutter and inline callout, keeps the last 
   await expect(page.getByTestId('console')).toContainText('ERROR')
   await expect(page.locator('.cm-lintRange-error').first()).toBeVisible()
   await expect(page.locator('.cm-diag-callout')).toContainText(/^Line \d+: /)
-  await expect(page.getByText('Showing the last model that compiled')).toBeVisible()
+  await expect(page.getByText('Showing v1, the last version that compiled')).toBeVisible()
   await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm')
   await expect(page.getByRole('button', { name: 'Export STL' })).toBeDisabled()
   await expect(page.locator('[role="dialog"]')).toHaveCount(0)
