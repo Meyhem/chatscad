@@ -34,7 +34,7 @@ export function TurntableTab() {
         mesh,
         size: previewSize(GIF_SIZES[sizeIndex].size),
         background,
-        cameras: [presetPose(mesh.bounds, 'iso')],
+        cameras: [presetPose(mesh.bounds, 'iso', GIF_SIZES[sizeIndex].size[0] / GIF_SIZES[sizeIndex].size[1])],
       })) {
         if (live) setPreview(frame)
       }

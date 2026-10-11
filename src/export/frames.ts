@@ -7,13 +7,29 @@ export interface CameraPose {
   position: Vec3
   target: Vec3
   up?: Vec3
+  /** Vertical field of view in degrees used to draw this pose; FRAME_FOV when absent. */
+  fov?: number
+  /** Width / height of the view that framed this pose (the main viewer's canvas). */
+  aspect?: number
 }
 
 /** Field of view of every exported frame; the main viewer uses the same. */
 export const FRAME_FOV = 45
 
-export function presetPose(bounds: Bounds, preset: 'iso' | 'front' | 'top'): CameraPose {
-  const fit = computeCameraFit(bounds, FRAME_FOV, 1)
+const toRad = (deg: number) => (deg * Math.PI) / 180
+const toDeg = (rad: number) => (rad * 180) / Math.PI
+
+/** Widens the vertical fov when the image is narrower than the view that framed `pose`, so its sides are never cropped. */
+export function fitPoseToAspect(pose: CameraPose, aspect: number): CameraPose {
+  const vFov = pose.fov ?? FRAME_FOV
+  if (!pose.aspect || aspect >= pose.aspect) return { ...pose, fov: vFov }
+  const halfWidth = Math.tan(toRad(vFov) / 2) * pose.aspect
+  return { ...pose, fov: toDeg(2 * Math.atan(halfWidth / aspect)) }
+}
+
+/** A preset camera that fits the whole model into an image of `aspect` (width / height). */
+export function presetPose(bounds: Bounds, preset: 'iso' | 'front' | 'top', aspect = 1): CameraPose {
+  const fit = computeCameraFit(bounds, FRAME_FOV, aspect)
   const [tx, ty, tz] = fit.target
   switch (preset) {
     case 'iso':
@@ -27,8 +43,8 @@ export function presetPose(bounds: Bounds, preset: 'iso' | 'front' | 'top'): Cam
 }
 
 /** One full turn about the Z axis, starting at the iso pose. */
-export function turntablePoses(bounds: Bounds, frames: number): CameraPose[] {
-  const { position, target } = presetPose(bounds, 'iso')
+export function turntablePoses(bounds: Bounds, frames: number, aspect = 1): CameraPose[] {
+  const { position, target } = presetPose(bounds, 'iso', aspect)
   const dx = position[0] - target[0]
   const dy = position[1] - target[1]
   return Array.from({ length: frames }, (_, i) => {

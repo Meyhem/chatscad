@@ -59,7 +59,7 @@ export async function exportTurntable(
       mesh: opts.mesh,
       size: opts.size,
       background: opts.transparent ? null : readToken('viewport'),
-      cameras: turntablePoses(opts.mesh.bounds, total),
+      cameras: turntablePoses(opts.mesh.bounds, total, width / height),
     })
     for await (const frame of frames) {
       opts.signal.throwIfAborted()

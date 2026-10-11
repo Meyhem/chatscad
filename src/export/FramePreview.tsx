@@ -24,7 +24,7 @@ export function FramePreview({
   return (
     <div className="relative grid h-[300px] place-items-center overflow-hidden rounded-md border border-line bg-viewport">
       {frame ? (
-        <canvas ref={canvas} role="img" aria-label={label} className="max-h-full max-w-full" />
+        <canvas ref={canvas} role="img" aria-label={label} className="absolute inset-0 size-full object-contain" />
       ) : (
         (placeholder ?? (
           <span className="pc-status is-busy">

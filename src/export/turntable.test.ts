@@ -54,7 +54,7 @@ it('renders one turn on a transparent ground and encodes every frame', async () 
   )
   expect(blob.type).toBe('image/gif')
   expect(f.createEncoder).toHaveBeenCalledWith(480, 480, true)
-  expect(f.renderFrames).toHaveBeenCalledWith({ mesh, size: [480, 480], background: null, cameras: turntablePoses(mesh.bounds, 72) })
+  expect(f.renderFrames).toHaveBeenCalledWith({ mesh, size: [480, 480], background: null, cameras: turntablePoses(mesh.bounds, 72, 1) })
   expect(f.delays).toHaveLength(72)
   expect(new Set(f.delays)).toEqual(new Set([60]))
   expect(progress.at(-1)).toEqual({ done: 72, total: 72, bytes: 72_000 })
@@ -69,6 +69,15 @@ it('uses the viewport token for a solid ground', async () => {
   )
   expect(f.renderFrames.mock.calls[0][0].background).toBe('token:viewport')
   expect(f.createEncoder).toHaveBeenCalledWith(640, 480, false)
+})
+
+it('fits the turntable to a wide GIF', async () => {
+  const f = fakes()
+  await exportTurntable(
+    { mesh, size: [640, 480], frames: 36, transparent: false, signal: new AbortController().signal, onProgress: () => {} },
+    f.deps,
+  )
+  expect(f.renderFrames.mock.calls[0][0].cameras).toEqual(turntablePoses(mesh.bounds, 36, 640 / 480))
 })
 
 it('stops on cancel without finishing the GIF', async () => {

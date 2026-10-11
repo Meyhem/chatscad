@@ -26,6 +26,20 @@ test('saves a PNG of the model at the chosen size', async ({ page }) => {
   expect(csp).toEqual([])
 })
 
+test('the image preview fits inside its box at every size', async ({ page }) => {
+  const dialog = await openExport(page, 'Image')
+  for (const label of ['1080 × 1080 px', '1920 × 1080 px', '800 × 600 px']) {
+    await dialog.getByLabel('Size').selectOption({ label })
+    const preview = dialog.getByRole('img', { name: `Preview of the ${label} image` })
+    await expect(preview).toBeVisible()
+    const box = (await preview.locator('..').boundingBox())!
+    const canvas = (await preview.boundingBox())!
+    expect(canvas.y).toBeGreaterThanOrEqual(box.y)
+    expect(canvas.y + canvas.height).toBeLessThanOrEqual(box.y + box.height + 0.5)
+    expect(canvas.x + canvas.width).toBeLessThanOrEqual(box.x + box.width + 0.5)
+  }
+})
+
 test('saves a looping turntable GIF encoded in a worker', async ({ page }) => {
   const csp = watchCspViolations(page)
   const dialog = await openExport(page, 'Turntable')

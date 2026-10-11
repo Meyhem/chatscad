@@ -6,7 +6,7 @@ import { readToken } from '../../theme/tokens'
 import { IconDownload } from '../../ui/icons'
 import { getViewerPose } from '../../viewer/viewerCamera'
 import { FramePreview } from '../FramePreview'
-import { presetPose, renderFrames, type CameraPose } from '../frames'
+import { fitPoseToAspect, presetPose, renderFrames, type CameraPose } from '../frames'
 import { imageDataToPng } from '../png'
 import { saveFile } from '../saveFile'
 import { IMAGE_SIZES, previewSize } from '../sizes'
@@ -16,8 +16,10 @@ export type CameraChoice = 'current' | 'iso' | 'front' | 'top'
 const CAMERA_LABELS: Record<CameraChoice, string> = { current: 'Current view', iso: 'Iso', front: 'Front', top: 'Top' }
 const CAMERA_CHOICES = Object.keys(CAMERA_LABELS) as CameraChoice[]
 
-export function poseFor(choice: CameraChoice, bounds: Bounds): CameraPose {
-  return choice === 'current' ? (getViewerPose() ?? presetPose(bounds, 'iso')) : presetPose(bounds, choice)
+/** The camera for an image of `aspect` (width / height); "Current view" grows the frame rather than crop what the viewer shows. */
+export function poseFor(choice: CameraChoice, bounds: Bounds, aspect: number): CameraPose {
+  const viewer = choice === 'current' ? getViewerPose() : null
+  return viewer ? fitPoseToAspect(viewer, aspect) : presetPose(bounds, choice === 'current' ? 'iso' : choice, aspect)
 }
 
 async function lastFrame(frames: AsyncGenerator<ImageData>): Promise<ImageData | null> {
@@ -35,19 +37,20 @@ export function ImageTab() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { size, label } = IMAGE_SIZES[sizeIndex]
+  const aspect = size[0] / size[1]
 
   useEffect(() => {
     if (!mesh) return
     let live = true
     const background = transparent ? null : readToken('viewport')
-    lastFrame(renderFrames({ mesh, size: previewSize(IMAGE_SIZES[sizeIndex].size), background, cameras: [poseFor(camera, mesh.bounds)] })).then(
+    lastFrame(renderFrames({ mesh, size: previewSize(IMAGE_SIZES[sizeIndex].size), background, cameras: [poseFor(camera, mesh.bounds, aspect)] })).then(
       (frame) => live && setPreview(frame),
       (e: unknown) => live && setError(`Could not draw the preview: ${errorMessage(e)}`),
     )
     return () => {
       live = false
     }
-  }, [mesh, sizeIndex, transparent, camera])
+  }, [mesh, sizeIndex, transparent, camera, aspect])
 
   if (!mesh) return <NothingToExport />
 
@@ -56,7 +59,7 @@ export function ImageTab() {
     setError(null)
     try {
       const background = transparent ? null : readToken('viewport')
-      const frame = await lastFrame(renderFrames({ mesh, size, background, cameras: [poseFor(camera, mesh.bounds)] }))
+      const frame = await lastFrame(renderFrames({ mesh, size, background, cameras: [poseFor(camera, mesh.bounds, aspect)] }))
       if (frame) await saveFile(await imageDataToPng(frame), 'model.png')
     } catch (e) {
       setError(`Could not save the PNG: ${errorMessage(e)}`)

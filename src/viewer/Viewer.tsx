@@ -18,7 +18,7 @@ import { computeCameraFit } from './cameraFit'
 import { meshToGeometry } from './geometry'
 import { PickHighlight } from './PickHighlight'
 import { staleText } from './staleText'
-import { setViewerPose } from './viewerCamera'
+import { poseFromCamera, setViewerPose } from './viewerCamera'
 import { setThumbnailSource } from './thumbnail'
 import { ViewportCapture } from './ViewportCapture'
 
@@ -104,19 +104,19 @@ interface ControlsWithEvents extends ControlsLike {
 
 /** Reports the orbit pose so the PNG export can use "Current view". */
 function PoseReporter() {
-  const camera = useThree((s) => s.camera)
+  const camera = useThree((s) => s.camera) as PerspectiveCamera
   const controls = useThree((s) => s.controls) as unknown as ControlsWithEvents | null
+  const size = useThree((s) => s.size)
   useEffect(() => {
     if (!controls) return
-    const save = () =>
-      setViewerPose({ position: camera.position.toArray(), target: controls.target.toArray(), up: camera.up.toArray() })
+    const save = () => setViewerPose(poseFromCamera(camera, controls.target, size))
     save()
     controls.addEventListener('change', save)
     return () => {
       controls.removeEventListener('change', save)
       setViewerPose(null)
     }
-  }, [camera, controls])
+  }, [camera, controls, size])
   return null
 }
 

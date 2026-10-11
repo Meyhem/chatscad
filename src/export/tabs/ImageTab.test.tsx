@@ -4,10 +4,10 @@ import type { MeshData } from '../../render/types'
 import { useAppStore } from '../../state/store'
 import { okResult } from '../../test/results'
 import { setViewerPose } from '../../viewer/viewerCamera'
-import { presetPose, renderFrames, type CameraPose } from '../frames'
+import { fitPoseToAspect, presetPose, renderFrames, type CameraPose } from '../frames'
 import { imageDataToPng } from '../png'
 import { saveFile } from '../saveFile'
-import { ImageTab } from './ImageTab'
+import { ImageTab, poseFor } from './ImageTab'
 
 vi.mock('../frames', async (importOriginal) => {
   const real = await importOriginal<typeof import('../frames')>()
@@ -45,7 +45,7 @@ it('saves a PNG at the chosen size, camera and background', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: 'Save PNG' }))
   await waitFor(() => expect(saveFile).toHaveBeenCalled())
-  expect(lastCall()).toEqual({ mesh, size: [800, 600], background: null, cameras: [presetPose(mesh.bounds, 'top')] })
+  expect(lastCall()).toEqual({ mesh, size: [800, 600], background: null, cameras: [presetPose(mesh.bounds, 'top', 800 / 600)] })
   expect(imageDataToPng).toHaveBeenCalledWith(expect.objectContaining({ width: 800, height: 600 }))
   expect(vi.mocked(saveFile).mock.calls[0][1]).toBe('model.png')
   expect(document.querySelectorAll('.pc-btn.is-primary')).toHaveLength(1)
@@ -57,11 +57,17 @@ it('defaults to the current view when the viewer has one, and to iso otherwise',
   expect(screen.getByRole('option', { name: 'Current view' })).toBeDisabled()
   unmount()
 
-  const pose: CameraPose = { position: [5, -50, 40], target: [10, 10, 5], up: [0, 0, 1] }
+  const pose: CameraPose = { position: [5, -50, 40], target: [10, 10, 5], up: [0, 0, 1], fov: 45, aspect: 2 }
   setViewerPose(pose)
   render(<ImageTab />)
   expect(screen.getByLabelText('Camera')).toHaveValue('current')
-  await waitFor(() => expect(lastCall().cameras).toEqual([pose]))
+  // The default 1080 × 1080 image is narrower than the viewer, so the frame grows instead of cropping.
+  await waitFor(() => expect(lastCall().cameras).toEqual([fitPoseToAspect(pose, 1)]))
+})
+
+it('falls back to the iso preset at the image aspect when the viewer has no pose', () => {
+  setViewerPose(null)
+  expect(poseFor('current', mesh.bounds, 16 / 9)).toEqual(presetPose(mesh.bounds, 'iso', 16 / 9))
 })
 
 it('explains when there is nothing to export', () => {

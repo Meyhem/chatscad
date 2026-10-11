@@ -12,7 +12,7 @@ import {
 } from 'three'
 import type { MeshData } from '../render/types'
 import { meshToGeometry } from '../viewer/geometry'
-import type { CameraPose } from './frames'
+import { FRAME_FOV, type CameraPose } from './frames'
 import { flipRows } from './pixels'
 
 export interface GlFrameRendererOptions {
@@ -80,6 +80,7 @@ export function createGlFrameRenderer({ width, height, background, filament }: G
       const distance = camera.position.distanceTo(new Vector3(...pose.target))
       camera.near = Math.max(distance / 1000, 0.01)
       camera.far = distance * 100
+      camera.fov = pose.fov ?? FRAME_FOV
       camera.updateProjectionMatrix()
       renderer.render(scene, camera)
       gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
