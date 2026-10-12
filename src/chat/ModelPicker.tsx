@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ProviderProfile } from '../db/db'
 import { selectActiveModel, selectActiveProfile, useProvidersStore } from '../settings/providersStore'
 import { IconChevron, IconSearch } from '../ui/icons'
+import { fuzzyFilter } from './fuzzy'
 
 const MAX_PER_PROFILE = 50
 
@@ -38,7 +39,6 @@ export function ModelPicker() {
   }
 
   const typed = query.trim()
-  const q = typed.toLowerCase()
   const pick = (profileId: string, id: string) => {
     void chooseModel(profileId, id)
     setOpen(false)
@@ -89,9 +89,7 @@ export function ModelPicker() {
             />
           </div>
           {profiles.map((p) => {
-            const ids = modelIds(p)
-              .filter((id) => id.toLowerCase().includes(q))
-              .slice(0, MAX_PER_PROFILE)
+            const ids = fuzzyFilter(typed, modelIds(p)).slice(0, MAX_PER_PROFILE)
             if (ids.length === 0) return null
             return (
               <div key={p.id} role="group" aria-label={p.name} className="flex flex-col">

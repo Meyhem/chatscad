@@ -46,6 +46,20 @@ it('lists the models of every profile, filters by search, and remembers the choi
   await vi.waitFor(async () => expect((await getSettings()).activeModel).toBe('qwen/qwen3-coder'))
 })
 
+it('matches models fuzzily and puts the best match first', async () => {
+  seed([openrouter, anthropic])
+  render(<ModelPicker />)
+  await userEvent.click(screen.getByRole('button', { name: 'Model: openai/gpt-5-mini' }))
+  await userEvent.type(screen.getByLabelText('Search models'), 'qw3c')
+  expect(screen.getByRole('button', { name: 'qwen/qwen3-coder' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'openai/gpt-5-mini' })).toBeNull()
+
+  await userEvent.clear(screen.getByLabelText('Search models'))
+  await userEvent.type(screen.getByLabelText('Search models'), 'son 55')
+  expect(screen.getByRole('button', { name: 'claude-sonnet-5-5' })).toBeInTheDocument()
+  expect(screen.queryByRole('group', { name: 'OpenRouter' })).toBeNull()
+})
+
 it('switches profile when a model of another profile is picked', async () => {
   seed([openrouter, anthropic])
   render(<ModelPicker />)
