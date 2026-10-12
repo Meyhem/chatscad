@@ -8,6 +8,19 @@ it('knows BOSL2 and MCAD and nothing else', () => {
   expect(LIBRARY_INFO.MCAD).toMatchObject({ license: 'LGPL-2.1', usage: 'use <MCAD/boxes.scad>' })
 })
 
+it('describes what each library contains, so people can choose one for a project', () => {
+  for (const name of LIBRARY_NAMES) {
+    const info = LIBRARY_INFO[name]
+    expect(info.title).not.toBe('')
+    expect(info.summary).toMatch(/\.$/)
+    expect(info.contents.length).toBeGreaterThanOrEqual(4)
+    for (const c of info.contents) expect(c.name).not.toBe('')
+    expect(info.goodFor).not.toBe('')
+    expect(info.tradeoff).not.toBe('')
+  }
+  expect(LIBRARY_INFO.BOSL2.contents.map((c) => c.name)).toContain('Threads')
+})
+
 it('builds bundle URLs under the base path', () => {
   expect(libraryUrl('/chatscad/', 'BOSL2')).toBe('/chatscad/libraries/BOSL2.json')
 })

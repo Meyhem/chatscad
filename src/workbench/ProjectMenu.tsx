@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { importFromText, saveProjectFile } from '../history/projectFile'
 import { useProjectStore } from '../history/projectStore'
 import { useAppStore } from '../state/store'
+import { NewProjectDialog } from './NewProjectDialog'
 import { IconChevronDown, IconGallery, IconImport, IconPlus, IconX } from '../ui/icons'
 
 type Mode = 'menu' | 'rename' | 'delete'
@@ -14,6 +15,7 @@ export function ProjectMenu() {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<Mode>('menu')
   const [name, setName] = useState('')
+  const [creating, setCreating] = useState(false)
   const [importError, setImportError] = useState<{ file: string; error: string } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -76,11 +78,11 @@ export function ProjectMenu() {
                 className={item}
                 onClick={() => {
                   close()
-                  void store().newProject({ code: '', origin: 'blank' }).then(toWorkbench)
+                  setCreating(true)
                 }}
               >
                 <IconPlus className="pc-i" aria-hidden="true" />
-                New project
+                New project…
               </button>
               <button
                 type="button"
@@ -204,6 +206,15 @@ export function ProjectMenu() {
             </div>
           )}
         </div>
+      )}
+      {creating && (
+        <NewProjectDialog
+          onClose={() => setCreating(false)}
+          onCreate={({ name, enabledLibraries }) => {
+            setCreating(false)
+            void store().newProject({ name, code: '', origin: 'blank', enabledLibraries }).then(toWorkbench)
+          }}
+        />
       )}
     </div>
   )

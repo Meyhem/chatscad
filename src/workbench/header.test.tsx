@@ -49,18 +49,24 @@ describe('ProjectMenu', () => {
     expect(screen.getByRole('button', { name: /18650 holder/ })).toHaveAttribute('aria-expanded', 'false')
     openMenu()
     expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
-      'New project', 'Rename…', 'Examples', 'Export project (.json)', 'Import project (.json)…', 'Cable clip', 'Delete project…',
+      'New project…', 'Rename…', 'Examples', 'Export project (.json)', 'Import project (.json)…', 'Cable clip', 'Delete project…',
     ])
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
-  it('starts an empty new project and returns to the workbench', async () => {
+  it('asks for a name and libraries, then starts an empty new project and returns to the workbench', async () => {
     useAppStore.getState().setView('history')
     render(<ProjectMenu />)
     openMenu()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'New project' }))
-    await waitFor(() => expect(actions.newProject).toHaveBeenCalledWith({ code: '', origin: 'blank' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New project…' }))
+    expect(screen.queryByRole('menu')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Hose filter' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create project' }))
+    await waitFor(() =>
+      expect(actions.newProject).toHaveBeenCalledWith({ name: 'Hose filter', code: '', origin: 'blank', enabledLibraries: ['BOSL2'] }),
+    )
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(useAppStore.getState().view).toBe('workbench')
   })
 
