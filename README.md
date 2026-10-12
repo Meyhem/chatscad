@@ -4,7 +4,7 @@
 
 Describe a part, tune it, print it. ChatSCAD is a CAD workbench that runs entirely in your browser: you write (and soon, describe) a model in OpenSCAD, it compiles on your own device, and you download an STL for your 3D printer. Nothing is uploaded and there is no account.
 
-![ChatSCAD rendering a four-slot 18650 cell holder: the 3D view on the left, the OpenSCAD code on the right, 88.8 × 25.4 × 22 mm in the header](docs/images/workbench.png)
+![ChatSCAD designing a garden hose filter: the chat with the model on the left, the 3D view and parameter sliders in the middle, the OpenSCAD code and console on the right, 158.1 × 70.4 × 150 mm in the header](docs/images/interface.png)
 
 ## What you can do today
 
