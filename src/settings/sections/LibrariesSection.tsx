@@ -1,5 +1,6 @@
 import { useProjectStore } from '../../history/projectStore'
-import { LIBRARY_INFO, LIBRARY_NAMES } from '../../render/libraries'
+import { LIBRARY_NAMES } from '../../render/libraries'
+import { LibraryCard } from '../../ui/LibraryCard'
 
 export function LibrariesSection() {
   const project = useProjectStore((s) => s.project)
@@ -16,29 +17,18 @@ export function LibrariesSection() {
       ) : (
         <div className="pc-stack">
           <span className="pc-label">For {project.name}</span>
-          {LIBRARY_NAMES.map((name) => {
-            const on = project.enabledLibraries.includes(name)
-            const info = LIBRARY_INFO[name]
-            return (
-              <div key={name} className="flex flex-col gap-1">
-                <label className="pc-switch">
-                  <input
-                    type="checkbox"
-                    checked={on}
-                    onChange={() => {
-                      const next = LIBRARY_NAMES.filter((n) => (n === name ? !on : project.enabledLibraries.includes(n)))
-                      void useProjectStore.getState().setEnabledLibraries(next)
-                    }}
-                  />
-                  <span className="pc-track" />
-                  {name}
-                </label>
-                <span className="pc-caption pc-mono">
-                  {name} {info.version} · {info.license} · {info.usage}
-                </span>
-              </div>
-            )
-          })}
+          {LIBRARY_NAMES.map((name) => (
+            <LibraryCard
+              key={name}
+              lib={name}
+              on={project.enabledLibraries.includes(name)}
+              onToggle={() => {
+                const on = project.enabledLibraries.includes(name)
+                const next = LIBRARY_NAMES.filter((n) => (n === name ? !on : project.enabledLibraries.includes(n)))
+                void useProjectStore.getState().setEnabledLibraries(next)
+              }}
+            />
+          ))}
         </div>
       )}
     </section>
