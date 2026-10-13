@@ -2,23 +2,25 @@
 
 **Try it:** https://meyhem.github.io/chatscad/
 
-Describe a part, tune it, print it. ChatSCAD is a CAD workbench that runs entirely in your browser: you write (and soon, describe) a model in OpenSCAD, it compiles on your own device, and you download an STL for your 3D printer. Nothing is uploaded and there is no account.
+Describe a part, tune it, print it. ChatSCAD is a CAD workbench that runs entirely in your browser: you ask an AI model for a part in plain words (or write OpenSCAD yourself), it compiles on your own device, and you download an STL for your 3D printer. There is no server and no account.
 
-![ChatSCAD designing a garden hose filter: the chat with the model on the left, the 3D view and parameter sliders in the middle, the OpenSCAD code and console on the right, 158.1 × 70.4 × 150 mm in the header](docs/images/interface.png)
+![ChatSCAD with a 50 mm cube: on the left the Agent column with an agent run that built the model and passed review against 3 checks, four coloured review views and the Edit | Agent switch above the prompt box; in the middle the 3D view and parameter sliders for cube size, hole radius and corner chamfer; on the right the OpenSCAD code and console](docs/images/app.png)
 
-## What you can do today
+## What you can do
 
-ChatSCAD is being built in milestones. The first one, the render core, is done:
-
-- **Write or paste OpenSCAD** in a code editor with syntax highlighting. The model re-renders about half a second after you stop typing.
-- **See it in 3D.** Orbit, pan and zoom. The camera frames the first render and then stays where you put it. The size of the part is always shown in millimetres.
-- **Find mistakes fast.** A failed compile names the line in the status pill, marks it in the editor with the error underneath, and keeps your last good model on screen.
-- **Export** a binary STL for your slicer, or the `.scad` source. On phones and tablets the share sheet opens, so you can send the file straight to a slicer app.
-- **Work offline-friendly and private.** OpenSCAD itself runs in your browser as WebAssembly. Your code never leaves the page.
+- **Ask for a part, or a change to it.** Bring your own key for Anthropic, OpenAI, OpenRouter or any OpenAI-compatible endpoint, or use a local model such as Ollama. Keys stay on your device. Code that fails to compile goes back to the model automatically.
+- **Choose Edit or Agent for each request.** Edit sends one quick change. Agent, with a model that takes images, plans checks for the part, builds it, renders four views with each part in its own colour, reviews them against the checks and proposes fixes for you to approve, round after round. Each run is grouped in the chat with its steps.
+- **Tune it with sliders.** Every model is parametric: parameters become sliders with units, with presets and "Bake into code".
+- **Tap a part to change just that part**, or start from a photo, a drawing or a sketch.
+- **Ask for three variants** of a request and keep the one you like. Dictate prompts with your voice.
+- **Go back in time.** Every change is a version you can preview, compare, restore or branch from.
+- **Edit the code by hand** in an OpenSCAD editor with highlighting and inline errors. The model re-renders about half a second after you stop typing, and a failed compile keeps your last good model on screen.
+- **See it in 3D** with the size in millimetres, and export a binary STL, the `.scad` source, a PNG or a turntable GIF. Share a model as a link.
+- **Use it on a phone**, install it, and keep working offline. Start from the gallery of example models.
 
 ## Example: a holder for 18650 cells
 
-Open the app, replace the starter code with this, and you get the holder from the screenshot above:
+Open the app, replace the code with this (or ask the agent for it), and you get a holder for four cells:
 
 ```openscad
 // 18650 cell holder with a sliding lid
@@ -49,18 +51,11 @@ body();
 lid_rail();
 ```
 
-Change `slots = 4;` to `slots = 6;` and the holder grows to six cells. When it looks right, press **Export STL** and open the file in your slicer.
+Drag the `slots` slider to 6, or change `slots = 4;` to `slots = 6;`, and the holder grows to six cells. When it looks right, press **Export STL** and open the file in your slicer.
 
 If you make a typo, ChatSCAD tells you where. Here a `)` is missing after `translate([…]`:
 
 ![The same model with a syntax error: the status pill says "Failed · line 16", line 16 is marked red with "Line 16: Parser error: syntax error" under it, and the last good model stays in the 3D view](docs/images/compile-error.png)
-
-## What is coming
-
-- **Ask the agent** to create and change parts in plain words, with automatic fixes when the generated code does not compile. Switch between Edit, for a quick change, and Agent, which with a vision model plans checks for a part, reviews coloured renders of each part against them, and proposes fixes you approve. You bring your own key for Anthropic, OpenAI, OpenRouter, or a local model such as Ollama. Keys stay on your device.
-- **Sliders for every parameter**, version history you can restore or branch from, and a gallery of starter models.
-- **Phone layout and offline install**, three variants per prompt to pick from, voice prompts, share links, PNG and turntable GIF export.
-- **Tap a part to change just that part**, and start from a photo or a sketch.
 
 The full plan is in the [technical spec](docs/SPEC.md).
 
@@ -86,4 +81,4 @@ The output in `dist/` is plain static files. Set `BASE_PATH` when the app lives 
 
 ## Privacy
 
-There is no server. Rendering, storage and, later, AI calls all happen in your browser. The page loads no third-party scripts, fonts or analytics, and a strict Content Security Policy enforces that.
+There is no server. Rendering and storage happen in your browser, and AI requests go straight from your browser to the provider you chose. The page loads no third-party scripts, fonts or analytics, and a strict Content Security Policy enforces that.
