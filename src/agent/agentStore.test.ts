@@ -413,3 +413,26 @@ it('keeps a ready Sizes card when a review is started, but a build supersedes it
   await agent().submit('Taller', deps)
   expect(agent().cards.sz!.status).toBe('superseded')
 })
+
+it('refines with the photos: one agent build whose request names the new angles and the user’s sizes', async () => {
+  const project = useProjectStore.getState().project!
+  useProjectStore.setState({ project: { ...project, origin: 'photos', photos: [{ id: 'a', blobId: 'blob-a', angle: 'front', addedAt: 1 }], checks: [{ id: 'c', kind: 'size', text: 'About 50 mm tall' }] } })
+  const { deps, sent, sendOpts } = setup([PASSES])
+  useAppStore.setState({ code: 'wall = 3;\ncube(wall);', params: { wall: 3.2 } })
+  await agent().refineWithPhotos(['side'], deps)
+  expect([sent[0]?.text, sendOpts[0]]).toEqual([
+    'Compare the model with the reference photos and fix what differs. New photos: side. The user set these sizes; keep them: wall = 3.2.',
+    { display: 'Refine with 1 photo', transcript: undefined, showPhotos: false },
+  ])
+  expect(sent).toHaveLength(1)
+})
+
+it('counts every project photo in the refine bubble, and does nothing without photos', async () => {
+  const project = useProjectStore.getState().project!
+  const { deps, sendOpts } = setup([], { visionOn: false })
+  await agent().refineWithPhotos([], deps)
+  expect(sendOpts).toHaveLength(0)
+  useProjectStore.setState({ project: { ...project, origin: 'photos', photos: [{ id: 'a', blobId: 'blob-a', angle: 'front', addedAt: 1 }, { id: 'b', blobId: 'blob-b', angle: 'top', addedAt: 2 }] } })
+  await agent().refineWithPhotos([], deps)
+  expect(sendOpts[0]?.display).toBe('Refine with 2 photos')
+})

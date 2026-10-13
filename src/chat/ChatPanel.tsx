@@ -5,6 +5,9 @@ import { groupRuns } from '../agent/runSteps'
 import { RunView } from '../agent/ui/RunView'
 import { useAgentMode, useReviewer } from '../agent/useReviewer'
 import { useImageDropAndPaste } from '../images/useImageDropAndPaste'
+import { PhotosButton } from '../photos/PhotosButton'
+import { PhotosDialog } from '../photos/PhotosDialog'
+import { usePhotosDialog } from '../photos/photosDialogStore'
 import { useVisionSupport } from '../refine/useVisionSupport'
 import { useProvidersStore } from '../settings/providersStore'
 import { useAppStore } from '../state/store'
@@ -60,6 +63,8 @@ export function ChatPanel() {
   const cardStates = useAgentStore((s) => Object.values(s.cards).map((c) => c.status).join())
   const reviewer = useReviewer()
   const mode = useAgentMode()
+  const photosOpen = usePhotosDialog((s) => s.open)
+  const setPhotosOpen = usePhotosDialog((s) => s.setOpen)
   const current = useAppStore((s) => s.status === 'ok' && s.renderedCode === s.code)
   const scrollRef = useRef<HTMLDivElement>(null)
   const column = useRef<HTMLElement>(null)
@@ -96,6 +101,7 @@ export function ChatPanel() {
         <span className="pc-label">Agent</span>
         <span className="flex-1" />
         <ChecksButton />
+        <PhotosButton />
         {cost !== undefined && (
           <ProjectCostCaption />
         )}
@@ -158,6 +164,7 @@ export function ChatPanel() {
       <div className="shrink-0 border-t border-line p-3">
         <Composer />
       </div>
+      {photosOpen && <PhotosDialog onClose={() => setPhotosOpen(false)} />}
     </section>
   )
 }

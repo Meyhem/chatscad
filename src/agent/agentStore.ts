@@ -9,7 +9,8 @@ import type { AgentMode, ProviderProfile } from '../db/db'
 import type { PresetView } from '../export/frames'
 import { useProjectStore } from '../history/projectStore'
 import { blobToBase64 } from '../images/base64'
-import { loadPhotos, photoParts } from '../photos/projectPhotos'
+import { refineText } from '../photos/photoPrompt'
+import { loadPhotos, photoParts, type PhotoAngle } from '../photos/projectPhotos'
 import { errorMessage } from '../render/result'
 import { getRenderQueue } from '../render/sharedQueue'
 import type { RenderResult } from '../render/types'
@@ -148,6 +149,8 @@ export interface AgentState {
   fixIssues(cardId: string, deps?: AgentDeps): Promise<void>
   accept(cardId: string): void
   acceptSizes(cardId: string): void
+  /** Rebuilds against every project photo (spec P10); `newAngles` are the photos just added. */
+  refineWithPhotos(newAngles: PhotoAngle[], deps?: AgentDeps): Promise<void>
   addSuggestedChecks(cardId: string): Promise<void>
   stop(): void
   reset(): void
@@ -551,6 +554,18 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       const app = useAppStore.getState()
       const values = effectiveValues(app.code, app.params)
       patch<SizesCard>(cardId, { status: 'accepted', rows: card.rows.map((r) => ({ ...r, value: values[r.name] ?? r.value })) })
+    },
+
+    /** Spec P10: rebuild against all photos, keeping the user's sizes; reviewed like any agent build. */
+    async refineWithPhotos(newAngles, deps = browserDeps) {
+      if (isBusy()) return
+      const project = useProjectStore.getState().project
+      const count = project?.photos?.length ?? 0
+      if (count === 0) return
+      const text = refineText(newAngles, useAppStore.getState().params)
+      set({ latest: text })
+      startRun()
+      await build(text, `Refine with ${plural(count, 'photo')}`, currentReviewer() !== null && (project?.checks?.length ?? 0) > 0, 1, deps)
     },
 
     async addSuggestedChecks(cardId) {
