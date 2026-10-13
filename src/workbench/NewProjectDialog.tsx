@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { UNTITLED } from '../history/projectStore'
 import { NO_VISION_EXPLANATION } from '../images/attachments'
 import type { PreparedImage } from '../images/prepareImage'
-import { addDraftPhotos, layoutFor, removeDraftPhoto, type DraftPhoto, type DraftState } from '../photos/photoDraft'
+import { layoutFor, type DraftPhoto } from '../photos/photoDraft'
 import { PhotoSlots } from '../photos/PhotoSlots'
-import { MAX_BRIEF_CHARS, MAX_PROJECT_PHOTOS, tooManyPhotos, type PhotoAngle, type PhotoScale } from '../photos/projectPhotos'
+import { MAX_BRIEF_CHARS, type PhotoScale } from '../photos/projectPhotos'
+import { useDraftPhotos } from '../photos/useDraftPhotos'
 import { useVisionSupport } from '../refine/useVisionSupport'
 import { LIBRARY_NAMES, type LibraryName } from '../render/libraries'
 import { useAppStore } from '../state/store'
@@ -85,7 +86,6 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
   const [enabled, setEnabled] = useState<LibraryName[]>(DEFAULT_LIBRARIES)
   const [chosenStart, setStart] = useState<Start>('blank')
   const [layout, setLayout] = useState<Layout>('angles')
-  const [draft, setDraft] = useState<DraftState>({ photos: [], error: null })
   const [brief, setBrief] = useState('')
   const [scale, setScale] = useState<PhotoScale>('reference')
   const [showLibraries, setShowLibraries] = useState(false)
@@ -93,43 +93,8 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
   const [createError, setCreateError] = useState<string | null>(null)
   const start: Start = chosenStart === 'photos' && vision ? 'photos' : 'blank'
 
-  // Photos are prepared one batch at a time; each batch joins the draft as it is when the batch is ready,
-  // so removals and layout changes made in the meantime stay.
-  const latest = useRef(draft)
   const layoutNow = useRef(layout)
-  const queue = useRef<Promise<void>>(Promise.resolve())
-  const open = useRef(true)
-  const commit = (next: DraftState) => {
-    latest.current = next
-    setDraft(next)
-  }
-  useEffect(
-    () => () => {
-      open.current = false
-      for (const p of latest.current.photos) URL.revokeObjectURL(p.url)
-    },
-    [],
-  )
-
-  const onAdd = (files: File[], angle: PhotoAngle) => {
-    queue.current = queue.current
-      .then(async () => {
-        const before = latest.current
-        const next = await addDraftPhotos(before, files, angle, prepare, objectUrl)
-        const added = next.photos.slice(before.photos.length)
-        if (!open.current) {
-          for (const p of added) URL.revokeObjectURL(p.url)
-          return
-        }
-        const photos = layoutFor(layoutNow.current, [...latest.current.photos, ...added]).slice(0, MAX_PROJECT_PHOTOS)
-        const dropped = added.filter((p) => !photos.some((kept) => kept.id === p.id))
-        for (const p of dropped) URL.revokeObjectURL(p.url)
-        const overCap = layoutNow.current === 'angles' && dropped.length > 0
-        commit({ photos, error: overCap ? tooManyPhotos(dropped[0]!.name) : next.error })
-      })
-      .catch(() => {}) // one failed batch must not stop later picks
-  }
-  const onRemove = (id: string) => commit(removeDraftPhoto(latest.current, id))
+  const { draft, latest, commit, onAdd, onRemove, mounted } = useDraftPhotos({ layout: () => layoutNow.current, prepare, objectUrl })
   const changeLayout = (next: Layout) => {
     layoutNow.current = next
     setLayout(next)
@@ -166,9 +131,9 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
               ...(start === 'photos' ? { photos: { photos: layoutFor(layout, draft.photos), brief: brief.trim(), scale } } : {}),
             })
           } catch (err) {
-            if (open.current) setCreateError(`Could not create the project: ${err instanceof Error ? err.message : String(err)}`)
+            if (mounted.current) setCreateError(`Could not create the project: ${err instanceof Error ? err.message : String(err)}`)
           } finally {
-            if (open.current) setSaving(false)
+            if (mounted.current) setSaving(false)
           }
         }}
       >

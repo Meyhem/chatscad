@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useAppStore } from '../state/store'
 import { NewProjectDialog } from './NewProjectDialog'
@@ -209,4 +210,16 @@ it('stays open with the draft and says why when creating fails', async () => {
   expect(URL.revokeObjectURL).not.toHaveBeenCalled()
   expect(screen.getByRole('button', { name: 'Create and build' })).toBeEnabled()
   expect(onClose).not.toHaveBeenCalled()
+})
+
+it('keeps picked photos under StrictMode, whose effects mount twice in development', async () => {
+  const prepare = async (b: Blob) => ({ blob: b, mediaType: 'image/jpeg' as const, width: 1, height: 1 })
+  render(
+    <StrictMode>
+      <NewProjectDialog onCreate={vi.fn()} onClose={vi.fn()} vision prepare={prepare} />
+    </StrictMode>,
+  )
+  fireEvent.click(screen.getByRole('radio', { name: 'Photos' }))
+  fireEvent.change(screen.getByLabelText('Add front photo'), { target: { files: [new File(['x'], 'front.jpg', { type: 'image/jpeg' })] } })
+  expect(await screen.findByRole('img', { name: 'Front photo' })).toBeInTheDocument()
 })
