@@ -7,6 +7,9 @@ export interface Check {
   text: string
 }
 
+/** A stable empty list for store selectors (a fresh [] would re-render forever). */
+export const NO_CHECKS: readonly Check[] = []
+
 export const CHECK_KINDS: readonly CheckKind[] = ['part', 'size', 'fit', 'feature', 'print', 'other']
 
 export const CHECK_KIND_LABEL: Record<CheckKind, string> = {

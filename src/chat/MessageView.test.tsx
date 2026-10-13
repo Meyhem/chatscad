@@ -113,3 +113,23 @@ it('shows the cut-off callout', () => {
   )
   expect(screen.getByRole('alert')).toHaveTextContent('The reply was cut off before it wrote any code')
 })
+
+describe('agent cards', () => {
+  const noteFor = (cardId: string): ChatMessage => ({ id: 'n', role: 'note', text: 'Plan · 2 checks', turnLabel: null, model: null, usage: null, status: 'done', cardId })
+
+  it('shows the live card behind a note', async () => {
+    const { useAgentStore } = await import('../agent/agentStore')
+    useAgentStore.setState({
+      cards: {
+        p: { kind: 'plan', id: 'p', noteId: 'n', request: 'A box', then: 'build', status: 'ready', checks: [{ id: 'c', kind: 'part', text: 'A box' }], parts: [], model: 'm', usage: null, error: null },
+      },
+    })
+    render(<MessageView message={noteFor('p')} />)
+    expect(screen.getByTestId('plan-card')).toBeInTheDocument()
+  })
+
+  it('falls back to the note text when the card is gone, as after a reload', () => {
+    render(<MessageView message={noteFor('gone')} />)
+    expect(screen.getByTestId('chat-note')).toHaveTextContent('Plan · 2 checks')
+  })
+})

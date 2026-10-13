@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useAgentStore } from '../agent/agentStore'
+import { ReviewButton } from '../agent/ui/ReviewButton'
 import { AttachButton } from '../images/AttachButton'
 import { AttachmentTray } from '../images/AttachmentTray'
 import { useAttachments } from '../images/attachments'
@@ -15,7 +17,6 @@ import { IconSend, IconStop } from '../ui/icons'
 import { useChatStore } from './chatStore'
 import { EffortPicker } from './EffortPicker'
 import { ModelPicker } from './ModelPicker'
-import { sendPrompt, stopTurn } from './sendPrompt'
 import { DictationCaption } from '../voice/DictationCaption'
 import { MicButton } from '../voice/MicButton'
 import { useComposerDictation } from '../voice/useDictation'
@@ -24,7 +25,9 @@ import { useVoiceStore } from '../voice/voiceStore'
 export function Composer() {
   const draft = useChatStore((s) => s.draft)
   const setDraft = useChatStore((s) => s.setDraft)
-  const busy = useChatStore((s) => s.busy)
+  const chatBusy = useChatStore((s) => s.busy)
+  const agentBusy = useAgentStore((s) => s.busy !== null)
+  const busy = chatBusy || agentBusy
   const profile = useProvidersStore(selectActiveProfile)
   const model = useProvidersStore(selectActiveModel)
   const vision = useVisionSupport()
@@ -47,7 +50,9 @@ export function Composer() {
       if (startVariants(draft)) setDraft('')
       return
     }
-    void (audioTranscript ? sendPrompt(draft, { audioTranscript }) : sendPrompt(draft))
+    // The agent decides whether to plan, build and review (spec A3, A4).
+    const text = draft
+    void useAgentStore.getState().submit(text, undefined, audioTranscript ? { audioTranscript } : {})
   }
 
   return (
@@ -81,8 +86,9 @@ export function Composer() {
             />
           )}
           <VariantCountButton />
+          <ReviewButton />
           {busy ? (
-            <button type="button" className="pc-btn is-icon is-sm" aria-label="Stop" title="Stop" onClick={stopTurn}>
+            <button type="button" className="pc-btn is-icon is-sm" aria-label="Stop" title="Stop" onClick={() => useAgentStore.getState().stop()}>
               <IconStop className="pc-i" aria-hidden="true" />
             </button>
           ) : (

@@ -50,4 +50,9 @@ export {
   Slash as IconLine,
   Sparkles as IconAskAi,
   Trash2 as IconClear,
+  CircleHelp as IconUnclear,
+  Eye as IconEye,
+  ListChecks as IconChecks,
+  Palette as IconPalette,
+  ScanEye as IconAgent,
 } from 'lucide-react'

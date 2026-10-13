@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react'
+import { useAgentStore } from '../agent/agentStore'
+import { ChecksButton } from '../agent/ui/ChecksButton'
+import { useReviewer } from '../agent/useReviewer'
 import { useImageDropAndPaste } from '../images/useImageDropAndPaste'
 import { useVisionSupport } from '../refine/useVisionSupport'
 import { useProvidersStore } from '../settings/providersStore'
 import { useAppStore } from '../state/store'
-import { IconInfo, IconSpinner } from '../ui/icons'
+import { IconEye, IconInfo, IconSpinner } from '../ui/icons'
 import { selectChatCost, useChatStore } from './chatStore'
 import { ProjectCostCaption } from './ProjectCostCaption'
 import { Composer } from './Composer'
@@ -50,6 +53,10 @@ export function ChatPanel() {
   const goToLine = useAppStore((s) => s.goToLine)
   const appStatus = useAppStore((s) => s.status)
   const codeSource = useAppStore((s) => s.codeSource)
+  const agentBusy = useAgentStore((s) => s.busy)
+  const cards = useAgentStore((s) => s.cards)
+  const reviewer = useReviewer()
+  const current = useAppStore((s) => s.status === 'ok' && s.renderedCode === s.code)
   const scrollRef = useRef<HTMLDivElement>(null)
   const column = useRef<HTMLElement>(null)
   useImageDropAndPaste(column, useVisionSupport())
@@ -57,7 +64,7 @@ export function ChatPanel() {
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages, fixing])
+  }, [messages, fixing, cards])
 
   // findLast needs lib ES2023; tsconfig targets ES2022.
   const lastReply = [...messages].reverse().find((m) => m.role === 'assistant')
@@ -65,12 +72,17 @@ export function ChatPanel() {
   // still holds the AI's failing code, so "Back to" must stay.
   const aiCodeFails = appStatus === 'error' && (codeSource === 'ai' || codeSource === 'autofix')
   const showBack = backTo !== null && (fixing !== null || (!busy && (lastReply?.compileStatus === 'error' || aiCodeFails)))
+  // "Review vN": the latest reply built a model that is on screen and has not been reviewed since.
+  const last = messages.at(-1)
+  const showReview =
+    reviewer !== null && !busy && agentBusy === null && current && last?.role === 'assistant' && last.compileStatus === 'ok'
 
   return (
-    <section ref={column} aria-label="Chat" className="flex min-h-0 min-w-0 flex-col border-b border-line bg-panel md:border-b-0">
+    <section ref={column} aria-label="Agent" className="flex min-h-0 min-w-0 flex-col border-b border-line bg-panel md:border-b-0">
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
-        <span className="pc-label">Chat</span>
+        <span className="pc-label">Agent</span>
         <span className="flex-1" />
+        <ChecksButton />
         {cost !== undefined && (
           <ProjectCostCaption />
         )}
@@ -98,6 +110,16 @@ export function ChatPanel() {
               Auto-fix {fixing.attempt} of {fixing.of}
             </span>
             Sending the error back to {fixing.model}…
+          </div>
+        )}
+        {showReview && (
+          <div className="pc-row pc-caption">
+            <IconEye className="pc-i" aria-hidden="true" />
+            Not reviewed.
+            <span className="flex-1" />
+            <button type="button" className="pc-btn is-sm" onClick={() => void useAgentStore.getState().reviewNow()}>
+              Review {last.turnLabel ?? 'this model'}
+            </button>
           </div>
         )}
         {(fixing || showBack) && (

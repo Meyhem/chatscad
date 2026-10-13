@@ -27,9 +27,10 @@ beforeEach(async () => {
   useProvidersStore.setState({ ...useProvidersStore.getInitialState(), loaded: true, profiles: [profile], settings: DEFAULT_SETTINGS }, true)
 })
 
-it('is the Chat region with a pane head', () => {
+it('is the Agent region with a pane head and the Checks button', () => {
   render(<ChatPanel />)
-  expect(screen.getByRole('region', { name: 'Chat' })).toHaveTextContent('Chat')
+  expect(screen.getByRole('region', { name: 'Agent' })).toHaveTextContent('Agent')
+  expect(screen.getByRole('button', { name: 'No checks' })).toBeInTheDocument()
   expect(screen.queryByTestId('project-cost')).toBeNull()
 })
 
@@ -124,4 +125,28 @@ it('keeps "Back to" after Stop auto-fix, while the failing AI code is still in t
   })
   render(<ChatPanel />)
   expect(screen.getByRole('button', { name: 'Back to v1' })).toBeInTheDocument()
+})
+
+it('agent: offers to review the model the latest reply built, when a model takes images', async () => {
+  const reviewNow = vi.fn(async () => {})
+  const { useAgentStore } = await import('../agent/agentStore')
+  useAgentStore.setState({ reviewNow })
+  useProvidersStore.setState({
+    profiles: [{ ...profile, capabilities: { ...profile.capabilities, vision: true } }],
+    settings: { ...DEFAULT_SETTINGS, activeProfileId: profile.id, activeModel: 'claude-sonnet-5-5' },
+  })
+  useAppStore.setState({ code: 'cube(1);', renderedCode: 'cube(1);', status: 'ok' })
+  useChatStore.setState({
+    messages: [msg({ id: 'u', role: 'user', text: 'A cube' }), msg({ id: 'a', role: 'assistant', text: 'Made a cube.', turnLabel: 'v1', compileStatus: 'ok' })],
+  })
+  render(<ChatPanel />)
+  await userEvent.click(screen.getByRole('button', { name: 'Review v1' }))
+  expect(reviewNow).toHaveBeenCalled()
+})
+
+it('agent: no Review button without a model that takes images', () => {
+  useAppStore.setState({ code: 'cube(1);', renderedCode: 'cube(1);', status: 'ok' })
+  useChatStore.setState({ messages: [msg({ id: 'a', role: 'assistant', text: 'Made a cube.', turnLabel: 'v1', compileStatus: 'ok' })] })
+  render(<ChatPanel />)
+  expect(screen.queryByRole('button', { name: 'Review v1' })).not.toBeInTheDocument()
 })

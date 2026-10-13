@@ -59,11 +59,11 @@ function layout() {
   return { viewer }
 }
 
-it('shows Chat first with the 3D view paused', () => {
+it('shows the Agent first with the 3D view paused', () => {
   layout()
   const tabs = screen.getByRole('tablist', { name: 'Panels' })
   expect(tabs).toHaveClass('pc-tabbar')
-  expect(screen.getByRole('tab', { name: 'Chat' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: 'Agent' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.getByRole('textbox', { name: 'Prompt' })).toBeVisible()
   expect(screen.getByTestId('viewer-slot')).not.toBeVisible()
   expect(screen.getByTestId('viewer-slot')).toHaveAttribute('data-paused', 'true')
@@ -104,12 +104,12 @@ it('opens and closes the parameter sheet from its grabber', async () => {
   expect(screen.getByTestId('params')).toBeVisible()
 })
 
-it('Ask AI from the 3D tab switches to Chat and puts the cursor in the prompt', async () => {
+it('Ask AI from the 3D tab switches to the Agent and puts the cursor in the prompt', async () => {
   layout()
   await userEvent.click(screen.getByRole('tab', { name: '3D' }))
   act(() => {
     expect(focusComposer()).toBe(true)
   })
-  expect(screen.getByRole('tab', { name: 'Chat' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: 'Agent' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.getByRole('textbox', { name: 'Prompt' })).toHaveFocus()
 })

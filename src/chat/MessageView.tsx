@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import { useAgentStore } from '../agent/agentStore'
+import { AgentCardView } from '../agent/ui/AgentCardView'
 import { MessageImages } from '../images/MessageImages'
 import { formatCost, formatTokens } from '../ui/format'
 import { IconSparkle, IconSpinner, IconWarning, IconX } from '../ui/icons'
@@ -36,6 +38,8 @@ function MetaLine({ message }: { message: ChatMessage }) {
 }
 
 export function MessageView({ message }: { message: ChatMessage }) {
+  const hasCard = useAgentStore((s) => message.cardId !== undefined && s.cards[message.cardId] !== undefined)
+  if (message.role === 'note' && hasCard && message.cardId) return <AgentCardView cardId={message.cardId} />
   if (message.role === 'note') {
     return (
       <div className="pc-row pc-caption justify-center text-center" data-testid="chat-note">

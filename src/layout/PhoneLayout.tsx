@@ -2,13 +2,13 @@ import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, 
 import { flushSync } from 'react-dom'
 import { SHOW_CHAT_EVENT } from '../refine/focusComposer'
 import { useAppStore } from '../state/store'
-import { IconBox, IconChat, IconCode } from '../ui/icons'
+import { IconAgent, IconBox, IconCode } from '../ui/icons'
 import { ParamSheet } from './ParamSheet'
 
 export type PhoneTab = 'chat' | 'code' | '3d'
 
-const TABS: Array<{ id: PhoneTab; label: string; Icon: typeof IconChat }> = [
-  { id: 'chat', label: 'Chat', Icon: IconChat },
+const TABS: Array<{ id: PhoneTab; label: string; Icon: typeof IconAgent }> = [
+  { id: 'chat', label: 'Agent', Icon: IconAgent },
   { id: 'code', label: 'Code', Icon: IconCode },
   { id: '3d', label: '3D', Icon: IconBox },
 ]

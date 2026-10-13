@@ -41,6 +41,8 @@ export interface PlanCard {
   model: string
   usage: CardUsage | null
   error: { title: string; body: string } | null
+  /** The dictated transcript behind the request, kept for the build. */
+  transcript?: string
 }
 
 export interface ReviewCard {
@@ -67,7 +69,7 @@ export interface ReviewCard {
 export type AgentCard = PlanCard | ReviewCard
 
 export interface AgentDeps {
-  send(text: string, display?: string): Promise<TurnOutcome>
+  send(text: string, display?: string, transcript?: string): Promise<TurnOutcome>
   provider(profile: ProviderProfile): LlmProvider
   review: ReviewDeps
   recordUsage(input: { profile: ProviderProfile; model: string; usage: Usage; projectId: string | null }): Promise<unknown>
@@ -75,7 +77,10 @@ export interface AgentDeps {
 }
 
 const browserDeps: AgentDeps = {
-  send: (text, display) => sendPrompt(text, display ? { displayText: display } : {}),
+  send: (text, display, transcript) => {
+    const extra = { ...(display ? { displayText: display } : {}), ...(transcript ? { audioTranscript: transcript } : {}) }
+    return Object.keys(extra).length > 0 ? sendPrompt(text, extra) : sendPrompt(text)
+  },
   provider: createProvider,
   review: {
     renderTagged: (req, signal) => getRenderQueue().render(req, signal),
@@ -94,7 +99,7 @@ export interface AgentState {
   /** The request that started the current model: what every review judges against. */
   anchor: string | null
   setReviewNext(on: boolean): void
-  submit(text: string, deps?: AgentDeps): Promise<void>
+  submit(text: string, deps?: AgentDeps, extra?: { audioTranscript?: string }): Promise<void>
   approvePlan(cardId: string, deps?: AgentDeps): Promise<void>
   skipPlan(cardId: string, deps?: AgentDeps): Promise<void>
   setPlanChecks(cardId: string, checks: Check[]): void
@@ -213,12 +218,24 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     return card.id
   }
 
-  async function plan(request: string, then: PlanCard['then'], deps: AgentDeps): Promise<void> {
+  async function plan(request: string, then: PlanCard['then'], deps: AgentDeps, transcript?: string): Promise<void> {
     const providers = useProvidersStore.getState()
     const profile = selectActiveProfile(providers)
     const model = selectActiveModel(providers)
     if (!profile || !model) return
-    const id = addCard({ kind: 'plan', id: crypto.randomUUID(), request, then, status: 'planning', checks: [], parts: [], model, usage: null, error: null })
+    const id = addCard({
+      kind: 'plan',
+      id: crypto.randomUUID(),
+      request,
+      then,
+      status: 'planning',
+      checks: [],
+      parts: [],
+      model,
+      usage: null,
+      error: null,
+      ...(transcript ? { transcript } : {}),
+    })
     const controller = new AbortController()
     running = controller
     set({ busy: 'planning' })
@@ -234,9 +251,9 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     }
   }
 
-  async function build(text: string, display: string | undefined, review: boolean, round: number, deps: AgentDeps): Promise<void> {
-    const outcome = await deps.send(text, display)
-    if (!review || !outcome.sent || outcome.stopped || !outcome.rendered?.ok) return
+  async function build(text: string, display: string | undefined, review: boolean, round: number, deps: AgentDeps, transcript?: string): Promise<void> {
+    const outcome = await deps.send(text, display, transcript)
+    if (!review || !outcome?.sent || outcome.stopped || !outcome.rendered?.ok) return
     await reviewRound(round, deps)
   }
 
@@ -321,7 +338,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
 
     setReviewNext: (on) => set({ reviewNext: on }),
 
-    async submit(text, deps = browserDeps) {
+    async submit(text, deps = browserDeps, extra = {}) {
       const request = text.trim()
       if (request === '' || get().busy || useChatStore.getState().busy) return
       const newModel = isEmptyCode(useAppStore.getState().code)
@@ -330,10 +347,10 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       set({ reviewNext: false, ...(newModel ? { anchor: request } : {}) })
       const checks = useProjectStore.getState().project?.checks ?? []
       if (review && checks.length === 0) {
-        await plan(request, 'build', deps)
+        await plan(request, 'build', deps, extra.audioTranscript)
         return
       }
-      await build(request, undefined, review, 1, deps)
+      await build(request, undefined, review, 1, deps, extra.audioTranscript)
     },
 
     async approvePlan(cardId, deps = browserDeps) {
@@ -343,14 +360,14 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       await useProjectStore.getState().setChecks(card.checks)
       set({ anchor: card.request })
       if (card.then === 'review') await reviewRound(1, deps)
-      else await build(buildText(card.request, card.checks, card.parts), card.request, true, 1, deps)
+      else await build(buildText(card.request, card.checks, card.parts), card.request, true, 1, deps, card.transcript)
     },
 
     async skipPlan(cardId, deps = browserDeps) {
       const card = get().cards[cardId]
       if (card?.kind !== 'plan' || card.status !== 'ready') return
       patch<PlanCard>(cardId, { status: 'skipped' })
-      if (card.then === 'build') await build(card.request, undefined, false, 1, deps)
+      if (card.then === 'build') await build(card.request, undefined, false, 1, deps, card.transcript)
     },
 
     setPlanChecks(cardId, checks) {

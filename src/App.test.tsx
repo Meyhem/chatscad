@@ -100,11 +100,11 @@ it('disables STL export as soon as the code is edited, until the new code has re
   await waitFor(() => expect(screen.getByRole('button', { name: 'Export STL' })).toBeEnabled(), { timeout: 3_000 })
 })
 
-it('lays out chat, 3D view and code as the three workbench columns', () => {
+it('lays out the agent, 3D view and code as the three workbench columns', () => {
   render(<App createWorker={scriptedWorker(() => okResult())} />)
   const regions = screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))
   // The Customizer dock is a region under the viewer (M3); the console is a region inside the code column (M1).
-  expect(regions).toEqual(['Chat', '3D view', 'Parameters', 'Code', 'Console'])
+  expect(regions).toEqual(['Agent', '3D view', 'Parameters', 'Code', 'Console'])
 })
 
 it('switches between the Project, History and Settings tabs, keeping the workbench mounted', async () => {
