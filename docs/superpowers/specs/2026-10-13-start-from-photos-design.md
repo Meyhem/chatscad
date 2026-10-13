@@ -25,8 +25,8 @@ This is for two jobs: replicating or replacing a real part, and making a part th
 | P11 | The **reviewer sees the photos** with the review frames and is told to compare the render against the photo of the matching angle (front, top; side maps to the right frame). Other angles are still sent as reference. |
 | P12 | The **viewer can show a reference photo** in its top left corner: a small picture with tabs for each angle and a hide button. Choosing a tagged angle moves the camera to the matching preset (front, top, side as right, back, bottom); "other" leaves the camera alone. The choice is per session, not stored. |
 | P13 | **Photos need vision.** When the active profile has no vision, the Photos option is disabled with the existing explanation and an "Open AI providers" button. Photo projects build in Agent mode by default; without a reviewer the run degrades to a plain build, as any agent run does. |
-| P14 | **Project files carry the photos** as base64 data with their tags, the brief and the scale choice, validated on import. Share links do not include photos (size), and a shared project opens as a blank-origin project with the brief only. |
-| P15 | On phones the dialog fills the screen; photo slots open the camera or the photo library (`capture="environment"` on the file input). |
+| P14 | **Project files carry the photos** as base64 data with their tags, the brief and the scale choice, validated on import. Share links do not include photos (size); they stay code and parameters only. |
+| P15 | On phones the dialog fills the screen; photo slots open the device's picker, which offers the camera or the photo library. The file input has no `capture` attribute, because it would hide the library. |
 
 ## Architecture
 
@@ -45,7 +45,7 @@ NewProjectDialog ─ Start from: Photos ─▶ newProject({ origin: 'photos', ph
 
 - `src/photos/projectPhotos.ts`: the `ProjectPhoto` type, angle tags and labels, `MAX_PROJECT_PHOTOS`, `PHOTO_MAX_EDGE`, `preparePhoto(file)`, `photoParts(photos)` (content parts with `Reference photo (front)` text before each image), `photoLabel(angle)`.
 - `src/photos/photoPrompt.ts`: `photoSection(ctx)` for the system prompt, `keepSizesSection(params)` for P9, `refineText(newAngles)` for P10, `PHOTO_PLAN_NOTE` for the planner.
-- `src/photos/PhotoSlots.tsx`: the slot grid used by both dialogs (one-photo and several-angles layouts, add, remove, drop, camera on phones).
+- `src/photos/PhotoSlots.tsx`: the slot grid used by both dialogs (one-photo and several-angles layouts, add, remove, drop; on phones the device's picker offers the camera).
 - `src/photos/PhotosDialog.tsx`: the project Photos dialog (P10); `src/photos/PhotosButton.tsx`: the Agent header button.
 - `src/photos/ReferencePhoto.tsx`: the viewer overlay (P12).
 - `src/workbench/NewProjectDialog.tsx`: Start from, the photo step, the description and scale fields, "Create and build".
