@@ -61,9 +61,7 @@ lid_rail();
 
 Drag the `slots` slider to 6, or change `slots = 4;` to `slots = 6;`, and the holder grows to six cells. When it looks right, press **Export STL** and open the file in your slicer.
 
-If you make a typo, ChatSCAD tells you where. Here a `)` is missing after `translate([…]`:
-
-![The same model with a syntax error: the status pill says "Failed · line 16", line 16 is marked red with "Line 16: Parser error: syntax error" under it, and the last good model stays in the 3D view](docs/images/compile-error.png)
+If you make a typo, ChatSCAD tells you where: the status pill names the failing line, the line is marked red with the parser error under it, and the last good model stays in the 3D view.
 
 The full plan is in the [technical spec](docs/SPEC.md).
 
