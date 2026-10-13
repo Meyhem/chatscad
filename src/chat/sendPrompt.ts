@@ -101,7 +101,8 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<Tur
       deps.turnInput,
     )
     modelText = input.userText
-    if (photos.length > 0) {
+    // Spec R8: a model without vision gets the request without the photos.
+    if (photos.length > 0 && profile.capabilities.vision) {
       const { loaded, missing } = await (deps.loadPhotos ?? defaultLoadPhotos)(photos)
       missingPhotos = missing
       if (loaded.length > 0) {
@@ -147,6 +148,7 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<Tur
     ...(deps.audioTranscript ? { audioTranscript: deps.audioTranscript } : {}),
     ...(shownImages.length > 0 ? { imageBlobIds: shownImages } : {}),
   })
+  if (photos.length > 0 && !profile.capabilities.vision) chat.addMessage(note('Photos were not sent: this model does not take images.'))
   if (missingPhotos > 0) chat.addMessage(note(`${missingPhotos} ${missingPhotos === 1 ? 'photo' : 'photos'} could not be loaded`))
   const openReply = () => chat.addMessage({ role: 'assistant', text: '', turnLabel: null, model, usage: null, status: 'streaming' })
   let current = openReply()

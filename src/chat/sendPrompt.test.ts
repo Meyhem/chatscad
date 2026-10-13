@@ -356,6 +356,8 @@ it('agent: shows the short text in the bubble and sends the full text to the mod
 })
 
 describe('P6: a photo project', () => {
+  const visionProfile = { ...profile, capabilities: { ...profile.capabilities, vision: true } }
+  beforeEach(() => useProvidersStore.setState({ profiles: [visionProfile] }))
   afterEach(() => useProjectStore.setState({ project: null }))
 
   it('sends the project photos with the request, notes a missing one and keeps the user’s sizes', async () => {
@@ -392,5 +394,28 @@ describe('P6: a photo project', () => {
     expect(messages[0]!.imageBlobIds).toEqual(['blob-front', 'blob-gone'])
     expect(messages.some((m) => m.role === 'note' && m.text === '1 photo could not be loaded')).toBe(true)
     expect(chat().history[0]).toEqual({ role: 'user', content: 'Make it taller' })
+  })
+
+  it('sends no photos to a model without vision, says so, and still keeps the user’s sizes', async () => {
+    useProvidersStore.setState({ profiles: [profile] })
+    useProjectStore.setState({
+      project: {
+        id: 'p', name: 'P', createdAt: 1, updatedAt: 1, headVersionId: null, providerProfileId: null, enabledLibraries: [], origin: 'photos',
+        photos: [{ id: 'a', blobId: 'blob-front', angle: 'front', addedAt: 1 }],
+        scale: 'reference',
+      },
+    })
+    useAppStore.setState({ code: 'h = 10;', params: { h: 12 } })
+    const loadPhotos = vi.fn(async () => ({ loaded: [], missing: 0 }))
+    const { provider, requests } = scriptedProvider({ text: 'Done.\n\n```openscad\nh = 12;\ncube(h);\n```' })
+    await sendPrompt('Make it taller', { createProvider: () => provider, render: async () => okResult(), showPhotos: true, loadPhotos })
+    expect(loadPhotos).not.toHaveBeenCalled()
+    expect(requests[0]!.system).not.toContain('Reference photos of the real object are attached')
+    const content = requests[0]!.messages.at(-1)!.content
+    expect(typeof content).toBe('string')
+    expect(content).toContain('The user set these sizes; keep them: h = 12.')
+    const messages = chat().messages
+    expect(messages[0]!.imageBlobIds).toEqual(['blob-front'])
+    expect(messages.some((m) => m.role === 'note' && m.text === 'Photos were not sent: this model does not take images.')).toBe(true)
   })
 })

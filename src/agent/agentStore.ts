@@ -303,7 +303,8 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     running = controller
     set({ busy: 'planning' })
     try {
-      const { parts } = await projectPhotoParts()
+      // Spec R8: a builder without vision plans from the text alone.
+      const { parts } = profile.capabilities.vision ? await projectPhotoParts() : { parts: [] }
       const result = await runPlan({ provider: deps.provider(profile), model, request, photos: parts, signal: controller.signal })
       void deps.recordUsage({ profile, model, usage: result.usage, projectId: useProjectStore.getState().project?.id ?? null }).catch(() => {})
       patch<PlanCard>(id, { status: 'ready', checks: result.checks, parts: result.parts, usage: cardUsage({ profile, model }, result.usage) })

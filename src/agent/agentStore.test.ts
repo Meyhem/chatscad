@@ -344,3 +344,18 @@ it('keeps the first request without photos in the bubble when it was not asked t
   await agent().submit('A box', deps)
   expect(sendOpts[0]).toEqual({ display: undefined, transcript: undefined, showPhotos: false })
 })
+
+it('plans without photos when the builder takes no images, while the reviewer still gets them', async () => {
+  const project = useProjectStore.getState().project!
+  useProjectStore.setState({ project: { ...project, origin: 'photos', photos: [{ id: 'a', blobId: 'blob-a', angle: 'front', addedAt: 1 }], scale: 'reference' } })
+  await db.blobs.put({ id: 'blob-a', kind: 'image', data: new Blob(['f'], { type: 'image/jpeg' }) })
+  const { deps, requests } = setup([PLAN, PASSES], { settings: { reviewApprovePlan: false } })
+  const builder = { ...vision, capabilities: { ...vision.capabilities, vision: false } }
+  const seer = { ...vision, id: 'p2', name: 'Seer' }
+  useProvidersStore.setState({ profiles: [builder, seer] })
+  useSettingsStore.setState((s) => ({ settings: { ...s.settings, reviewProfileId: 'p2', reviewModel: 'seer' } }))
+  await agent().submit('A bracket', deps, { showPhotos: true })
+  expect(requests[0].messages[0].content).toBe('Request: A bracket')
+  const reviewContent = requests[1].messages[0].content as Array<{ type: string }>
+  expect(reviewContent.at(-1)).toMatchObject({ type: 'image' })
+})
