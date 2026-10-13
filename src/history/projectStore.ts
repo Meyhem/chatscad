@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Check } from '../agent/checks'
 import type { AgentMode, Project, Version, VersionSource } from '../db/db'
 import { deleteProjectCascade, getProject, listRecentProjects, putProject } from '../db/projects'
+import { MAX_BRIEF_CHARS, type PhotoScale, type ProjectPhoto } from '../photos/projectPhotos'
 import type { Params } from '../render/params'
 import { useSettingsStore } from '../settings/settingsStore'
 import { useAppStore } from '../state/store'
@@ -17,6 +18,9 @@ export interface NewProjectOptions {
   source?: VersionSource
   message?: string
   enabledLibraries?: string[]
+  photos?: ProjectPhoto[]
+  brief?: string
+  scale?: PhotoScale
 }
 
 export type CommitInput = Pick<Version, 'code' | 'params' | 'source' | 'message' | 'model' | 'compileStatus' | 'renderMs'>
@@ -41,6 +45,8 @@ export interface ProjectState {
   setEnabledLibraries(libraries: string[]): Promise<void>
   setChecks(checks: Check[]): Promise<void>
   setAgentMode(mode: AgentMode): Promise<void>
+  setPhotos(photos: ProjectPhoto[]): Promise<void>
+  setBrief(brief: string): Promise<void>
   refreshRecent(): Promise<void>
 }
 
@@ -113,6 +119,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
         providerProfileId: null,
         enabledLibraries: opts.enabledLibraries ?? [],
         origin: opts.origin,
+        ...(opts.photos ? { photos: opts.photos } : {}),
+        ...(opts.brief !== undefined ? { brief: opts.brief } : {}),
+        ...(opts.scale ? { scale: opts.scale } : {}),
       }
       await putProject(draft)
       const v1 = await createVersion({
@@ -237,6 +246,22 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
       const project = get().project
       if (!project) return
       const updated: Project = { ...project, checks, updatedAt: Date.now() }
+      set({ project: updated })
+      await putProject(updated)
+    },
+
+    async setPhotos(photos) {
+      const project = get().project
+      if (!project) return
+      const updated: Project = { ...project, photos, updatedAt: Date.now() }
+      set({ project: updated })
+      await putProject(updated)
+    },
+
+    async setBrief(brief) {
+      const project = get().project
+      if (!project) return
+      const updated: Project = { ...project, brief: brief.slice(0, MAX_BRIEF_CHARS), updatedAt: Date.now() }
       set({ project: updated })
       await putProject(updated)
     },

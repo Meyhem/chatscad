@@ -79,3 +79,13 @@ it('stores blobs and reads them back', async () => {
   expect(stored?.kind).toBe('thumbnail')
   expect(await stored?.data.text()).toBe('abc')
 })
+
+it('deletes a project’s photo blobs with the project', async () => {
+  await db.blobs.put({ id: 'photo-1', kind: 'image', data: new Blob(['x']) })
+  await db.projects.put({
+    id: 'pp', name: 'P', createdAt: 1, updatedAt: 1, headVersionId: null, providerProfileId: null, enabledLibraries: [], origin: 'photos',
+    photos: [{ id: 'p1', blobId: 'photo-1', angle: 'front', addedAt: 1 }],
+  })
+  await deleteProjectCascade('pp')
+  expect(await db.blobs.get('photo-1')).toBeUndefined()
+})

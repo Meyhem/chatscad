@@ -204,3 +204,19 @@ it('keeps checks saved while a version is being committed', async () => {
   expect(store().project?.checks).toEqual([{ id: 'c1', kind: 'part', text: 'A lid' }])
   expect((await getProject(store().project!.id))?.checks).toEqual([{ id: 'c1', kind: 'part', text: 'A lid' }])
 })
+
+it('keeps photos, the brief and the scale on a photo project', async () => {
+  const photos = [{ id: 'p1', blobId: 'b1', angle: 'front' as const, addedAt: 1 }]
+  const project = await store().newProject({ code: '', origin: 'photos', photos, brief: 'A bracket', scale: 'reference' })
+  expect(project).toMatchObject({ origin: 'photos', photos, brief: 'A bracket', scale: 'reference' })
+  await store().setPhotos([...photos, { id: 'p2', blobId: 'b2', angle: 'top', addedAt: 2 }])
+  await store().setBrief('A bracket, 50 mm tall')
+  const saved = await db.projects.get(project.id)
+  expect(saved?.photos).toHaveLength(2)
+  expect(saved?.brief).toBe('A bracket, 50 mm tall')
+})
+
+it('leaves photos off a blank project', async () => {
+  const project = await store().newProject({ code: '', origin: 'blank' })
+  expect('photos' in project).toBe(false)
+})

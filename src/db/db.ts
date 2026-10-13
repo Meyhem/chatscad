@@ -1,3 +1,4 @@
+import type { PhotoScale, ProjectPhoto } from '../photos/projectPhotos'
 import type { Check } from '../agent/checks'
 import type { PanelLayout } from '../layout/panelLayout'
 import Dexie, { type Table } from 'dexie'
@@ -98,7 +99,12 @@ export interface Project {
   headVersionId: string | null
   providerProfileId: string | null
   enabledLibraries: string[] // 'BOSL2' | 'MCAD'
-  origin: 'blank' | 'gallery' | 'shared-link'
+  origin: 'blank' | 'gallery' | 'shared-link' | 'photos'
+  /** Reference photos of the real object (spec P3); absent on projects that did not start from photos. */
+  photos?: ProjectPhoto[]
+  /** The description the project started from (spec P4). */
+  brief?: string
+  scale?: PhotoScale
   /** The agent's checks for this project; absent until a plan is approved or a check is added. */
   checks?: Check[]
   /** The composer mode: Edit sends one builder turn, Agent plans, builds and reviews. Absent means Agent. */

@@ -47,11 +47,11 @@ export const browserCodec: ImageCodec = {
   },
 }
 
-/** Downscales to at most 1568 px on the long edge and re-encodes (which also drops EXIF data such as location). */
-export async function prepareImage(blob: Blob, type: OutputType, codec: ImageCodec = browserCodec): Promise<PreparedImage> {
+/** Downscales to at most `maxEdge` px on the long edge and re-encodes (which also drops EXIF data such as location). */
+export async function prepareImage(blob: Blob, type: OutputType, codec: ImageCodec = browserCodec, maxEdge = MAX_IMAGE_EDGE): Promise<PreparedImage> {
   const image = await codec.decode(blob)
   try {
-    const { width, height } = fitWithin(image.width, image.height)
+    const { width, height } = fitWithin(image.width, image.height, maxEdge)
     return { blob: await codec.encode(image, width, height, type, JPEG_QUALITY), mediaType: type, width, height }
   } finally {
     image.close?.()

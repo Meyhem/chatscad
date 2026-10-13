@@ -14,9 +14,11 @@ export async function deleteProjectCascade(id: string): Promise<void> {
   await db.transaction('rw', [db.projects, db.versions, db.messages, db.presets, db.blobs], async () => {
     const versions = await db.versions.where('projectId').equals(id).toArray()
     const messages = await db.messages.where('projectId').equals(id).toArray()
+    const project = await db.projects.get(id)
     const blobIds = [
       ...versions.flatMap((v) => (v.thumbnailBlobId ? [v.thumbnailBlobId] : [])),
       ...messages.flatMap((m) => m.imageBlobIds),
+      ...(project?.photos ?? []).map((p) => p.blobId),
     ]
     await db.blobs.bulkDelete(blobIds)
     await db.versions.where('projectId').equals(id).delete()
