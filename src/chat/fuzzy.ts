@@ -86,6 +86,13 @@ export function fuzzyScore(query: string, texts: string | readonly string[]): nu
   return total
 }
 
+/** True when the query has words and each appears as written (no scattered letters, no typos) in one of `texts`. */
+export function isStrongMatch(query: string, texts: readonly string[]): boolean {
+  const words = normalise(query).split(' ').filter(Boolean)
+  const targets = texts.map(normalise).filter(Boolean)
+  return words.length > 0 && words.every((w) => targets.some((t) => t.includes(w)))
+}
+
 /** The items that match the query, best first; ties keep their original order. `keys` gives the texts to search per item. */
 export function fuzzyFilter<T = string>(query: string, items: readonly T[], keys: (item: T) => readonly string[] = (item) => [String(item)]): T[] {
   if (normalise(query) === '') return [...items]

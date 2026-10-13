@@ -1,4 +1,4 @@
-import { editDistance, fuzzyFilter, fuzzyScore, normalise } from './fuzzy'
+import { editDistance, fuzzyFilter, fuzzyScore, isStrongMatch, normalise } from './fuzzy'
 
 it('matches an empty query against everything', () => {
   expect(fuzzyScore('', 'anything')).toBe(0)
@@ -87,4 +87,11 @@ it('counts edit distance with neighbour swaps as one edit', () => {
   expect(editDistance('deepseck', 'deepseek')).toBe(1)
   expect(editDistance('qwexyz', 'qwen3')).toBe(3)
   expect(editDistance('', 'abc')).toBe(3)
+})
+
+it('calls a match strong only when every word appears as written', () => {
+  expect(isStrongMatch('dee fla 4', DEEPSEEK)).toBe(true)
+  expect(isStrongMatch('flahs', DEEPSEEK)).toBe(false) // typo
+  expect(isStrongMatch('dpsk', DEEPSEEK)).toBe(false) // scattered letters
+  expect(isStrongMatch(' - ', DEEPSEEK)).toBe(false) // no words
 })

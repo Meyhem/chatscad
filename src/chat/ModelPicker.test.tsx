@@ -120,3 +120,37 @@ it('picks the top match with Enter for a loose multi-word query', async () => {
   expect(selectActiveModel(useProvidersStore.getState())).toBe('deepseek/deepseek-v4-flash')
   expect(screen.queryByLabelText('Search models')).toBeNull()
 })
+
+const router = newProfile({
+  name: 'Router',
+  adapter: 'openai-compatible',
+  baseUrl: 'https://openrouter.ai/api/v1',
+  defaultModel: 'openai/gpt-4o-2024-08-06',
+  cachedModels: [
+    { id: 'openai/gpt-4o-2024-08-06', name: 'OpenAI: GPT-4o (2024-08-06)' },
+    { id: 'anthropic/claude-sonnet-4.5', name: 'Anthropic: Claude Sonnet 4.5' },
+    { id: 'mistralai/mistral-large', name: 'Mistral: Mistral Large' },
+    { id: 'qwen/qwen3-coder', name: 'Qwen: Qwen3 Coder' },
+  ],
+})
+
+async function enterIn(profiles: ProviderProfile[], text: string) {
+  seed(profiles)
+  render(<ModelPicker />)
+  await userEvent.click(screen.getByRole('button', { name: /^Model: / }))
+  await userEvent.type(screen.getByLabelText('Search models'), text)
+  await userEvent.keyboard('{Enter}')
+  return { profile: selectActiveProfile(useProvidersStore.getState())?.name, model: selectActiveModel(useProvidersStore.getState()) }
+}
+
+it('keeps a new full id typed by hand instead of a loose match on Enter', async () => {
+  expect(await enterIn([router], 'openai/gpt-6')).toEqual({ profile: 'Router', model: 'openai/gpt-6' })
+})
+
+it('keeps a typed name that only matches through a typo or scattered letters', async () => {
+  expect(await enterIn([router], 'mixtral')).toEqual({ profile: 'Router', model: 'mixtral' })
+})
+
+it('picks an exact id in any profile over a closer-looking model in an earlier one', async () => {
+  expect(await enterIn([router, anthropic], 'claude-sonnet-5-5')).toEqual({ profile: 'Anthropic', model: 'claude-sonnet-5-5' })
+})

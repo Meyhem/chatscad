@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ProviderProfile } from '../db/db'
 import { selectActiveModel, selectActiveProfile, useProvidersStore } from '../settings/providersStore'
 import { IconChevron, IconSearch } from '../ui/icons'
-import { fuzzyFilter } from './fuzzy'
+import { fuzzyFilter, fuzzyScore, isStrongMatch } from './fuzzy'
 
 const MAX_PER_PROFILE = 50
 
@@ -10,6 +10,30 @@ export function modelIds(profile: ProviderProfile): string[] {
   const ids = profile.cachedModels.map((m) => m.id)
   const fallback = profile.defaultModel.trim()
   return fallback !== '' && !ids.includes(fallback) ? [fallback, ...ids] : ids
+}
+
+interface Group {
+  profile: ProviderProfile
+  keys(id: string): string[]
+  ids: string[]
+}
+
+/**
+ * The model Enter selects, or null to use the typed text. An exact id anywhere wins. A full id ("vendor/model")
+ * that is not listed stays as typed, and so does a query that only matches loosely (scattered letters or typos);
+ * otherwise the best-scoring match across profiles.
+ */
+function pickForEnter(typed: string, groups: Group[]): { profileId: string; id: string } | null {
+  for (const g of groups) if (g.ids.includes(typed)) return { profileId: g.profile.id, id: typed }
+  if (typed.includes('/')) return null
+  let best: { profileId: string; id: string; score: number } | null = null
+  for (const g of groups) {
+    const id = g.ids[0]
+    if (!isStrongMatch(typed, g.keys(id))) continue
+    const score = fuzzyScore(typed, g.keys(id)) ?? -Infinity
+    if (!best || score > best.score) best = { profileId: g.profile.id, id, score }
+  }
+  return best
 }
 
 export function ModelPicker() {
@@ -42,10 +66,11 @@ export function ModelPicker() {
   const groups = profiles
     .map((p) => {
       const names = new Map(p.cachedModels.map((m) => [m.id, m.name ?? '']))
-      return { profile: p, ids: fuzzyFilter(typed, modelIds(p), (id) => [id, names.get(id) ?? '']).slice(0, MAX_PER_PROFILE) }
+      const keys = (id: string) => [id, names.get(id) ?? '']
+      return { profile: p, keys, ids: fuzzyFilter(typed, modelIds(p), keys).slice(0, MAX_PER_PROFILE) }
     })
     .filter((g) => g.ids.length > 0)
-  const top = typed !== '' ? groups[0] : undefined
+  const enterPick = pickForEnter(typed, groups)
   const pick = (profileId: string, id: string) => {
     void chooseModel(profileId, id)
     setOpen(false)
@@ -89,9 +114,9 @@ export function ModelPicker() {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key !== 'Enter' || typed === '') return
-                if (top) {
+                if (enterPick) {
                   e.preventDefault()
-                  pick(top.profile.id, top.ids[0])
+                  pick(enterPick.profileId, enterPick.id)
                 } else if (active) {
                   e.preventDefault()
                   pick(active.id, typed)
