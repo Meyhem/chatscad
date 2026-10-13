@@ -53,3 +53,29 @@ test('saves a looping turntable GIF encoded in a worker', async ({ page }) => {
   expect(bytes.includes(Buffer.from('NETSCAPE2.0'))).toBe(true)
   expect(csp).toEqual([])
 })
+
+test('saves a dimensioned drawing with the model in the front view', async ({ page }) => {
+  const csp = watchCspViolations(page)
+  const dialog = await openExport(page, 'Drawing')
+  const preview = dialog.getByRole('img', { name: 'Preview of the drawing' })
+  await expect(preview).toBeVisible()
+  // The filament is orange (red well above blue); paper and ink are grey, so only the model qualifies.
+  const modelPixels = await preview.evaluate((el) => {
+    const c = el as HTMLCanvasElement
+    const { data } = c.getContext('2d')!.getImageData(0, c.height / 2, c.width / 2, c.height / 2)
+    let n = 0
+    for (let i = 0; i < data.length; i += 4) if (data[i] - data[i + 2] > 60) n++
+    return n
+  })
+  expect(modelPixels).toBeGreaterThan(100)
+
+  const download = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Save PNG' }).click()
+  const file = await download
+  expect(file.suggestedFilename()).toBe('model-drawing.png')
+  const bytes = await readFile((await file.path())!)
+  expect([...bytes.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+  expect(bytes.readUInt32BE(16)).toBe(2339)
+  expect(bytes.readUInt32BE(20)).toBe(1654)
+  expect(csp).toEqual([])
+})

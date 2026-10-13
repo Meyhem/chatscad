@@ -28,6 +28,9 @@
   --part-7: #cc79a7;
   --part-none: #a3a9b1;
   --frame-ground: #eceef1;
+  --sheet-paper: #ffffff;
+  --sheet-ink: #10151c;
+  --sheet-muted: #4d5867;
   --ok: #34c3d4;
   --ok-soft: #0f2a2e;
   --warn: #e6c34a;
@@ -91,6 +94,9 @@
   --part-7: #cc79a7;
   --part-none: #a3a9b1;
   --frame-ground: #eceef1;
+  --sheet-paper: #ffffff;
+  --sheet-ink: #10151c;
+  --sheet-muted: #4d5867;
   --ok: #0a7381;
   --ok-soft: #e0f3f5;
   --warn: #876000;
@@ -139,6 +145,9 @@
     --part-7: #cc79a7;
     --part-none: #a3a9b1;
     --frame-ground: #eceef1;
+    --sheet-paper: #ffffff;
+    --sheet-ink: #10151c;
+    --sheet-muted: #4d5867;
     --ok: #0a7381;
     --ok-soft: #e0f3f5;
     --warn: #876000;
@@ -192,6 +201,9 @@
   --color-part-7: var(--part-7);
   --color-part-none: var(--part-none);
   --color-frame-ground: var(--frame-ground);
+  --color-sheet-paper: var(--sheet-paper);
+  --color-sheet-ink: var(--sheet-ink);
+  --color-sheet-muted: var(--sheet-muted);
   --color-ok: var(--ok);
   --color-ok-soft: var(--ok-soft);
   --color-warn: var(--warn);

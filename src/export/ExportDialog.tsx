@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import { DrawingTab } from './tabs/DrawingTab'
 import { ImageTab } from './tabs/ImageTab'
 import { TimelapseTab } from './tabs/TimelapseTab'
 import { TurntableTab } from './tabs/TurntableTab'
@@ -12,6 +13,7 @@ import { ModelFileTab } from './tabs/ModelFileTab'
 export const TABS: Array<{ id: ExportTab; label: string; Panel: ComponentType }> = [
   { id: 'model', label: 'Model file', Panel: ModelFileTab },
   { id: 'image', label: 'Image', Panel: ImageTab },
+  { id: 'drawing', label: 'Drawing', Panel: DrawingTab },
   { id: 'turntable', label: 'Turntable', Panel: TurntableTab },
   { id: 'timelapse', label: 'Timelapse', Panel: TimelapseTab },
   { id: 'link', label: 'Link', Panel: LinkTab },

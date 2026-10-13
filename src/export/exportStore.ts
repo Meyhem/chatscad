@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type ExportTab = 'model' | 'image' | 'turntable' | 'timelapse' | 'link'
+export type ExportTab = 'model' | 'image' | 'drawing' | 'turntable' | 'timelapse' | 'link'
 
 interface ExportState {
   open: boolean

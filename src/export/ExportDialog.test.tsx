@@ -51,6 +51,13 @@ it('opens on the requested tab and switches tabs', async () => {
   expect(useExportStore.getState().tab).toBe('model')
 })
 
+it('offers the Drawing tab right after Image', () => {
+  useExportStore.getState().openAt('model')
+  render(<ExportDialog />)
+  const names = screen.getAllByRole('tab').map((t) => t.textContent)
+  expect(names).toEqual(['Model file', 'Image', 'Drawing', 'Turntable', 'Timelapse', 'Link'])
+})
+
 it('exports STL and .scad from the Model file tab', async () => {
   useExportStore.getState().openAt('model')
   render(<ExportDialog />)
