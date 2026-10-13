@@ -22,6 +22,7 @@ import { runPlan } from './plan'
 import { selectReviewer, type ReviewerChoice } from './reviewer'
 import { runReview, type Issue, type LegendEntry, type Review, type ReviewDeps } from './review'
 import { sizeRows, sizesSummary, type SizeRow } from './sizes'
+import { effectiveValues } from '../scad/customizer'
 import { recordAgentUsage } from './usage'
 
 export interface CardUsage {
@@ -341,8 +342,8 @@ export const useAgentStore = create<AgentState>()((set, get) => {
   }
 
   /** A newer change makes open cards stale: their issues and plans describe older code. */
-  function supersedeOpenCards(): void {
-    for (const card of Object.values(get().cards)) if (card.status === 'ready') patch(card.id, { status: 'superseded' })
+  function supersedeOpenCards(keepSizes = false): void {
+    for (const card of Object.values(get().cards)) if (card.status === 'ready' && !(keepSizes && card.kind === 'sizes')) patch(card.id, { status: 'superseded' })
   }
 
   async function build(
@@ -516,7 +517,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       }
       const request = get().anchor ?? firstUserText() ?? lastUserText()
       if (request) {
-        supersedeOpenCards()
+        supersedeOpenCards(true)
         await plan(request, 'review', deps)
       }
     },
@@ -545,7 +546,11 @@ export const useAgentStore = create<AgentState>()((set, get) => {
 
     acceptSizes(cardId) {
       const card = get().cards[cardId]
-      if (card?.kind === 'sizes' && card.status === 'ready') patch<SizesCard>(cardId, { status: 'accepted' })
+      if (card?.kind !== 'sizes' || card.status !== 'ready') return
+      // The accepted card shows what renders, edits included.
+      const app = useAppStore.getState()
+      const values = effectiveValues(app.code, app.params)
+      patch<SizesCard>(cardId, { status: 'accepted', rows: card.rows.map((r) => ({ ...r, value: values[r.name] ?? r.value })) })
     },
 
     async addSuggestedChecks(cardId) {

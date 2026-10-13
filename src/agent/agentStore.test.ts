@@ -391,3 +391,25 @@ it('adds no Sizes card in a project without photos', async () => {
   await agent().submit('Make it', deps)
   expect(cards().some((c) => c.kind === 'sizes')).toBe(false)
 })
+
+it('writes the live sizes into an accepted Sizes card', async () => {
+  const code = 'wall = 3; // [1:6] guessed\ncube(wall);'
+  useAppStore.getState().setCode(code, 'ai')
+  const id = 'sz'
+  useAgentStore.setState({ cards: { [id]: { kind: 'sizes', id, noteId: 'n', versionLabel: 'v1', status: 'ready', rows: [{ name: 'wall', value: 3, unit: 'mm', source: 'guess' }] } } })
+  useAppStore.getState().setParams({ wall: 3.4 })
+  agent().acceptSizes(id)
+  expect(agent().cards[id]).toMatchObject({ status: 'accepted', rows: [{ name: 'wall', value: 3.4, unit: 'mm', source: 'guess' }] })
+})
+
+it('keeps a ready Sizes card when a review is started, but a build supersedes it', async () => {
+  const { deps } = setup([PLAN])
+  useChatStore.getState().addMessage({ role: 'user', text: 'A box', turnLabel: null, model: null, usage: null, status: 'done' })
+  useAgentStore.setState({ cards: { sz: { kind: 'sizes', id: 'sz', noteId: 'n', versionLabel: 'v1', status: 'ready', rows: [] } } })
+  await agent().reviewNow(deps)
+  expect(agent().cards.sz!.status).toBe('ready')
+  expect(cards().some((c) => c.kind === 'plan')).toBe(true)
+  await useProjectStore.getState().setAgentMode('edit')
+  await agent().submit('Taller', deps)
+  expect(agent().cards.sz!.status).toBe('superseded')
+})
