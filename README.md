@@ -2,9 +2,16 @@
 
 **Try it:** https://meyhem.github.io/chatscad/
 
-Describe a part, tune it, print it. ChatSCAD is a CAD workbench that runs entirely in your browser: you ask an AI model for a part in plain words (or write OpenSCAD yourself), it compiles on your own device, and you download an STL for your 3D printer. There is no server and no account.
+Describe a part, tune it, print it. ChatSCAD is a CAD workbench that runs entirely in your browser: an AI model writes OpenSCAD for you, it compiles on your own device, and you download the result for your 3D printer. There is no server and no account.
 
-![ChatSCAD with a 50 mm cube: on the left the Agent column with an agent run that built the model and passed review against 3 checks, four coloured review views and the Edit | Agent switch above the prompt box; in the middle the 3D view and parameter sliders for cube size, hole radius and corner chamfer; on the right the OpenSCAD code and console](docs/images/app.png)
+- **Model from pictures or from scratch.** Start from one or more photos of a real object, a drawing or a sketch, or describe a new part in plain words (or write the OpenSCAD yourself).
+- **Bring your own model.** Many API-based providers work out of the box: Anthropic, OpenAI, OpenRouter, any OpenAI-compatible endpoint, or a local model such as Ollama. Keys stay on your device.
+- **Agentic flow with review.** The agent plans checks for the part, builds it, renders four views and reviews them against the checks, then proposes fixes round after round.
+- **Various exports.** Binary STL, the `.scad` source, a PNG, a turntable GIF, or a share link.
+
+![ChatSCAD with a 10 × 10 × 50 mm cartridge modelled from four photos: on the left the agent run with its approved 6-check plan and the photos; in the middle the 3D view, the side photo overlay and parameter sliders; on the right the generated OpenSCAD code and console](docs/images/bullet.png)
+
+The cartridge above was modelled from four phone photos and one sentence ("its about 50mm tall and 10mm in diameter") with GPT 6 SOL, on the first try, for $0.038 in total.
 
 ## What you can do
 
