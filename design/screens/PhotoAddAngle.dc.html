@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Add an angle and refine</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/chatscad/components/bundle.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6e9bff}a:hover{color:#8db1ff}
+</style>
+</helmet>
+<div class="app pc-root" data-theme="{{theme}}" style="width: 1440px; height: 900px; position: relative;">
+
+<header class="topbar">
+  <span class="brand"><span class="brand-dot"></span>ChatSCAD</span>
+  <span class="sep"></span>
+  <button class="project" type="button">Curtain rod bracket<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"></path></svg></button>
+  <nav class="pc-tabs" role="tablist" aria-label="Views">
+    <button class="pc-tab" role="tab" aria-selected="true" type="button">Project</button>
+    <button class="pc-tab" role="tab" aria-selected="false" type="button">History</button>
+    <button class="pc-tab" role="tab" aria-selected="false" type="button">Settings</button>
+  </nav>
+  <span class="sep"></span>
+  <span class="pc-status is-ok"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7"></path></svg>Rendered <span class="pc-mono">640 ms</span></span>
+  <span class="grow"></span>
+</header>
+<div class="backdrop-cols" aria-hidden="true"><div></div><div class="is-view"></div><div></div></div>
+
+<div class="overlay" style="top: 0;">
+  <form class="pc-dialog photo-dialog" role="dialog" aria-labelledby="ph-title" style="max-width: 760px;">
+    <div class="dlg-head">
+      <div class="pc-stack" style="flex: 1; gap: 4px;">
+        <h2 id="ph-title">Photos</h2>
+        <p class="pc-muted">Every build and review in this project sees these photos and the description.</p>
+      </div>
+      <button type="button" class="pc-btn is-icon is-ghost" aria-label="Close"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></button>
+    </div>
+
+    <div class="dlg-body">
+      <div class="pc-stack" style="gap: 8px;">
+        <div class="pc-row" style="justify-content: space-between;"><span style="font-weight: 600; font-size: 13px;">3 of 5 photos</span><span class="pc-caption">Scale from the 1 euro coin in the front photo</span></div>
+        <div class="slots">
+          <div class="slot is-filled">
+            <svg class="photo" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect class="ph-bg" width="160" height="120"></rect><rect class="ph-shade" y="94" width="160" height="26"></rect><rect class="ph-obj" x="30" y="16" width="14" height="80"></rect><rect class="ph-lit" x="44" y="76" width="56" height="12"></rect><path class="ph-obj" d="M95 40 h8 v28 a14 14 0 0 0 28 0 v-28 h8 v28 a22 22 0 0 1 -44 0 z"></path><ellipse class="ph-coin" cx="140" cy="106" rx="11" ry="6"></ellipse></svg>
+            <span class="slot-tag">Front</span>
+            <button class="slot-x" type="button" aria-label="Remove front photo"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></button>
+          </div>
+          <div class="slot is-filled">
+            <svg class="photo" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect class="ph-bg" width="160" height="120"></rect><rect class="ph-obj" x="28" y="30" width="12" height="60"></rect><rect class="ph-lit" x="40" y="52" width="54" height="16"></rect><circle class="ph-obj" cx="112" cy="60" r="23"></circle><circle class="ph-hole" cx="112" cy="60" r="15"></circle><circle class="ph-coin" cx="136" cy="102" r="10"></circle></svg>
+            <span class="slot-tag">Top</span>
+            <button class="slot-x" type="button" aria-label="Remove top photo"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></button>
+          </div>
+          <div class="slot is-filled is-new">
+            <svg class="photo" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect class="ph-bg" width="160" height="120"></rect><rect class="ph-shade" y="100" width="160" height="20"></rect><rect class="ph-lit" x="56" y="12" width="40" height="88" rx="2"></rect><circle class="ph-hole" cx="76" cy="34" r="4"></circle><circle class="ph-hole" cx="76" cy="78" r="4"></circle><rect class="ph-obj" x="96" y="70" width="18" height="30"></rect><ellipse class="ph-coin" cx="136" cy="108" rx="11" ry="6"></ellipse></svg>
+            <span class="slot-tag">Side<span class="pc-chip is-accent" style="height: 16px; font-size: 10px; margin-left: 2px;">New</span></span>
+            <button class="slot-x" type="button" aria-label="Remove side photo"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></button>
+          </div>
+          <button class="slot" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9 M3.5 8h9"></path></svg>Back</button>
+          <button class="slot" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9 M3.5 8h9"></path></svg>Bottom</button>
+          <button class="slot" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9 M3.5 8h9"></path></svg>Other angle</button>
+        </div>
+      </div>
+
+      <div class="pc-field">
+        <label for="ph-desc">Description</label>
+        <div class="pc-area" style="height: 84px;"><textarea id="ph-desc">A wall bracket for a 25 mm curtain rod. About 50 mm tall. Two holes for 4 mm wood screws in the wall plate. The rod sits in an open cup; it should lift out without unscrewing anything.</textarea></div>
+      </div>
+
+      <div class="pc-callout is-info">
+        <svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11z M8 7v4 M8 5h.01"></path></svg>
+        <div class="pc-callout-body">
+          <strong>Refining builds v2 from v1</strong>
+          <span class="pc-muted">The agent compares v1 with all 3 photos and fixes what differs. Sizes you set keep their values: <span class="pc-mono">cup_depth 28 mm</span>. Guessed sizes may change.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dlg-foot">
+      <span class="pc-caption" style="flex: 1;">v1 stays in History.</span>
+      <button type="button" class="pc-btn">Cancel</button>
+      <button type="button" class="pc-btn">Save photos only</button>
+      <button type="submit" class="pc-btn is-primary">Refine with 3 photos</button>
+    </div>
+  </form>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'dark' };
+  }
+}
+</script>
+</body>
+</html>

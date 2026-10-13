@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New project from photos</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/chatscad/components/bundle.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6e9bff}a:hover{color:#8db1ff}
+</style>
+</helmet>
+<div class="app pc-root" data-theme="{{theme}}" style="width: 1440px; height: 900px; position: relative;">
+
+<header class="topbar">
+  <span class="brand"><span class="brand-dot"></span>ChatSCAD</span>
+  <span class="sep"></span>
+  <button class="project" type="button">Cable clip<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"></path></svg></button>
+  <nav class="pc-tabs" role="tablist" aria-label="Views">
+    <button class="pc-tab" role="tab" aria-selected="true" type="button">Project</button>
+    <button class="pc-tab" role="tab" aria-selected="false" type="button">History</button>
+    <button class="pc-tab" role="tab" aria-selected="false" type="button">Settings</button>
+  </nav>
+  <span class="grow"></span>
+</header>
+<div class="backdrop-cols" aria-hidden="true"><div></div><div class="is-view"></div><div></div></div>
+
+<div class="overlay" style="top: 0;">
+  <form class="pc-dialog photo-dialog" role="dialog" aria-labelledby="np-title">
+    <div class="dlg-head">
+      <div class="pc-stack" style="flex: 1; gap: 4px;">
+        <h2 id="np-title">New project</h2>
+        <p class="pc-muted">Start blank, or from photos of a real object. Photos are a starting point; describe the rest in words.</p>
+      </div>
+      <button type="button" class="pc-btn is-icon is-ghost" aria-label="Close"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></button>
+    </div>
+
+    <div class="dlg-body">
+      <div class="two-col" style="align-items: end;">
+        <div class="pc-field">
+          <label for="np-name">Name</label>
+          <div class="pc-input"><input id="np-name" value="Curtain rod bracket"></div>
+        </div>
+        <div class="pc-field">
+          <span style="font-weight: 600; font-size: 13px;" id="np-start">Start from</span>
+          <div class="pc-tabs" role="radiogroup" aria-labelledby="np-start" style="align-self: flex-start;">
+            <button class="pc-tab" role="radio" type="button" aria-checked="{{blankSel}}" aria-selected="{{blankSel}}" onClick="{{pickBlank}}"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h6l3 3v8h-9z M9.5 2.5v3h3"></path></svg>Blank</button>
+            <button class="pc-tab" role="radio" type="button" aria-checked="{{photosSel}}" aria-selected="{{photosSel}}" aria-disabled="{{photosDisabled}}" onClick="{{pickPhotos}}" style="{{photosTabStyle}}"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5h2.5l1-1.5h4l1 1.5h2.5v7.5h-11z M8 7a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"></path></svg>Photos</button>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{noVision}}" hint-placeholder-val="{{ false }}">
+        <div class="pc-callout is-warn">
+          <svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5l6 11H2z M8 6.5v3 M8 11.5h.01"></path></svg>
+          <div class="pc-callout-body"><strong>Photos need a model with vision</strong><span class="pc-muted">Images need a model with vision. Turn on Vision for this provider in Settings › AI providers if its model can read images.</span></div>
+          <button class="pc-btn is-sm" type="button">Open AI providers</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{isPhotos}}" hint-placeholder-val="{{ true }}">
+        <div class="two-col">
+          <div class="pc-stack" style="gap: 12px;">
+            <div class="pc-row" style="justify-content: space-between;">
+              <span style="font-weight: 600; font-size: 13px;" id="np-photos">Photos</span>
+              <div class="pc-tabs" role="radiogroup" aria-labelledby="np-photos">
+                <button class="pc-tab" role="radio" type="button" aria-checked="{{oneSel}}" aria-selected="{{oneSel}}" onClick="{{pickOne}}">One photo</button>
+                <button class="pc-tab" role="radio" type="button" aria-checked="{{anglesSel}}" aria-selected="{{anglesSel}}" onClick="{{pickAngles}}">Several angles</button>
+              </div>
+            </div>
+
+            <sc-if value="{{isOne}}" hint-placeholder-val="{{ false }}">
+              <div class="slot is-filled" style="aspect-ratio: 16 / 10;">
+                <svg class="photo" viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect class="ph-bg" width="160" height="100"></rect><rect class="ph-shade" y="80" width="160" height="20"></rect><rect class="ph-obj" x="30" y="10" width="13" height="72" rx="1"></rect><rect class="ph-lit" x="43" y="64" width="54" height="11"></rect><path class="ph-obj" d="M92 32 h8 v26 a13 13 0 0 0 26 0 v-26 h8 v26 a21 21 0 0 1 -42 0 z"></path><ellipse class="ph-coin" cx="140" cy="89" rx="10" ry="5"></ellipse></svg>
+                <span class="slot-tag">Photo</span>
+                <button class="slot-x" type="button" aria-label="Remove photo"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></button>
+              </div>
+              <ul class="tips">
+                <li><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7"></path></svg><span>Shoot straight at the side that shows the shape best.</span></li>
+                <li><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7"></path></svg><span>Put a coin, card or ruler next to it for scale.</span></li>
+                <li><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7"></path></svg><span>What one photo cannot show is guessed. Add angles later from the project.</span></li>
+              </ul>
+            </sc-if>
+
+            <sc-if value="{{isAngles}}" hint-placeholder-val="{{ true }}">
+              <div class="slots">
+                <div class="slot is-filled">
+                  <svg class="photo" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect class="ph-bg" width="160" height="120"></rect><rect class="ph-shade" y="94" width="160" height="26"></rect><rect class="ph-obj" x="30" y="16" width="14" height="80" rx="1"></rect><rect class="ph-lit" x="44" y="76" width="56" height="12"></rect><path class="ph-obj" d="M95 40 h8 v28 a14 14 0 0 0 28 0 v-28 h8 v28 a22 22 0 0 1 -44 0 z"></path><ellipse class="ph-coin" cx="140" cy="106" rx="11" ry="6"></ellipse></svg>
+                  <span class="slot-tag">Front</span>
+                  <button class="slot-x" type="button" aria-label="Remove front photo"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></button>
+                </div>
+                <div class="slot is-filled">
+                  <svg class="photo" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect class="ph-bg" width="160" height="120"></rect><rect class="ph-obj" x="28" y="30" width="12" height="60"></rect><rect class="ph-lit" x="40" y="52" width="54" height="16"></rect><circle class="ph-obj" cx="112" cy="60" r="23"></circle><circle class="ph-hole" cx="112" cy="60" r="15"></circle><circle class="ph-coin" cx="136" cy="102" r="10"></circle></svg>
+                  <span class="slot-tag">Top</span>
+                  <button class="slot-x" type="button" aria-label="Remove top photo"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></button>
+                </div>
+                <button class="slot" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9 M3.5 8h9"></path></svg>Side</button>
+                <button class="slot" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9 M3.5 8h9"></path></svg>Back</button>
+                <button class="slot" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9 M3.5 8h9"></path></svg>Bottom</button>
+                <button class="slot" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9 M3.5 8h9"></path></svg>Other angle</button>
+              </div>
+              <span class="pc-caption">Fill the angles you have. One is enough to start. Drop photos here, or click a slot to choose or take one.</span>
+            </sc-if>
+          </div>
+
+          <div class="pc-stack" style="gap: 16px;">
+            <div class="pc-field">
+              <label for="np-desc">Describe it</label>
+              <div class="pc-area" style="height: 188px;"><textarea id="np-desc" placeholder="What it is, sizes you know, what it attaches to">A wall bracket for a 25 mm curtain rod. About 50 mm tall. Two holes for 4 mm wood screws in the wall plate. The rod sits in an open cup; it should lift out without unscrewing anything.</textarea></div>
+              <span class="pc-hint">Sizes you know, what it fits or holds, and anything the photos cannot show, such as the back or the depth of a hole.</span>
+            </div>
+            <div class="pc-field">
+              <label for="np-scale">Scale</label>
+              <select id="np-scale" class="pc-select">
+                <option>Find a coin, card or ruler in the photos</option>
+                <option>Only the sizes in the description</option>
+              </select>
+              <span class="pc-hint">With neither, every size is a guess and the first reply says so.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lib-line">
+          <span class="pc-label">Libraries</span>
+          <span class="pc-chip is-accent">BOSL2</span>
+          <span class="pc-caption">MCAD off</span>
+          <span class="grow"></span>
+          <button class="pc-btn is-sm is-ghost" type="button">Change</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{isBlank}}" hint-placeholder-val="{{ false }}">
+        <div class="pc-stack" style="gap: 8px;">
+          <div class="pc-row" style="justify-content: space-between;"><span class="pc-label">Libraries</span><span class="pc-caption">Optional · change later in Settings › Libraries</span></div>
+          <label class="lib-card is-on">
+            <span class="pc-stack" style="flex: 1; gap: 2px;"><span class="pc-row" style="gap: 8px;"><span style="font-weight: 600;">BOSL2</span><span class="pc-muted">Belfry OpenSCAD Library v2</span><span class="pc-chip is-accent">Recommended</span></span><span>Threads, gears, fillets, rounding and attachments for printable parts.</span></span>
+            <span class="pc-switch"><input type="checkbox" checked aria-label="Use BOSL2 in this project"><span class="pc-track"></span></span>
+          </label>
+          <label class="lib-card">
+            <span class="pc-stack" style="flex: 1; gap: 2px;"><span class="pc-row" style="gap: 8px;"><span style="font-weight: 600;">MCAD</span><span class="pc-muted">Mechanical parts</span></span><span>Nuts, bolts, bearings and motors as ready modules.</span></span>
+            <span class="pc-switch"><input type="checkbox" aria-label="Use MCAD in this project"><span class="pc-track"></span></span>
+          </label>
+          <div class="pc-callout"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11z M8 7v4 M8 5h.01"></path></svg><span class="pc-callout-body pc-muted">The AI may use BOSL2. It is bundled with the app and works offline.</span></div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div class="dlg-foot">
+      <span class="pc-caption" style="flex: 1;">{{footNote}}</span>
+      <button type="button" class="pc-btn">Cancel</button>
+      <button type="submit" class="pc-btn is-primary">{{submitLabel}}</button>
+    </div>
+  </form>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"state":{"editor":"enum","options":["angles","one","blank","novision"],"default":"angles"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const start = this.props.state ?? 'angles';
+    const noVision = start === 'novision';
+    let view = st.view ?? (noVision ? 'blank' : start);
+    if (noVision) view = 'blank';
+    const photos = view !== 'blank';
+    const photoMode = st.photoMode ?? (start === 'one' ? 'one' : 'angles');
+    const set = (v) => () => this.setState(v);
+    return {
+      theme: this.props.theme ?? 'dark',
+      noVision,
+      isBlank: !photos,
+      isPhotos: photos,
+      isOne: photos && view === 'one',
+      isAngles: photos && view === 'angles',
+      blankSel: String(!photos),
+      photosSel: String(photos),
+      oneSel: String(view === 'one'),
+      anglesSel: String(view === 'angles'),
+      photosDisabled: String(noVision),
+      photosTabStyle: noVision ? 'color: var(--ink-disabled); cursor: not-allowed;' : '',
+      pickBlank: set({ view: 'blank' }),
+      pickPhotos: noVision ? () => {} : set({ view: photoMode }),
+      pickOne: set({ view: 'one', photoMode: 'one' }),
+      pickAngles: set({ view: 'angles', photoMode: 'angles' }),
+      submitLabel: photos ? 'Create and build' : 'Create project',
+      footNote: photos ? 'The agent plans checks from your description and photos, then builds v1.' : 'Opens an empty project. Describe a part, write code, or start from an example.',
+    };
+  }
+}
+</script>
+</body>
+</html>
