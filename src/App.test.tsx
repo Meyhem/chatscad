@@ -321,7 +321,7 @@ it('puts a resize divider between every desktop panel, sized from the saved layo
   render(<App createWorker={scriptedWorker(() => okResult())} />)
   const names = screen.getAllByRole('separator').map((s) => [s.getAttribute('aria-label'), s.getAttribute('aria-valuenow')])
   expect(names).toEqual([
-    ['Resize chat', '420'],
+    ['Resize agent', '420'],
     ['Resize parameters', '200'],
     ['Resize code', '500'],
     ['Resize console', '150'],
@@ -331,8 +331,8 @@ it('puts a resize divider between every desktop panel, sized from the saved layo
 it('saves a resized panel for this device', async () => {
   wideWindow()
   render(<App createWorker={scriptedWorker(() => okResult())} />)
-  fireEvent.keyDown(screen.getByRole('separator', { name: 'Resize chat' }), { key: 'ArrowRight' })
-  expect(screen.getByRole('separator', { name: 'Resize chat' })).toHaveAttribute('aria-valuenow', '376')
+  fireEvent.keyDown(screen.getByRole('separator', { name: 'Resize agent' }), { key: 'ArrowRight' })
+  expect(screen.getByRole('separator', { name: 'Resize agent' })).toHaveAttribute('aria-valuenow', '376')
   await waitFor(() => expect(usePrefs.getState().panelLayout.chatWidth).toBe(376))
 })
 
@@ -347,7 +347,7 @@ it('narrows the columns to fit a small window without changing the saved layout'
   render(<App createWorker={scriptedWorker(() => okResult())} />)
   // 1024 px: the 3D view keeps 360 px, the code column gives way first.
   expect(screen.getByRole('separator', { name: 'Resize code' })).toHaveAttribute('aria-valuenow', '320')
-  expect(screen.getByRole('separator', { name: 'Resize chat' })).toHaveAttribute('aria-valuenow', '342')
+  expect(screen.getByRole('separator', { name: 'Resize agent' })).toHaveAttribute('aria-valuenow', '342')
   expect(usePrefs.getState().panelLayout.chatWidth).toBe(560)
 })
 
@@ -357,9 +357,9 @@ it('lets the code divider take room from a chat column stored wider than shown',
   render(<App createWorker={scriptedWorker(() => okResult())} />)
   const code = screen.getByRole('separator', { name: 'Resize code' })
   expect(code).toHaveAttribute('aria-valuemax', '458')
-  expect(screen.getByRole('separator', { name: 'Resize chat' })).toHaveAttribute('aria-valuemax', '418')
+  expect(screen.getByRole('separator', { name: 'Resize agent' })).toHaveAttribute('aria-valuemax', '418')
   fireEvent.keyDown(code, { key: 'ArrowLeft' })
   expect(code).toHaveAttribute('aria-valuenow', '336')
-  expect(screen.getByRole('separator', { name: 'Resize chat' })).toHaveAttribute('aria-valuenow', '402')
+  expect(screen.getByRole('separator', { name: 'Resize agent' })).toHaveAttribute('aria-valuenow', '402')
   await waitFor(() => expect(usePrefs.getState().panelLayout).toMatchObject({ chatWidth: 402, codeWidth: 336 }))
 })

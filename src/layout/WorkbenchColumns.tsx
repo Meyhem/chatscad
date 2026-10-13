@@ -42,7 +42,7 @@ export function WorkbenchColumns({ viewer }: { viewer: ReactNode }) {
       <ChatPanel />
       <Splitter
         orientation="vertical"
-        label="Resize chat"
+        label="Resize agent"
         value={columns.chatWidth}
         min={LIMITS.chat[0]}
         max={columnMax('chat', windowWidth)}

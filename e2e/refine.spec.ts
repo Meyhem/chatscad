@@ -71,7 +71,8 @@ async function seedVisionProfile(page: Page) {
     const settings = tx.objectStore('settings')
     const read = settings.get('app')
     read.onsuccess = () => {
-      settings.put({ ...(read.result ?? {}), id: 'app', activeProfileId: 'fake-vision', activeModel: 'fake-vision', autoFixAttempts: 0 })
+      // These tests are about picking and images, not the agent's review of new models.
+      settings.put({ ...(read.result ?? {}), id: 'app', activeProfileId: 'fake-vision', activeModel: 'fake-vision', autoFixAttempts: 0, reviewNewModels: false })
     }
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve()

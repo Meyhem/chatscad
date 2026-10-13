@@ -96,9 +96,8 @@ export function ReviewButton() {
 
   if (!reviewer) {
     return (
-      <button type="button" className="pc-btn is-sm is-ghost" disabled title={NO_REVIEWER} aria-label={`Review. ${NO_REVIEWER}`}>
+      <button type="button" className="pc-btn is-icon is-sm is-ghost" disabled title={NO_REVIEWER} aria-label={`Review. ${NO_REVIEWER}`}>
         <IconEye className="pc-i" aria-hidden="true" />
-        Review
       </button>
     )
   }
@@ -109,13 +108,12 @@ export function ReviewButton() {
       trigger={(props) => (
         <button
           type="button"
-          className={`pc-btn is-sm is-ghost${willReview ? ' is-on' : ''}`}
+          className={`pc-btn is-sm is-ghost gap-0.5 px-1.5${willReview ? ' is-on' : ''}`}
           aria-label={willReview ? `Review: on for the next request, by ${reviewer.model}` : 'Review: off'}
           title={willReview ? `The next request is reviewed by ${reviewer.model}` : 'The next request is not reviewed'}
           {...props}
         >
           <IconEye className="pc-i" aria-hidden="true" />
-          Review
           <IconChevron className="pc-i" aria-hidden="true" />
         </button>
       )}

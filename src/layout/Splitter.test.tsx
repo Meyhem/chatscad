@@ -7,7 +7,7 @@ function setup(over: Partial<React.ComponentProps<typeof Splitter>> = {}) {
   render(
     <Splitter
       orientation="vertical"
-      label="Resize chat"
+      label="Resize agent"
       value={360}
       min={280}
       max={560}
@@ -17,7 +17,7 @@ function setup(over: Partial<React.ComponentProps<typeof Splitter>> = {}) {
       {...over}
     />,
   )
-  return { onChange, onCommit, el: screen.getByRole('separator', { name: over.label ?? 'Resize chat' }) }
+  return { onChange, onCommit, el: screen.getByRole('separator', { name: over.label ?? 'Resize agent' }) }
 }
 
 beforeAll(() => {

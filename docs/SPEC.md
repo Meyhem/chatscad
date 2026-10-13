@@ -28,7 +28,7 @@ Rendering, storage and AI calls all run in the user's browser; static hosting is
 | --- | --- |
 | Rendering | OpenSCAD WASM in a Web Worker |
 | Storage | Local only (IndexedDB); no backend, no proxy |
-| Editing | AI chat, code editor, parameter sliders, click-to-refine, image and sketch input |
+| Editing | AI agent (build, optional vision review), code editor, parameter sliders, click-to-refine, image and sketch input |
 | Providers | Any OpenAI-compatible endpoint plus native Anthropic; keys entered in the app |
 | Output | Live preview, STL export, full version history |
 
@@ -91,7 +91,9 @@ One `LlmProvider` interface (`listModels`, `streamChat`, capability flags) with 
 - Follow-up edits return search/replace blocks against the current version (cheaper, fewer regressions); the app falls back to requesting a full file if a block fails to apply.
 - Context sent each turn: current code, the user message, compile errors, optional viewport screenshot and selected part.
 
-**Auto-fix loop.** If the result fails to compile, the app sends stderr back automatically, up to N attempts (default 2). Each attempt is a version so nothing is hidden. Optional "visual check": send a rendered screenshot to a vision model and ask whether it matches the request.
+**Auto-fix loop.** If the result fails to compile, the app sends stderr back automatically, up to N attempts (default 2). Each attempt is a version so nothing is hidden.
+
+**Agent review.** The Project tab's left column is the Agent: every request builds as above, and a vision-capable reviewer model can check the result. Review runs on its own after the first build of a model, when Review is on for a request, from "Review vN", and after each round of fixes. A reviewed request in a project without checks is planned first: the builder model turns it into checks and module names, which the user approves, edits or skips; checks are stored on the project and editable from the column header. The reviewer gets four views (iso, front, top, right) with each top-level part in its own colour from the click-to-refine tags, a legend of colour, module and lines, the size, warnings, code and checks, and answers in JSON: a verdict and evidence per check, issues tied to parts and checks, and suggested checks. Fixes for failed checks start ticked; "Fix N issues" sends them back to the builder. "Fix until every check passes" repeats without asking up to the round limit (default 3). Without a vision model the Review control is disabled and says why. The viewer's Part colours button shows the same colours. Design: `docs/superpowers/specs/2026-10-13-agent-review-design.md`.
 
 ## Editing modes
 
@@ -178,7 +180,7 @@ History is a tree, not a list: editing an old version creates a branch instead o
 
 ## PWA and mobile UX
 
-Phone layout is three tabs (Chat, Code, 3D) with the 3D view always one tap away; desktop is a resizable three-pane split.
+Phone layout is three tabs (Agent, Code, 3D) with the 3D view always one tap away; desktop is a resizable three-pane split.
 
 - **Offline.** Precache the app shell, OpenSCAD WASM and library zips; editing, sliders, rendering and export work offline. Only AI calls need a network.
 - **First load.** The WASM binary is several MB; fetch it in the background after first paint and show a progress state, not a blank screen.

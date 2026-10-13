@@ -1,14 +1,14 @@
 import { expect, test } from '@playwright/test'
 import { replaceCode, STARTER_CODE, waitForAppReady, waitForFirstRender } from './support'
 
-test('switches between Chat, Code and 3D, with the symbol key row in Code', async ({ page }) => {
+test('switches between Agent, Code and 3D, with the symbol key row in Code', async ({ page }) => {
   await page.goto('./')
   await waitForAppReady(page)
   const tabs = page.getByRole('tablist', { name: 'Panels' })
   await expect(tabs).toBeVisible()
   await tabs.getByRole('tab', { name: 'Code' }).click()
   await replaceCode(page, STARTER_CODE)
-  await tabs.getByRole('tab', { name: 'Chat' }).click()
+  await tabs.getByRole('tab', { name: 'Agent' }).click()
   await waitForFirstRender(page)
   await expect(page.getByRole('textbox', { name: 'Prompt' })).toBeVisible()
 
@@ -26,7 +26,7 @@ test('switches between Chat, Code and 3D, with the symbol key row in Code', asyn
   await expect(page.locator('.cm-content')).toBeFocused()
   await expect(page.locator('.cm-line').last()).toHaveText(';')
 
-  await tabs.getByRole('tab', { name: 'Chat' }).click()
+  await tabs.getByRole('tab', { name: 'Agent' }).click()
   await expect(page.getByRole('textbox', { name: 'Prompt' })).toBeVisible()
 
   const views = page.getByRole('tablist', { name: 'Views' })
