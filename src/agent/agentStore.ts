@@ -21,6 +21,7 @@ import { renderReviewFrames } from './frames'
 import { runPlan } from './plan'
 import { selectReviewer, type ReviewerChoice } from './reviewer'
 import { runReview, type Issue, type LegendEntry, type Review, type ReviewDeps } from './review'
+import { sizeRows, sizesSummary, type SizeRow } from './sizes'
 import { recordAgentUsage } from './usage'
 
 export interface CardUsage {
@@ -70,7 +71,17 @@ export interface ReviewCard {
   error: { title: string; body: string } | null
 }
 
-export type AgentCard = PlanCard | ReviewCard
+/** Spec P8: every size of a photo build with where it came from, for the user to check. */
+export interface SizesCard {
+  kind: 'sizes'
+  id: string
+  noteId: string
+  versionLabel: string | null
+  rows: SizeRow[]
+  status: 'ready' | 'accepted' | 'superseded'
+}
+
+export type AgentCard = PlanCard | ReviewCard | SizesCard
 
 export interface SendOptions {
   /** What the user bubble shows when the model gets a longer text. */
@@ -135,6 +146,7 @@ export interface AgentState {
   toggleIssue(cardId: string, issueId: string): void
   fixIssues(cardId: string, deps?: AgentDeps): Promise<void>
   accept(cardId: string): void
+  acceptSizes(cardId: string): void
   addSuggestedChecks(cardId: string): Promise<void>
   stop(): void
   reset(): void
@@ -225,6 +237,17 @@ function reviewSummary(card: ReviewCard): string {
   return `${head}: all ${plural(verdicts.length, 'check')} pass`
 }
 
+function cardSummary(card: AgentCard): string {
+  switch (card.kind) {
+    case 'plan':
+      return planSummary(card)
+    case 'review':
+      return reviewSummary(card)
+    case 'sizes':
+      return sizesSummary(card.rows, card.versionLabel)
+  }
+}
+
 const note = (text: string, cardId: string) =>
   useChatStore.getState().addMessage({ role: 'note', text, turnLabel: null, model: null, usage: null, status: 'done', cardId })
 
@@ -270,11 +293,11 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     if (!card) return
     const next = { ...card, ...change } as AgentCard
     set((s) => ({ cards: { ...s.cards, [id]: next } }))
-    useChatStore.getState().patchMessage(next.noteId, { text: next.kind === 'plan' ? planSummary(next) : reviewSummary(next) })
+    useChatStore.getState().patchMessage(next.noteId, { text: cardSummary(next) })
   }
 
-  const addCard = (card: Omit<PlanCard, 'noteId'> | Omit<ReviewCard, 'noteId'>): string => {
-    const summary = card.kind === 'plan' ? planSummary(card as PlanCard) : reviewSummary(card as ReviewCard)
+  const addCard = (card: Omit<PlanCard, 'noteId'> | Omit<ReviewCard, 'noteId'> | Omit<SizesCard, 'noteId'>): string => {
+    const summary = cardSummary(card as AgentCard)
     const noteId = note(summary, card.id)
     set((s) => ({ cards: { ...s.cards, [card.id]: { ...card, noteId } as AgentCard } }))
     return card.id
@@ -333,6 +356,10 @@ export const useAgentStore = create<AgentState>()((set, get) => {
   ): Promise<void> {
     supersedeOpenCards()
     const outcome = await deps.send(text, { display, transcript, showPhotos })
+    if (outcome?.sent && !outcome.stopped && outcome.rendered?.ok && (useProjectStore.getState().project?.photos?.length ?? 0) > 0) {
+      const app = useAppStore.getState()
+      addCard({ kind: 'sizes', id: crypto.randomUUID(), versionLabel: useProjectStore.getState().head?.label ?? null, rows: sizeRows(app.code, app.params), status: 'ready' })
+    }
     if (!review || !outcome?.sent || outcome.stopped || !outcome.rendered?.ok) return
     await reviewRound(round, deps)
   }
@@ -514,6 +541,11 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     accept(cardId) {
       const card = get().cards[cardId]
       if (card?.kind === 'review' && card.status === 'ready') patch<ReviewCard>(cardId, { status: 'accepted' })
+    },
+
+    acceptSizes(cardId) {
+      const card = get().cards[cardId]
+      if (card?.kind === 'sizes' && card.status === 'ready') patch<SizesCard>(cardId, { status: 'accepted' })
     },
 
     async addSuggestedChecks(cardId) {

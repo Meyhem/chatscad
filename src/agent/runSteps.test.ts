@@ -1,5 +1,5 @@
 import type { ChatMessage } from '../chat/chatStore'
-import type { PlanCard, ReviewCard } from './agentStore'
+import type { PlanCard, ReviewCard, SizesCard } from './agentStore'
 import { groupRuns, runSteps } from './runSteps'
 
 const m = (over: Partial<ChatMessage> & Pick<ChatMessage, 'id' | 'role'>): ChatMessage => ({
@@ -64,4 +64,11 @@ it('falls back to the note text once the cards are gone (a reloaded project)', (
     {},
   )
   expect(steps.map((s) => `${s.state} ${s.label}`)).toEqual(['fail Review · round 1: 2 of 7 checks fail', 'done Review · round 2: all 7 checks pass'])
+})
+
+it('does not count a Sizes card as a step, with or without its card', () => {
+  const sizes: SizesCard = { kind: 'sizes', id: 's1', noteId: 'ns1', versionLabel: 'v1', rows: [], status: 'ready' }
+  const messages = [m({ id: 'b1', role: 'assistant' }), m({ id: 'ns1', role: 'note', text: 'Sizes in v1 · 0 · source not given', cardId: 's1' })]
+  expect(runSteps(messages, { s1: sizes }).map((s) => s.label)).toEqual(['Build'])
+  expect(runSteps(messages, {}).map((s) => s.label)).toEqual(['Build'])
 })

@@ -359,3 +359,35 @@ it('plans without photos when the builder takes no images, while the reviewer st
   const reviewContent = requests[1].messages[0].content as Array<{ type: string }>
   expect(reviewContent.at(-1)).toMatchObject({ type: 'image' })
 })
+
+it('adds a Sizes card after a successful build in a photo project, and supersedes it on the next build', async () => {
+  const project = useProjectStore.getState().project!
+  useProjectStore.setState({ project: { ...project, origin: 'photos', photos: [{ id: 'a', blobId: 'blob-a', angle: 'front', addedAt: 1 }] } })
+  const { deps } = setup([])
+  await useProjectStore.getState().setAgentMode('edit')
+  const sizedCode = 'wall = 3; // [1:6] guessed\ncube(wall);'
+  const send = deps.send
+  deps.send = async (text, opts) => {
+    const outcome = await send(text, opts)
+    useAppStore.getState().setCode(sizedCode, 'ai')
+    return outcome
+  }
+  await agent().submit('Make it', deps)
+  const sizes = cards().find((c) => c.kind === 'sizes')
+  expect(sizes).toMatchObject({ kind: 'sizes', status: 'ready', versionLabel: useProjectStore.getState().head?.label ?? null })
+  expect(sizes?.kind === 'sizes' && sizes.rows).toEqual([{ name: 'wall', value: 3, unit: 'mm', source: 'guess' }])
+  const label = useProjectStore.getState().head?.label
+  expect(useChatStore.getState().messages.at(-1)).toMatchObject({ role: 'note', text: `${label ? `Sizes in ${label}` : 'Sizes'} · 1 · 1 guessed`, cardId: sizes!.id })
+  await agent().submit('Taller', deps)
+  expect(agent().cards[sizes!.id]!.status).toBe('superseded')
+  expect(cards().filter((c) => c.kind === 'sizes')).toHaveLength(2)
+  agent().acceptSizes(cards().filter((c) => c.kind === 'sizes')[1]!.id)
+  expect(cards().filter((c) => c.kind === 'sizes').map((c) => c.status)).toEqual(['superseded', 'accepted'])
+})
+
+it('adds no Sizes card in a project without photos', async () => {
+  const { deps } = setup([])
+  await useProjectStore.getState().setAgentMode('edit')
+  await agent().submit('Make it', deps)
+  expect(cards().some((c) => c.kind === 'sizes')).toBe(false)
+})

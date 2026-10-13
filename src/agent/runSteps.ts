@@ -24,7 +24,9 @@ export interface RunStep {
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
-function cardStep(id: string, card: AgentCard): RunStep {
+function cardStep(id: string, card: AgentCard): RunStep | null {
+  // The Sizes card is a checklist for the user, not a step of the run.
+  if (card.kind === 'sizes') return null
   if (card.kind === 'plan') {
     const label = `Plan · ${plural(card.checks.length, 'check')}`
     switch (card.status) {
@@ -66,7 +68,10 @@ export function runSteps(messages: ChatMessage[], cards: Record<string, AgentCar
       steps.push({ id: m.id, label, state })
     } else if (m.role === 'note') {
       const card = m.cardId ? cards[m.cardId] : undefined
-      if (card) steps.push(cardStep(m.id, card))
+      if (card) {
+        const step = cardStep(m.id, card)
+        if (step) steps.push(step)
+      }
       // Without its card (a reloaded project), a plan or review note keeps its summary.
       else if (/^(Plan|Review)\b/.test(m.text)) steps.push({ id: m.id, label: m.text, state: /fail|stopped/.test(m.text) ? 'fail' : 'done' })
     }
