@@ -12,6 +12,7 @@ Describe a part, tune it, print it. ChatSCAD is a CAD workbench that runs entire
 - **Choose Edit or Agent for each request.** Edit sends one quick change. Agent, with a model that takes images, plans checks for the part, builds it, renders four views with each part in its own colour, reviews them against the checks and proposes fixes for you to approve, round after round. Each run is grouped in the chat with its steps.
 - **Tune it with sliders.** Every model is parametric: parameters become sliders with units, with presets and "Bake into code".
 - **Tap a part to change just that part**, or start from a photo, a drawing or a sketch.
+- **Start a project from photos** of a real object: one photo or several angles, a description and a scale. Every size in the model says where it came from (the description, a photo or a guess), and you can add angles later and refine.
 - **Ask for three variants** of a request and keep the one you like. Dictate prompts with your voice.
 - **Go back in time.** Every change is a version you can preview, compare, restore or branch from.
 - **Edit the code by hand** in an OpenSCAD editor with highlighting and inline errors. The model re-renders about half a second after you stop typing, and a failed compile keeps your last good model on screen.

@@ -93,6 +93,46 @@ export async function seedFakeProvider(page: Page, settings: Record<string, unkn
   await waitForAppReady(page)
 }
 
+/** Adds an OpenAI-compatible profile with vision for FAKE_BASE (model fake-vision), makes it active, then reloads. */
+export async function seedVisionProvider(page: Page): Promise<void> {
+  await page.goto('./')
+  await waitForAppReady(page)
+  await page.evaluate(async (baseUrl) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const open = indexedDB.open('chatscad')
+      open.onsuccess = () => resolve(open.result)
+      open.onerror = () => reject(open.error)
+    })
+    const tx = database.transaction(['providerProfiles', 'settings'], 'readwrite')
+    const now = Date.now()
+    tx.objectStore('providerProfiles').put({
+      id: 'fake-vision',
+      name: 'Fake vision',
+      adapter: 'openai-compatible',
+      baseUrl,
+      apiKey: 'test-key',
+      defaultModel: 'fake-vision',
+      cachedModels: [{ id: 'fake-vision' }],
+      capabilities: { streaming: true, vision: true, audio: false },
+      priceTable: { 'fake-vision': { inputPerMTok: 1, outputPerMTok: 2 } },
+      createdAt: now,
+      updatedAt: now,
+    })
+    const settings = tx.objectStore('settings')
+    const read = settings.get('app')
+    read.onsuccess = () => {
+      settings.put({ ...(read.result ?? {}), id: 'app', activeProfileId: 'fake-vision', activeModel: 'fake-vision', autoFixAttempts: 0 })
+    }
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+    database.close()
+  }, FAKE_BASE)
+  await page.reload()
+  await waitForAppReady(page)
+}
+
 /** Serves an OpenAI-compatible endpoint whose replies are the given codes, in turn, as full files. */
 export async function routeFakeLlm(page: Page, codes: string[]): Promise<{ requests: number }> {
   const state = { requests: 0 }

@@ -118,6 +118,8 @@ Changes re-render via `-D` overrides without touching source. "Bake" writes valu
 
 **Image and sketch input.** Attach a photo, upload a drawing, or sketch on a simple canvas with dimension annotations. Sent as image parts to vision-capable models only; the button is disabled with an explanation for profiles without vision. Images are downscaled client-side (max \~1568 px long edge) and stored with the version that used them.
 
+**Start from photos.** A new project can start from one photo or several tagged angles (front, top, side, back, bottom, other) of a real object, plus a description and a scale choice (a coin, card or ruler in the photos, or only the sizes in the description). The photos belong to the project (at most 5, 1024 px) and go with every builder, planner and reviewer request. The builder marks every Customizer annotation with its source (`from description`, `from photo`, `guessed`); the Customizer and a Sizes card after each build show it, guesses first. A Photos dialog adds angles later and refines the model against all photos, keeping the sizes the user set. The viewer can show a reference photo and match its camera angle.
+
 ## Variants, gallery, voice and model choice
 
 These v1 features reuse the same render pipeline and version store; none needs a backend.
@@ -159,7 +161,7 @@ History is a tree, not a list: editing an old version creates a branch instead o
 
 | Table | Key fields |
 | --- | --- |
-| `projects` | id, name, createdAt, updatedAt, headVersionId, providerProfileId, enabledLibraries, origin (`blank` · `gallery` · `shared-link`) |
+| `projects` | id, name, createdAt, updatedAt, headVersionId, providerProfileId, enabledLibraries, origin (`blank` · `gallery` · `shared-link`), photos, brief, scale |
 | `versions` | id, projectId, parentId, code, params (JSON), source (`ai` · `manual` · `slider` · `autofix` · `restore`), kind (`main` · `variant`), variantGroupId, message, model, compileStatus, renderMs, createdAt |
 | `messages` | id, projectId, versionId, role, content, imageBlobIds, audioTranscript |
 | `usage` | id, profileId, model, versionId, inputTokens, outputTokens, cost, costSource (`provider` · `price-table`), createdAt |

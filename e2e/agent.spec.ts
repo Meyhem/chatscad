@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import { FAKE_BASE, RENDER_TIMEOUT, waitForAppReady, watchCspViolations } from './support'
+import { FAKE_BASE, RENDER_TIMEOUT, seedVisionProvider, waitForAppReady, watchCspViolations } from './support'
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -77,45 +77,6 @@ async function fakeAgent(page: Page) {
     return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'text/event-stream' }, body: sse(text) })
   })
   return seen
-}
-
-async function seedVisionProvider(page: Page) {
-  await page.goto('./')
-  await waitForAppReady(page)
-  await page.evaluate(async (baseUrl) => {
-    const database = await new Promise<IDBDatabase>((resolve, reject) => {
-      const open = indexedDB.open('chatscad')
-      open.onsuccess = () => resolve(open.result)
-      open.onerror = () => reject(open.error)
-    })
-    const tx = database.transaction(['providerProfiles', 'settings'], 'readwrite')
-    const now = Date.now()
-    tx.objectStore('providerProfiles').put({
-      id: 'fake-vision',
-      name: 'Fake vision',
-      adapter: 'openai-compatible',
-      baseUrl,
-      apiKey: 'test-key',
-      defaultModel: 'fake-vision',
-      cachedModels: [{ id: 'fake-vision' }],
-      capabilities: { streaming: true, vision: true, audio: false },
-      priceTable: { 'fake-vision': { inputPerMTok: 1, outputPerMTok: 2 } },
-      createdAt: now,
-      updatedAt: now,
-    })
-    const settings = tx.objectStore('settings')
-    const read = settings.get('app')
-    read.onsuccess = () => {
-      settings.put({ ...(read.result ?? {}), id: 'app', activeProfileId: 'fake-vision', activeModel: 'fake-vision', autoFixAttempts: 0 })
-    }
-    await new Promise<void>((resolve, reject) => {
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error)
-    })
-    database.close()
-  }, FAKE_BASE)
-  await page.reload()
-  await waitForAppReady(page)
 }
 
 test('plans a new model, builds it, reviews coloured views, fixes the failed check and passes', async ({ page }) => {
