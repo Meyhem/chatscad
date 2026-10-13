@@ -182,3 +182,34 @@ it('exports and imports the checks, and imports files without them', async () =>
   const bad = parseImport({ ...file, project: { ...file.project, checks: 'all of them' } })
   expect(bad).toEqual({ ok: false, error: 'project.checks must be a list' })
 })
+
+it('exports and imports photos, the brief and the scale', async () => {
+  await db.blobs.put({ id: 'ph-1', kind: 'image', data: new Blob([new Uint8Array([137, 80, 78, 71])], { type: 'image/png' }) })
+  const project = await store().newProject({
+    code: 'cube(1);', origin: 'photos', brief: 'A bracket', scale: 'description',
+    photos: [{ id: 'p1', blobId: 'ph-1', angle: 'front', addedAt: 1 }],
+  })
+  const file = await exportProject(project.id)
+  expect(file.project).toMatchObject({ origin: 'photos', brief: 'A bracket', scale: 'description' })
+  expect(file.project.photos).toEqual([{ angle: 'front', mediaType: 'image/png', data: 'iVBORw==' }])
+
+  const parsed = parseImport(JSON.parse(JSON.stringify(file)))
+  expect(parsed.ok).toBe(true)
+  const imported = await importProjectFile((parsed as { ok: true; files: ProjectFile[] }).files[0]!)
+  expect(imported.photos).toHaveLength(1)
+  expect(imported.photos![0]!.angle).toBe('front')
+  const blob = await db.blobs.get(imported.photos![0]!.blobId)
+  expect(blob?.kind).toBe('image')
+  expect(new Uint8Array(await blob!.data.arrayBuffer())).toEqual(new Uint8Array([137, 80, 78, 71]))
+  expect(imported.brief).toBe('A bracket')
+})
+
+it('refuses photo data that is not base64 image data, or too many photos', async () => {
+  const base = (await exportProject((await sampleProject()).id)) as ProjectFile
+  const bad = { ...base, project: { ...base.project, origin: 'photos', photos: [{ angle: 'front', mediaType: 'image/png', data: 'not base64!!' }] } }
+  expect(parseImport(bad)).toEqual({ ok: false, error: 'project.photos[0].data must be base64 image data' })
+  const many = { ...base, project: { ...base.project, photos: Array.from({ length: 6 }, () => ({ angle: 'top', mediaType: 'image/jpeg', data: 'AA==' })) } }
+  expect(parseImport(many)).toEqual({ ok: false, error: 'project.photos has more than 5 entries' })
+  const wrongAngle = { ...base, project: { ...base.project, photos: [{ angle: 'diagonal', mediaType: 'image/jpeg', data: 'AA==' }] } }
+  expect(parseImport(wrongAngle)).toEqual({ ok: false, error: 'project.photos[0].angle must be one of photo, front, top, side, back, bottom, other' })
+})

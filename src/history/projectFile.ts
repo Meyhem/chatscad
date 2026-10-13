@@ -10,6 +10,9 @@ import { isLibraryName } from '../render/libraries'
 import type { ParamValue } from '../render/types'
 import { cleanChecks, MAX_CHECKS, type Check } from '../agent/checks'
 import { listVersions } from './versions'
+import { MAX_BRIEF_CHARS, MAX_PROJECT_PHOTOS, PHOTO_ANGLES, type PhotoAngle, type PhotoScale, type ProjectPhoto } from '../photos/projectPhotos'
+import { saveImage } from '../db/images'
+import { blobToBase64, dataUrlToBlob } from '../images/base64'
 
 export const PROJECT_FORMAT = 'chatscad-project'
 export const BACKUP_FORMAT = 'chatscad-backup'
@@ -20,11 +23,18 @@ export type FileVersion = Omit<Version, 'projectId' | 'thumbnailBlobId'>
 export type FileMessage = Omit<StoredMessage, 'projectId' | 'imageBlobIds' | 'usageId'>
 export type FilePreset = Omit<Preset, 'projectId'>
 
+export interface FilePhoto {
+  angle: PhotoAngle
+  mediaType: 'image/png' | 'image/jpeg'
+  /** Base64 image data, no data-URL prefix. */
+  data: string
+}
+
 export interface ProjectFile {
   format: typeof PROJECT_FORMAT
   version: 1
   exportedAt: number
-  project: { name: string; origin: Project['origin']; enabledLibraries: string[]; checks?: Check[] }
+  project: { name: string; origin: Project['origin']; enabledLibraries: string[]; checks?: Check[]; photos?: FilePhoto[]; brief?: string; scale?: PhotoScale }
   headVersionId: string
   versions: FileVersion[]
   messages: FileMessage[]
@@ -41,7 +51,12 @@ export interface BackupFile {
 export type ParseResult = { ok: true; files: ProjectFile[] } | { ok: false; error: string }
 
 const SOURCES: readonly VersionSource[] = ['ai', 'manual', 'slider', 'autofix', 'restore', 'gallery', 'import']
-const ORIGINS: readonly Project['origin'][] = ['blank', 'gallery', 'shared-link']
+const ORIGINS: readonly Project['origin'][] = ['blank', 'gallery', 'shared-link', 'photos']
+const ANGLES: readonly PhotoAngle[] = ['photo', ...PHOTO_ANGLES]
+const MEDIA: readonly FilePhoto['mediaType'][] = ['image/png', 'image/jpeg']
+const SCALES: readonly PhotoScale[] = ['reference', 'description']
+const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/
+const MAX_PHOTO_CHARS = 4_000_000 // about 3 MB of image data
 const ROLES: readonly StoredMessage['role'][] = ['user', 'assistant', 'note']
 const STATUSES: readonly Version['compileStatus'][] = ['ok', 'error', 'pending']
 const KINDS: readonly Version['kind'][] = ['main', 'variant']
@@ -121,6 +136,18 @@ function parseProject(v: unknown, at: string): ProjectFile {
     typeof lib === 'string' && isLibraryName(lib) ? lib : fail(`${p}project.enabledLibraries[${i}]`, 'must be BOSL2 or MCAD'),
   )
   const checks = project.checks === undefined ? undefined : cleanChecks(list(project, 'checks', `${p}project.`, MAX_CHECKS))
+  const photos =
+    project.photos === undefined
+      ? undefined
+      : list(project, 'photos', `${p}project.`, MAX_PROJECT_PHOTOS).map((raw, i): FilePhoto => {
+          const path = `${p}project.photos[${i}].`
+          const x = obj(raw, `${p}project.photos[${i}]`)
+          const data = str(x, 'data', path, MAX_PHOTO_CHARS)
+          if (data === '' || data.length % 4 !== 0 || !BASE64.test(data)) fail(`${path}data`, 'must be base64 image data')
+          return { angle: oneOf(x, 'angle', path, ANGLES), mediaType: oneOf(x, 'mediaType', path, MEDIA), data }
+        })
+  const brief = project.brief === undefined ? undefined : str(project, 'brief', `${p}project.`, MAX_BRIEF_CHARS)
+  const scale = project.scale === undefined ? undefined : oneOf(project, 'scale', `${p}project.`, SCALES)
 
   const ids = new Set<string>()
   const labels = new Set<string>()
@@ -187,7 +214,13 @@ function parseProject(v: unknown, at: string): ProjectFile {
     format: PROJECT_FORMAT,
     version: 1,
     exportedAt: typeof o.exportedAt === 'number' ? o.exportedAt : 0,
-    project: { name, origin, enabledLibraries, ...(checks ? { checks } : {}) },
+    project: {
+      name, origin, enabledLibraries,
+      ...(checks ? { checks } : {}),
+      ...(photos ? { photos } : {}),
+      ...(brief !== undefined ? { brief } : {}),
+      ...(scale ? { scale } : {}),
+    },
     headVersionId: head,
     versions,
     messages,
@@ -214,6 +247,12 @@ export async function exportProject(projectId: string): Promise<ProjectFile> {
   const project = await getProject(projectId)
   if (!project || !project.headVersionId) throw new Error(`Project ${projectId} not found`)
   const [versions, messages, presets] = await Promise.all([listVersions(projectId), listMessages(projectId), listPresets(projectId)])
+  const photos: FilePhoto[] = []
+  for (const photo of project.photos ?? []) {
+    const row = await db.blobs.get(photo.blobId)
+    if (!row) continue
+    photos.push({ angle: photo.angle, mediaType: row.data.type === 'image/png' ? 'image/png' : 'image/jpeg', data: await blobToBase64(row.data) })
+  }
   return {
     format: PROJECT_FORMAT,
     version: 1,
@@ -223,6 +262,9 @@ export async function exportProject(projectId: string): Promise<ProjectFile> {
       origin: project.origin,
       enabledLibraries: project.enabledLibraries,
       ...(project.checks ? { checks: project.checks } : {}),
+      ...(photos.length > 0 ? { photos } : {}),
+      ...(project.brief !== undefined ? { brief: project.brief } : {}),
+      ...(project.scale ? { scale: project.scale } : {}),
     },
     headVersionId: project.headVersionId,
     versions: versions.map((v) => ({
@@ -246,6 +288,11 @@ export async function importProjectFile(file: ProjectFile): Promise<Project> {
   const projectId = crypto.randomUUID()
   const newId = new Map(file.versions.map((v) => [v.id, crypto.randomUUID()]))
   const now = Date.now()
+  const photos: ProjectPhoto[] = []
+  for (const f of file.project.photos ?? []) {
+    const blobId = await saveImage(dataUrlToBlob(`data:${f.mediaType};base64,${f.data}`))
+    photos.push({ id: crypto.randomUUID(), blobId, angle: f.angle, addedAt: now })
+  }
   const project: Project = {
     id: projectId,
     name: file.project.name,
@@ -256,6 +303,9 @@ export async function importProjectFile(file: ProjectFile): Promise<Project> {
     enabledLibraries: file.project.enabledLibraries,
     origin: file.project.origin,
     ...(file.project.checks ? { checks: file.project.checks } : {}),
+    ...(photos.length > 0 ? { photos } : {}),
+    ...(file.project.brief !== undefined ? { brief: file.project.brief } : {}),
+    ...(file.project.scale ? { scale: file.project.scale } : {}),
   }
   const versions: Version[] = file.versions.map((v) => ({
     ...v,
