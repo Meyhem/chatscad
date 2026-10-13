@@ -11,6 +11,8 @@ export interface CameraPose {
   fov?: number
   /** Width / height of the view that framed this pose (the main viewer's canvas). */
   aspect?: number
+  /** Draw with an orthographic camera showing 2 × halfHeight mm vertically; `fov` is ignored. */
+  ortho?: { halfHeight: number }
 }
 
 /** Field of view of every exported frame; the main viewer uses the same. */
@@ -43,6 +45,26 @@ export function presetPose(bounds: Bounds, preset: PresetView, aspect = 1): Came
       return { position: [tx, ty, tz + fit.distance], target: fit.target, up: [0, 1, 0] }
     case 'right':
       return { position: [tx + fit.distance, ty, tz], target: fit.target }
+  }
+}
+
+export type OrthoView = Exclude<PresetView, 'iso'>
+
+/** An orthographic camera on an axis through the centre of `bounds`, showing 2 × `halfHeight` mm vertically. */
+export function orthoPose(bounds: Bounds, view: OrthoView, halfHeight: number): CameraPose {
+  const { min, max } = bounds
+  const target: Vec3 = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2]
+  // Far enough to stay outside the model; with no perspective the distance changes nothing else.
+  const d = Math.max(Math.hypot(max[0] - min[0], max[1] - min[1], max[2] - min[2]), 1) * 2
+  const [tx, ty, tz] = target
+  const ortho = { halfHeight }
+  switch (view) {
+    case 'front':
+      return { position: [tx, ty - d, tz], target, ortho }
+    case 'top':
+      return { position: [tx, ty, tz + d], target, up: [0, 1, 0], ortho }
+    case 'right':
+      return { position: [tx + d, ty, tz], target, ortho }
   }
 }
 

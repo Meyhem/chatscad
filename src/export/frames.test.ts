@@ -1,8 +1,8 @@
 import type { Mock } from 'vitest'
-import type { MeshData, Vec3 } from '../render/types'
+import type { Bounds, MeshData, Vec3 } from '../render/types'
 import { okResult } from '../test/results'
 import { computeCameraFit } from '../viewer/cameraFit'
-import { FRAME_FOV, presetPose, renderFrames, turntablePoses, type CameraPose } from './frames'
+import { FRAME_FOV, orthoPose, presetPose, renderFrames, turntablePoses, type CameraPose } from './frames'
 
 interface RendererOpts {
   width: number
@@ -113,4 +113,40 @@ it('disposes the renderer when the consumer stops early', async () => {
   await frames.return(undefined)
   expect(renderers[0].render).toHaveBeenCalledTimes(1)
   expect(renderers[0].dispose).toHaveBeenCalledTimes(1)
+})
+
+const OFFSET: Bounds = { min: [-10, 5, 0], max: [30, 25, 10] }
+
+it('places orthographic cameras on the axes, looking at the centre of the model', () => {
+  const front = orthoPose(OFFSET, 'front', 12)
+  expect(front.target).toEqual([10, 15, 5])
+  expect(front.position[0]).toBe(10)
+  expect(front.position[1]).toBeLessThan(5)
+  expect(front.position[2]).toBe(5)
+  expect(front.up).toBeUndefined()
+  expect(front.ortho).toEqual({ halfHeight: 12 })
+
+  const top = orthoPose(OFFSET, 'top', 12)
+  expect(top.position.slice(0, 2)).toEqual([10, 15])
+  expect(top.position[2]).toBeGreaterThan(10)
+  expect(top.up).toEqual([0, 1, 0])
+
+  const right = orthoPose(OFFSET, 'right', 12)
+  expect(right.position[0]).toBeGreaterThan(30)
+  expect(right.position.slice(1)).toEqual([15, 5])
+})
+
+it('keeps the camera clear of a model that is flat or tiny', () => {
+  const flat: Bounds = { min: [0, 0, 0], max: [0, 0, 0] }
+  const pose = orthoPose(flat, 'front', 1)
+  expect(pose.position[1]).toBeLessThan(0)
+  expect(Number.isFinite(pose.position[1])).toBe(true)
+})
+
+it('hands orthographic poses to the renderer unchanged', async () => {
+  const pose = orthoPose(mesh.bounds, 'top', 7)
+  for await (const _ of renderFrames({ mesh, size: [64, 32], background: null, cameras: [pose] })) {
+    // drain
+  }
+  expect(renderers.at(-1)!.render).toHaveBeenCalledWith(pose)
 })

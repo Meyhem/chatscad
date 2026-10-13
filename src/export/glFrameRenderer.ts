@@ -5,6 +5,7 @@ import {
   DirectionalLight,
   Mesh,
   MeshStandardMaterial,
+  OrthographicCamera,
   PerspectiveCamera,
   Scene,
   Vector3,
@@ -61,6 +62,7 @@ export function createGlFrameRenderer({ width, height, background, filament }: G
   scene.add(key, fill)
 
   const camera = new PerspectiveCamera(45, width / height, 0.1, 10_000)
+  const ortho = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10_000)
   const material = new MeshStandardMaterial({ color: new Color(filament), roughness: 0.6, metalness: 0.1 })
   // Part colours replace the filament colour; white keeps them unchanged.
   const coloured = new MeshStandardMaterial({ color: new Color(1, 1, 1), roughness: 0.6, metalness: 0.1, vertexColors: true })
@@ -80,15 +82,24 @@ export function createGlFrameRenderer({ width, height, background, filament }: G
       scene.add(model)
     },
     render(pose) {
-      camera.up.set(...(pose.up ?? [0, 0, 1]))
-      camera.position.set(...pose.position)
-      camera.lookAt(...pose.target)
-      const distance = camera.position.distanceTo(new Vector3(...pose.target))
-      camera.near = Math.max(distance / 1000, 0.01)
-      camera.far = distance * 100
-      camera.fov = pose.fov ?? FRAME_FOV
-      camera.updateProjectionMatrix()
-      renderer.render(scene, camera)
+      const cam = pose.ortho ? ortho : camera
+      cam.up.set(...(pose.up ?? [0, 0, 1]))
+      cam.position.set(...pose.position)
+      cam.lookAt(...pose.target)
+      const distance = cam.position.distanceTo(new Vector3(...pose.target))
+      cam.near = Math.max(distance / 1000, 0.01)
+      cam.far = distance * 100
+      if (pose.ortho) {
+        const halfWidth = pose.ortho.halfHeight * (width / height)
+        ortho.left = -halfWidth
+        ortho.right = halfWidth
+        ortho.top = pose.ortho.halfHeight
+        ortho.bottom = -pose.ortho.halfHeight
+      } else {
+        camera.fov = pose.fov ?? FRAME_FOV
+      }
+      cam.updateProjectionMatrix()
+      renderer.render(scene, cam)
       gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
       return new ImageData(flipRows(pixels, width, height), width, height)
     },
