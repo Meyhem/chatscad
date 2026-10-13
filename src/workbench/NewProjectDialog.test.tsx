@@ -234,3 +234,20 @@ it('takes the first of several photos picked for the one-photo slot and names th
   expect(await screen.findByRole('alert')).toHaveTextContent('One photo only. b.jpg was not added.')
   expect(screen.getAllByRole('img')).toHaveLength(1)
 })
+
+it('cannot be closed while creating', async () => {
+  let finish = () => {}
+  const onCreate = vi.fn(() => new Promise<void>((r) => (finish = r)))
+  const { onClose } = setup({ onCreate })
+  fireEvent.click(screen.getByRole('button', { name: 'Create project' }))
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled()
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+  const scrim = screen.getByRole('dialog').parentElement!
+  fireEvent.mouseDown(scrim, { target: scrim })
+  expect(onClose).not.toHaveBeenCalled()
+  await act(async () => finish())
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+  expect(onClose).toHaveBeenCalledTimes(1)
+})

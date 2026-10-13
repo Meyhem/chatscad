@@ -114,10 +114,15 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
       ? 'No libraries: the AI writes plain OpenSCAD that opens in any OpenSCAD and renders fastest.'
       : `The AI may use ${enabled.join(' and ')}. They are bundled with the app and work offline.`
 
+  /** Closing mid-create would lose the outcome; Cancel, Close, Escape and the scrim wait for it, as in the Photos dialog. */
+  const close = () => {
+    if (!saving) onClose()
+  }
+
   const ready = name.trim() !== '' && (start === 'blank' || (draft.photos.length > 0 && brief.trim() !== ''))
 
   return (
-    <Modal labelledBy="new-project-title" onClose={onClose} className={`pc-dialog ${start === 'photos' ? 'max-w-[920px]' : 'max-w-[600px]'} gap-0 p-0`}>
+    <Modal labelledBy="new-project-title" onClose={close} className={`pc-dialog ${start === 'photos' ? 'max-w-[920px]' : 'max-w-[600px]'} gap-0 p-0`}>
       <form
         onSubmit={async (e) => {
           e.preventDefault()
@@ -142,7 +147,7 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
             <h2 id="new-project-title">New project</h2>
             <p className="pc-muted">Start blank, or from photos of a real object. Photos are a starting point; describe the rest in words.</p>
           </div>
-          <button type="button" className="pc-btn is-icon is-ghost" aria-label="Close" onClick={onClose}>
+          <button type="button" className="pc-btn is-icon is-ghost" aria-label="Close" disabled={saving} onClick={close}>
             <IconX className="pc-i" aria-hidden="true" />
           </button>
         </div>
@@ -199,6 +204,7 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
                 type="button"
                 className="pc-btn is-sm"
                 onClick={() => {
+                  if (saving) return
                   useAppStore.getState().setView('settings')
                   onClose()
                 }}
@@ -318,7 +324,7 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
                 : 'Opens an empty project. Describe a part, write code, or start from an example.'}
             </span>
           )}
-          <button type="button" className="pc-btn" onClick={onClose}>
+          <button type="button" className="pc-btn" disabled={saving} onClick={close}>
             Cancel
           </button>
           <button type="submit" className="pc-btn is-primary" disabled={!ready || saving}>
