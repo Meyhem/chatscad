@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import { FAKE_BASE, RENDER_TIMEOUT, waitForAppReady } from './support'
+import { FAKE_BASE, RENDER_TIMEOUT, waitForAppReady, watchCspViolations } from './support'
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -120,6 +120,7 @@ async function seedVisionProvider(page: Page) {
 
 test('plans a new model, builds it, reviews coloured views, fixes the failed check and passes', async ({ page }) => {
   const seen = await fakeAgent(page)
+  const csp = watchCspViolations(page)
   await seedVisionProvider(page)
 
   const agent = page.getByRole('region', { name: 'Agent' })
@@ -155,6 +156,11 @@ test('plans a new model, builds it, reviews coloured views, fixes the failed che
   // The viewer shows the same part colours.
   await page.getByRole('button', { name: 'Part colours' }).click()
   await expect(page.getByTestId('viewer').getByRole('list', { name: 'Part colours' })).toContainText('body')
+
+  // The review frames are blob: images, which the strict CSP allows.
+  const loaded = await reviews.first().getByRole('img', { name: 'iso view' }).evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)
+  expect(loaded).toBe(768)
+  expect(csp).toEqual([])
 })
 
 test('an edit is not reviewed unless asked, and Review vN reviews it', async ({ page }) => {
