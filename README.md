@@ -1,4 +1,4 @@
-# ChatSCAD
+# ChatSCAD - AI Driven parametric modeler
 
 **Try it:** https://meyhem.github.io/chatscad/
 
