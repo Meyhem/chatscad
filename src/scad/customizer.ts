@@ -10,6 +10,15 @@ export type ParamControl =
   | { kind: 'text' }
   | { kind: 'vector'; length: number }
 
+/** Where a size came from, from the words after the Customizer annotation (spec P7). */
+export type ParamSource = 'description' | 'photo' | 'guess' | null
+
+export const SOURCE_LABEL: Record<Exclude<ParamSource, null>, string> = {
+  description: 'From description',
+  photo: 'From photo',
+  guess: 'Guessed',
+}
+
 export interface CustomizerParam {
   name: string
   defaultValue: ParamValue
@@ -18,6 +27,7 @@ export interface CustomizerParam {
   description: string // comment on the line above, if any
   line: number
   annotated: boolean
+  source: ParamSource
 }
 
 interface Assignment {
@@ -30,6 +40,7 @@ interface Assignment {
   hidden: boolean
   description: string
   annotation: string | null
+  source: ParamSource
 }
 
 const GROUP = /^\/\*\s*\[\s*([^\]]*?)\s*\]\s*\*\/$/
@@ -123,6 +134,24 @@ function annotationAfter(tokens: Token[], semicolon: number): string | null {
   return c?.kind === 'comment' && c.text.startsWith('//') ? c.text.slice(2).trim() : null
 }
 
+const SOURCE = /\s*(from (?:the )?description|from (?:the )?photos?|guessed)\s*$/i
+
+/** A bracketed annotation followed by other words keeps only the bracket; "[[1, 2]]" has no gap after the first "]", so it stays whole and unusable. */
+function cutAtBracket(text: string): string {
+  if (!text.startsWith('[')) return text
+  const close = text.indexOf(']')
+  return close !== -1 && /^\s/.test(text.slice(close + 1)) ? text.slice(0, close + 1) : text
+}
+
+/** Splits "[1:10] guessed" into the annotation and the source; other trailing words after a bracket are dropped. */
+export function splitSource(text: string | null): { annotation: string | null; source: ParamSource } {
+  if (text === null) return { annotation: null, source: null }
+  const m = SOURCE.exec(text)
+  const source: ParamSource = !m ? null : m[1]!.toLowerCase() === 'guessed' ? 'guess' : m[1]!.toLowerCase().includes('photo') ? 'photo' : 'description'
+  const rest = (m ? text.slice(0, m.index) : text).trim()
+  return { annotation: rest === '' ? null : cutAtBracket(rest), source }
+}
+
 function scanAssignments(code: string): Assignment[] {
   const tokens = lex(code)
   const found = new Map<string, Assignment>()
@@ -167,7 +196,7 @@ function scanAssignments(code: string): Assignment[] {
               group,
               hidden,
               description: descriptionAbove(tokens, i),
-              annotation: annotationAfter(tokens, end),
+              ...splitSource(annotationAfter(tokens, end)),
             })
           }
           i = end
@@ -232,7 +261,7 @@ function parseAnnotation(text: string, value: number | string): ParamControl | n
 }
 
 function toParam(a: Assignment): CustomizerParam {
-  const base = { name: a.name, defaultValue: a.value, group: a.group, description: a.description, line: a.line }
+  const base = { name: a.name, defaultValue: a.value, group: a.group, description: a.description, line: a.line, source: a.source }
   const v = a.value
   if (typeof v === 'boolean') return { ...base, control: { kind: 'toggle' }, annotated: a.annotation !== null }
   if (Array.isArray(v)) {

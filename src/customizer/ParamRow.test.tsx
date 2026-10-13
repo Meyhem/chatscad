@@ -11,6 +11,7 @@ const param = (over: Partial<CustomizerParam>): CustomizerParam => ({
   description: '',
   line: 1,
   annotated: true,
+  source: null,
   ...over,
 })
 
@@ -91,4 +92,11 @@ it('picks units from the description, angles and counts', () => {
   expect(unitFor(param({ name: 'rows', description: 'Number of rows' }))).toBe('')
   expect(unitFor(param({ name: 'fill', description: 'Infill (%)' }))).toBe('%')
   expect(unitFor(param({ name: 'wall' }))).toBe('mm')
+})
+
+it('shows where a size came from, and marks a guess', () => {
+  render(<ParamRow param={param({ name: 'wall', defaultValue: 3, control: { kind: 'slider', min: 1, step: 0.2, max: 6 }, source: 'guess' })} value={3} onChange={() => {}} />)
+  const hint = screen.getByText('Guessed')
+  expect(hint).toHaveClass('text-warn')
+  expect(screen.queryByText('[1 : 0.2 : 6]')).toBeNull()
 })

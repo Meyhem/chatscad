@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { formatValue } from '../history/messages'
 import { paramValueEqual } from '../render/params'
 import type { ParamValue } from '../render/types'
-import type { CustomizerParam } from '../scad/customizer'
+import { SOURCE_LABEL, type CustomizerParam } from '../scad/customizer'
 import { unitFor } from './units'
 
 const AXES = ['x', 'y', 'z', 'w']
@@ -52,7 +52,8 @@ export function ParamRow({ param, value, onChange }: Props) {
   const c = param.control
   const changed = !paramValueEqual(value, param.defaultValue)
   const unit = c.kind === 'slider' || c.kind === 'number' ? unitFor(param) : ''
-  const hint = c.kind === 'slider' ? `[${c.min} : ${c.step} : ${c.max}]` : c.kind === 'number' && c.step !== undefined ? `step ${c.step}` : null
+  const rangeHint = c.kind === 'slider' ? `[${c.min} : ${c.step} : ${c.max}]` : c.kind === 'number' && c.step !== undefined ? `step ${c.step}` : null
+  const hint = param.source ? SOURCE_LABEL[param.source] : rangeHint
   const num = typeof value === 'number' ? value : Number(param.defaultValue)
 
   let control: React.ReactNode
@@ -141,7 +142,7 @@ export function ParamRow({ param, value, onChange }: Props) {
     <div className={`pc-param${changed ? ' is-changed' : ''}`} title={param.description || undefined} data-testid={`param-${param.name}`}>
       <div className="pc-param-name">
         {param.name}
-        {hint && <small>{hint}</small>}
+        {hint && <small className={param.source === 'guess' ? 'text-warn' : undefined}>{hint}</small>}
       </div>
       {control}
     </div>

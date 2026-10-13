@@ -158,6 +158,28 @@ s = "say \"hi\"\n";`)
     }
   })
 
+  it('reads a size source after the annotation and keeps the control', () => {
+    const code = ['rod_d = 25; // [15:0.5:40] from description', 'wall = 3; // [1.2:0.2:6] guessed', 'plate_w = 22; // [14:1:40] from photo', 'n = 4; // 1 guessed', 'plain = 2; // [1:9]'].join('\n')
+    const params = parseCustomizer(code)
+    expect(params.map((p) => p.source)).toEqual(['description', 'guess', 'photo', 'guess', null])
+    expect(params[0]!.control).toEqual({ kind: 'slider', min: 15, step: 0.5, max: 40 })
+    expect(params[3]!.control).toEqual({ kind: 'number', step: 1 })
+    expect(params[3]!.annotated).toBe(true)
+  })
+
+  it('ignores trailing words that are not a source', () => {
+    const [p] = parseCustomizer('w = 5; // [1:10] mm')
+    expect(p!.source).toBeNull()
+    expect(p!.control).toEqual({ kind: 'slider', min: 1, step: 1, max: 10 })
+  })
+
+  it('reads a source on an un-annotated number too', () => {
+    const [p] = parseCustomizer('depth = 24; // guessed')
+    expect(p!.source).toBe('guess')
+    expect(p!.control).toEqual({ kind: 'number' })
+    expect(p!.annotated).toBe(false)
+  })
+
   it('does not use a slider annotation on a string, nor a step on a string', () => {
     expect(byName('s = "a"; // 8').s).toMatchObject({ control: { kind: 'text' }, annotated: false })
   })
