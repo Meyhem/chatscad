@@ -45,19 +45,56 @@ function SizeField({ row, live, onCommit }: { row: SizeRow; live: ParamValue; on
   )
 }
 
+const rowClass = 'grid items-center gap-2 border-b border-line py-1 text-[13px] last:border-b-0'
+const rowColumns = { gridTemplateColumns: 'minmax(0, 1fr) 96px 128px' }
+
+const setSize = (name: string, value: ParamValue) => {
+  const app = useAppStore.getState()
+  app.setParams({ ...app.params, [name]: value })
+}
+
+/** The open card's rows follow the code and the parameters, so only it reads them. */
+function LiveRows({ rows }: { rows: readonly SizeRow[] }) {
+  const code = useAppStore((s) => s.code)
+  const params = useAppStore((s) => s.params)
+  const values = effectiveValues(code, params)
+  return (
+    <div>
+      {rows.map((row) => (
+        <div key={row.name} className={rowClass} style={rowColumns}>
+          <span className="pc-mono truncate">{row.name}</span>
+          <SizeField row={row} live={values[row.name] ?? row.value} onCommit={(v) => setSize(row.name, v)} />
+          <SourceTag source={row.source} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** A checked or out-of-date card shows the values it kept. */
+function ClosedRows({ rows }: { rows: readonly SizeRow[] }) {
+  return (
+    <div>
+      {rows.map((row) => (
+        <div key={row.name} className={rowClass} style={rowColumns}>
+          <span className="pc-mono truncate">{row.name}</span>
+          <span className="pc-mono">
+            {String(row.value)}
+            {row.unit ? ` ${row.unit}` : ''}
+          </span>
+          <SourceTag source={row.source} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** Every size of the latest build and where it came from (spec P8). */
 export function SizesCardView({ card }: { card: SizesCard }) {
   const accept = useAgentStore((s) => s.acceptSizes)
   const openPhotos = usePhotosDialog((s) => s.setOpen)
-  const code = useAppStore((s) => s.code)
-  const params = useAppStore((s) => s.params)
-  const values = effectiveValues(code, params)
   const guessed = card.rows.filter((r) => r.source === 'guess').length
   const given = card.rows.some((r) => r.source !== null)
-  const setSize = (name: string, value: ParamValue) => {
-    const app = useAppStore.getState()
-    app.setParams({ ...app.params, [name]: value })
-  }
   const open = card.status === 'ready'
   return (
     <div className="pc-agent-card" data-testid="sizes-card">
@@ -72,22 +109,7 @@ export function SizesCardView({ card }: { card: SizesCard }) {
         {card.status === 'superseded' && <span className="pc-status">Out of date</span>}
       </div>
       {open && <span className="pc-caption">{guessed > 0 ? 'Check the guessed sizes first. The model estimated them from the photos.' : 'Every size came from the description or the photos.'}</span>}
-      <div>
-        {card.rows.map((row) => (
-          <div key={row.name} className="grid items-center gap-2 border-b border-line py-1 text-[13px] last:border-b-0" style={{ gridTemplateColumns: 'minmax(0, 1fr) 96px 128px' }}>
-            <span className="pc-mono truncate">{row.name}</span>
-            {open ? (
-              <SizeField row={row} live={values[row.name] ?? row.value} onCommit={(v) => setSize(row.name, v)} />
-            ) : (
-              <span className="pc-mono">
-                {String(row.value)}
-                {row.unit ? ` ${row.unit}` : ''}
-              </span>
-            )}
-            <SourceTag source={row.source} />
-          </div>
-        ))}
-      </div>
+      {open ? <LiveRows rows={card.rows} /> : <ClosedRows rows={card.rows} />}
       {open && (
         <>
           <div className="pc-row">

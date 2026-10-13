@@ -5,6 +5,11 @@ import { useAgentStore, type SizesCard } from '../agentStore'
 import { usePhotosDialog } from '../../photos/photosDialogStore'
 import { SizesCardView } from './SizesCardView'
 
+vi.mock('../../scad/customizer', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../scad/customizer')>()
+  return { ...actual, effectiveValues: vi.fn(actual.effectiveValues) }
+})
+
 const card: SizesCard = {
   kind: 'sizes', id: 's1', noteId: 'n1', versionLabel: 'v1', status: 'ready',
   rows: [
@@ -80,4 +85,16 @@ it('says every size was given when none is guessed', () => {
   const given: SizesCard = { ...card, rows: card.rows.filter((r) => r.source !== 'guess') }
   render(<SizesCardView card={given} />)
   expect(screen.getByText('Every size came from the description or the photos.')).toBeInTheDocument()
+})
+
+it('renders a closed card from its rows without reading the code', () => {
+  const read = vi.mocked(effectiveValues)
+  for (const status of ['accepted', 'superseded'] as const) {
+    read.mockClear()
+    const { unmount } = render(<SizesCardView card={{ ...card, status }} />)
+    act(() => useAppStore.setState({ code: 'wall = 5;\nrod_d = 25;\nplate_w = 22;', params: { wall: 6 } }))
+    expect(screen.getByText('3 mm')).toBeInTheDocument()
+    expect(read).not.toHaveBeenCalled()
+    unmount()
+  }
 })
