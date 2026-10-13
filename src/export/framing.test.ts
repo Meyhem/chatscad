@@ -30,7 +30,7 @@ describe.each([
   ['800 × 600', 800 / 600],
   ['a tall 600 × 1080', 600 / 1080],
 ])('at %s', (_label, aspect) => {
-  it.each(['iso', 'front', 'top'] as const)('the %s preset keeps the whole model in frame', (preset) => {
+  it.each(['iso', 'front', 'top', 'right'] as const)('the %s preset keeps the whole model in frame', (preset) => {
     expect(inFrame(presetPose(BOUNDS, preset, aspect), aspect, BOUNDS)).toBe(true)
   })
 

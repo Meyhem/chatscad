@@ -28,7 +28,9 @@ export function fitPoseToAspect(pose: CameraPose, aspect: number): CameraPose {
 }
 
 /** A preset camera that fits the whole model into an image of `aspect` (width / height). */
-export function presetPose(bounds: Bounds, preset: 'iso' | 'front' | 'top', aspect = 1): CameraPose {
+export type PresetView = 'iso' | 'front' | 'top' | 'right'
+
+export function presetPose(bounds: Bounds, preset: PresetView, aspect = 1): CameraPose {
   const fit = computeCameraFit(bounds, FRAME_FOV, aspect)
   const [tx, ty, tz] = fit.target
   switch (preset) {
@@ -39,6 +41,8 @@ export function presetPose(bounds: Bounds, preset: 'iso' | 'front' | 'top', aspe
     case 'top':
       // Looking straight down Z, so Z cannot be "up"; Y points up the image.
       return { position: [tx, ty, tz + fit.distance], target: fit.target, up: [0, 1, 0] }
+    case 'right':
+      return { position: [tx + fit.distance, ty, tz], target: fit.target }
   }
 }
 
@@ -62,11 +66,14 @@ export async function* renderFrames(opts: {
   size: [number, number]
   background: string | null
   cameras: CameraPose[]
+  /** Per-vertex colours (part colours); the filament token otherwise. */
+  colours?: Float32Array
 }): AsyncGenerator<ImageData> {
   const [width, height] = opts.size
   const renderer = createGlFrameRenderer({ width, height, background: opts.background, filament: readToken('filament') })
   try {
-    renderer.setMesh(opts.mesh)
+    if (opts.colours) renderer.setMesh(opts.mesh, opts.colours)
+    else renderer.setMesh(opts.mesh)
     for (const pose of opts.cameras) {
       yield renderer.render(pose)
       // Let the page paint and take input between frames.

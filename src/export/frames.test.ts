@@ -12,7 +12,7 @@ interface RendererOpts {
 }
 interface FakeRenderer {
   opts: RendererOpts
-  setMesh: Mock<(mesh: MeshData) => void>
+  setMesh: Mock<(mesh: MeshData, colours?: Float32Array) => void>
   render: Mock<(pose: CameraPose) => ImageData>
   dispose: Mock<() => void>
 }
@@ -23,7 +23,7 @@ vi.mock('./glFrameRenderer', () => ({
   createGlFrameRenderer: (opts: RendererOpts) => {
     const r: FakeRenderer = {
       opts,
-      setMesh: vi.fn<(mesh: MeshData) => void>(),
+      setMesh: vi.fn<(mesh: MeshData, colours?: Float32Array) => void>(),
       render: vi.fn(
         (_pose: CameraPose) => ({ width: opts.width, height: opts.height, data: new Uint8ClampedArray(4) }) as unknown as ImageData,
       ),
@@ -61,6 +61,21 @@ it('looks along +Y for front and straight down with Y up for top', () => {
   expect(top.position[1]).toBeCloseTo(t[1])
   expect(top.position[2]).toBeGreaterThan(t[2])
   expect(top.up).toEqual([0, 1, 0])
+})
+
+it('looks along -X from the right, with Z up', () => {
+  const right = presetPose(mesh.bounds, 'right')
+  const t = right.target
+  expect(right.position[1]).toBeCloseTo(t[1])
+  expect(right.position[2]).toBeCloseTo(t[2])
+  expect(right.position[0]).toBeGreaterThan(t[0])
+  expect(right.up).toBeUndefined()
+})
+
+it('passes per-vertex part colours to the renderer when given', async () => {
+  const colours = new Float32Array(mesh.triangleCount * 9)
+  for await (const _ of renderFrames({ mesh, size: [8, 8], background: null, cameras: [presetPose(mesh.bounds, 'iso')], colours })) break
+  expect(renderers[0].setMesh).toHaveBeenCalledExactlyOnceWith(mesh, colours)
 })
 
 it('circles the model once at a constant height and distance, starting at the iso pose', () => {

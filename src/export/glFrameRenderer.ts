@@ -1,5 +1,6 @@
 import {
   AmbientLight,
+  BufferAttribute,
   Color,
   DirectionalLight,
   Mesh,
@@ -23,7 +24,8 @@ export interface GlFrameRendererOptions {
 }
 
 export interface GlFrameRenderer {
-  setMesh(mesh: MeshData): void
+  /** `colours`: 3 floats per vertex (part colours); the filament colour otherwise. */
+  setMesh(mesh: MeshData, colours?: Float32Array): void
   render(pose: CameraPose): ImageData
   dispose(): void
 }
@@ -60,17 +62,21 @@ export function createGlFrameRenderer({ width, height, background, filament }: G
 
   const camera = new PerspectiveCamera(45, width / height, 0.1, 10_000)
   const material = new MeshStandardMaterial({ color: new Color(filament), roughness: 0.6, metalness: 0.1 })
+  // Part colours replace the filament colour; white keeps them unchanged.
+  const coloured = new MeshStandardMaterial({ color: new Color(1, 1, 1), roughness: 0.6, metalness: 0.1, vertexColors: true })
   let model: Mesh<BufferGeometry, MeshStandardMaterial> | null = null
   const gl = renderer.getContext()
   const pixels = new Uint8Array(width * height * 4)
 
   return {
-    setMesh(mesh) {
+    setMesh(mesh, colours) {
       if (model) {
         scene.remove(model)
         model.geometry.dispose()
       }
-      model = new Mesh(meshToGeometry(mesh), material)
+      const geometry = meshToGeometry(mesh)
+      if (colours) geometry.setAttribute('color', new BufferAttribute(colours, 3))
+      model = new Mesh(geometry, colours ? coloured : material)
       scene.add(model)
     },
     render(pose) {
@@ -89,6 +95,7 @@ export function createGlFrameRenderer({ width, height, background, filament }: G
     dispose() {
       model?.geometry.dispose()
       material.dispose()
+      coloured.dispose()
       renderer.dispose()
       renderer.forceContextLoss()
     },
