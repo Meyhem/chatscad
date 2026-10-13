@@ -123,19 +123,59 @@ it('skips the plan: builds without review', async () => {
   expect(cards()[0]).toMatchObject({ status: 'skipped' })
 })
 
-it('does not review an edit of an existing model unless asked', async () => {
+it('in Edit mode sends one builder turn, and never plans or reviews', async () => {
+  const { deps, sent, requests } = setup([])
+  await useProjectStore.getState().setAgentMode('edit')
+  await agent().submit('A box', deps)
+  expect(sent).toEqual([{ text: 'A box', display: undefined }])
+  expect(cards()).toEqual([])
+  expect(requests).toHaveLength(0)
+  expect(useChatStore.getState().messages.every((m) => m.runId === undefined)).toBe(true)
+})
+
+it('in Agent mode reviews an edit of an existing model against its checks', async () => {
   const { deps, sent, requests } = setup([PASSES])
   useAppStore.getState().setCode(MODEL_CODE)
   await useProjectStore.getState().setChecks([{ id: 'c1', kind: 'part', text: 'A body' }, { id: 'c2', kind: 'part', text: 'Rails' }])
   await agent().submit('Make it taller', deps)
   expect(sent).toHaveLength(1)
-  expect(reviewCards()).toEqual([])
-
-  agent().setReviewNext(true)
-  await agent().submit('Make it wider', deps)
   expect(reviewCards()).toHaveLength(1)
-  expect(agent().reviewNext).toBe(false)
   expect(requests).toHaveLength(1)
+})
+
+it('the mode passed with a request wins over the project mode', async () => {
+  const { deps, sent } = setup([PLAN])
+  await agent().submit('A box', deps, { mode: 'edit' })
+  expect(sent).toHaveLength(1)
+  expect(cards()).toEqual([])
+})
+
+it('tags every message of an agent run with one run id; an edit starts none', async () => {
+  const { deps } = setup([PLAN, PASSES, PASSES])
+  await agent().submit('A holder', deps)
+  await agent().approvePlan(cards()[0].id, deps)
+  const run = useChatStore.getState().messages
+  const ids = new Set(run.map((m) => m.runId))
+  expect(ids.size).toBe(1)
+  expect([...ids][0]).toEqual(expect.any(String))
+
+  await useProjectStore.getState().setAgentMode('edit')
+  await agent().submit('Make it taller', deps)
+  expect(useChatStore.getState().messages.slice(run.length).map((m) => m.runId)).toEqual([undefined])
+
+  // "Review vN" on that edit is a run of its own.
+  await agent().reviewNow(deps)
+  const review = useChatStore.getState().messages.at(-1)!
+  expect(review.runId).toEqual(expect.any(String))
+  expect(review.runId).not.toBe([...ids][0])
+})
+
+it('builds straight after planning when plan approval is off', async () => {
+  const { deps, sent } = setup([PLAN, PASSES], { settings: { reviewApprovePlan: false } })
+  await agent().submit('A holder', deps)
+  expect(cards()[0]).toMatchObject({ kind: 'plan', status: 'approved' })
+  expect(sent).toHaveLength(1)
+  expect(reviewCards()[0]).toMatchObject({ status: 'passed' })
 })
 
 it('sends the ticked fixes back to the builder and reviews the next round', async () => {

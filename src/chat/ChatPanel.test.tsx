@@ -8,6 +8,7 @@ import { resetDb } from '../test/db'
 import { ChatPanel, SUGGESTIONS } from './ChatPanel'
 import { useChatStore, type ChatMessage } from './chatStore'
 import { goBack, stopTurn } from './sendPrompt'
+import { useProjectStore } from '../history/projectStore'
 
 vi.mock('./sendPrompt', () => ({ sendPrompt: vi.fn(async () => {}), stopTurn: vi.fn(), goBack: vi.fn() }))
 
@@ -25,7 +26,10 @@ beforeEach(async () => {
   useAppStore.setState(useAppStore.getInitialState(), true)
   useChatStore.setState(useChatStore.getInitialState(), true)
   useProvidersStore.setState({ ...useProvidersStore.getInitialState(), loaded: true, profiles: [profile], settings: DEFAULT_SETTINGS }, true)
+  useProjectStore.setState({ project: null })
 })
+
+const project = { id: 'x', name: 'X', createdAt: 0, updatedAt: 0, headVersionId: null, providerProfileId: null, enabledLibraries: [], origin: 'blank' as const }
 
 it('is the Agent region with a pane head and the Checks button', () => {
   render(<ChatPanel />)
@@ -127,7 +131,7 @@ it('keeps "Back to" after Stop auto-fix, while the failing AI code is still in t
   expect(screen.getByRole('button', { name: 'Back to v1' })).toBeInTheDocument()
 })
 
-it('agent: offers to review the model the latest reply built, when a model takes images', async () => {
+it('agent: in Edit offers to review the model the latest reply built, when a model takes images', async () => {
   const reviewNow = vi.fn(async () => {})
   const { useAgentStore } = await import('../agent/agentStore')
   useAgentStore.setState({ reviewNow })
@@ -139,9 +143,41 @@ it('agent: offers to review the model the latest reply built, when a model takes
   useChatStore.setState({
     messages: [msg({ id: 'u', role: 'user', text: 'A cube' }), msg({ id: 'a', role: 'assistant', text: 'Made a cube.', turnLabel: 'v1', compileStatus: 'ok' })],
   })
-  render(<ChatPanel />)
+  useProjectStore.setState({ project: { ...project, agentMode: 'edit' } })
+  const { unmount } = render(<ChatPanel />)
+  expect(screen.getByText('Edits are not reviewed.')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Review v1' }))
   expect(reviewNow).toHaveBeenCalled()
+  unmount()
+
+  // In Agent mode the next request is reviewed anyway; the button would only repeat that.
+  useProjectStore.setState({ project })
+  render(<ChatPanel />)
+  expect(screen.queryByRole('button', { name: 'Review v1' })).not.toBeInTheDocument()
+})
+
+it('agent: groups each run with its steps, and folds all but the latest', async () => {
+  useChatStore.setState({
+    messages: [
+      msg({ id: 'u1', role: 'user', text: 'A holder', runId: 'a' }),
+      msg({ id: 'a1', role: 'assistant', text: 'Made it.', turnLabel: 'v1', compileStatus: 'ok', runId: 'a' }),
+      msg({ id: 'u2', role: 'user', text: 'Taller' }),
+      msg({ id: 'a2', role: 'assistant', text: 'Taller now.', turnLabel: 'v2', compileStatus: 'ok' }),
+      msg({ id: 'u3', role: 'user', text: 'Add a lid', runId: 'b' }),
+      msg({ id: 'a3', role: 'assistant', text: 'Added a lid.', turnLabel: 'v3', compileStatus: 'ok', runId: 'b' }),
+    ],
+  })
+  render(<ChatPanel />)
+  const runs = screen.getAllByRole('region', { name: 'Agent run' })
+  expect(runs).toHaveLength(2)
+  expect(runs[0]).not.toHaveTextContent('Made it.')
+  expect(runs[1]).toHaveTextContent('Added a lid.')
+  expect(screen.getAllByRole('list', { name: 'Steps' })).toHaveLength(1)
+  expect(screen.getByRole('list', { name: 'Steps' })).toHaveTextContent('Build v3')
+  // The edit between the runs stands on its own, tagged as an edit.
+  expect(screen.getByText('Taller now.').closest('section[aria-label="Agent run"]')).toBeNull()
+  await userEvent.click(screen.getAllByRole('button', { name: 'Show' })[0])
+  expect(runs[0]).toHaveTextContent('Made it.')
 })
 
 it('agent: no Review button without a model that takes images', () => {

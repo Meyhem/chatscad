@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { effortFor, reasoningSupport } from '../ai/effort'
 import type { ReasoningEffort } from '../ai/types'
 import { selectActiveModel, selectActiveProfile, useProvidersStore } from '../settings/providersStore'
-import { IconBrain, IconCheck, IconChevron } from '../ui/icons'
+import { IconCheck, IconChevron } from '../ui/icons'
 
 type Choice = ReasoningEffort | null
 
@@ -56,7 +56,7 @@ export function EffortPicker() {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
-        <IconBrain className="pc-i" aria-hidden="true" />
+        <span className="pc-opt-k">Effort</span>
         {label}
         <IconChevron className="pc-i" aria-hidden="true" />
       </button>

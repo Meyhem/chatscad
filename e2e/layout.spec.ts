@@ -35,7 +35,7 @@ test('panel sizes survive a reload and reset from settings', async ({ page }) =>
   await page.mouse.move(box.x + box.width / 2 + 100, y, { steps: 5 })
   await page.mouse.up()
   await expect(splitter).toHaveAttribute('aria-valuenow', '460')
-  expect(Math.round((await page.getByRole('region', { name: 'Agent' }).boundingBox())!.width)).toBe(460)
+  expect(Math.round((await page.getByRole('region', { name: 'Agent', exact: true }).boundingBox())!.width)).toBe(460)
 
   // The console grows from the keyboard, and the editor keeps its room.
   const consoleDivider = page.getByRole('separator', { name: 'Resize console' })

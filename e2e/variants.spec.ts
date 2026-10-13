@@ -7,9 +7,9 @@ test('asks for three variants, renders them in the background and uses the picke
   await seedFakeProvider(page, { variantCount: 1 })
 
   const count = page.getByRole('button', { name: 'Variants per prompt' })
-  await expect(count).toHaveText('1')
+  await expect(count).toHaveText(/^Variants\s*1$/)
   await count.click()
-  await expect(count).toHaveText('3')
+  await expect(count).toHaveText(/^Variants\s*3$/)
 
   await page.getByRole('textbox', { name: 'Prompt' }).fill('A test block')
   await page.getByRole('button', { name: 'Send' }).click()

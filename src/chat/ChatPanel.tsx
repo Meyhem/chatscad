@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { useAgentStore } from '../agent/agentStore'
 import { ChecksButton } from '../agent/ui/ChecksButton'
-import { useReviewer } from '../agent/useReviewer'
+import { groupRuns } from '../agent/runSteps'
+import { RunView } from '../agent/ui/RunView'
+import { useAgentMode, useReviewer } from '../agent/useReviewer'
 import { useImageDropAndPaste } from '../images/useImageDropAndPaste'
 import { useVisionSupport } from '../refine/useVisionSupport'
 import { useProvidersStore } from '../settings/providersStore'
@@ -57,6 +59,7 @@ export function ChatPanel() {
   // Scroll on new cards and status changes, not on ticking an issue in an older card.
   const cardStates = useAgentStore((s) => Object.values(s.cards).map((c) => c.status).join())
   const reviewer = useReviewer()
+  const mode = useAgentMode()
   const current = useAppStore((s) => s.status === 'ok' && s.renderedCode === s.code)
   const scrollRef = useRef<HTMLDivElement>(null)
   const column = useRef<HTMLElement>(null)
@@ -73,10 +76,19 @@ export function ChatPanel() {
   // still holds the AI's failing code, so "Back to" must stay.
   const aiCodeFails = appStatus === 'error' && (codeSource === 'ai' || codeSource === 'autofix')
   const showBack = backTo !== null && (fixing !== null || (!busy && (lastReply?.compileStatus === 'error' || aiCodeFails)))
-  // "Review vN": the latest reply built a model that is on screen and has not been reviewed since.
+  // "Review vN" (Edit mode): the latest reply was an edit that built the model on screen.
   const last = messages.at(-1)
   const showReview =
-    reviewer !== null && !busy && agentBusy === null && current && last?.role === 'assistant' && last.compileStatus === 'ok'
+    mode === 'edit' &&
+    reviewer !== null &&
+    !busy &&
+    agentBusy === null &&
+    current &&
+    last?.role === 'assistant' &&
+    last.runId === undefined &&
+    last.compileStatus === 'ok'
+  const items = groupRuns(messages)
+  const latestRun = [...items].reverse().find((i) => i.kind === 'run')
 
   return (
     <section ref={column} aria-label="Agent" className="flex min-h-0 min-w-0 flex-col border-b border-line bg-panel md:border-b-0">
@@ -101,9 +113,13 @@ export function ChatPanel() {
             ))}
           </div>
         )}
-        {messages.map((m) => (
-          <MessageView key={m.id} message={m} />
-        ))}
+        {items.map((item) =>
+          item.kind === 'run' ? (
+            <RunView key={item.runId} messages={item.messages} latest={item === latestRun} />
+          ) : (
+            <MessageView key={item.message.id} message={item.message} />
+          ),
+        )}
         {fixing && (
           <div className="pc-row pc-caption" data-testid="autofix">
             <span className="pc-status is-busy">
@@ -116,7 +132,7 @@ export function ChatPanel() {
         {showReview && (
           <div className="pc-row pc-caption">
             <IconEye className="pc-i" aria-hidden="true" />
-            Not reviewed.
+            Edits are not reviewed.
             <span className="flex-1" />
             <button type="button" className="pc-btn is-sm" onClick={() => void useAgentStore.getState().reviewNow()}>
               Review {last.turnLabel ?? 'this model'}

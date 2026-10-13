@@ -116,4 +116,8 @@ test('a long model name and the effort chip stay on one line in the composer bar
   const bar = (await page.locator('.pc-composer-bar').boundingBox())!
   const send = (await page.getByRole('button', { name: 'Send' }).boundingBox())!
   expect(send.x + send.width).toBeLessThanOrEqual(bar.x + bar.width + 0.5)
+  // The model options sit inside the input box, on their own row.
+  const options = (await page.locator('.pc-opt-row').boundingBox())!
+  const picked = (await model.boundingBox())!
+  expect(picked.x + picked.width).toBeLessThanOrEqual(options.x + options.width + 0.5)
 })

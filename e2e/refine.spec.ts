@@ -71,8 +71,7 @@ async function seedVisionProfile(page: Page) {
     const settings = tx.objectStore('settings')
     const read = settings.get('app')
     read.onsuccess = () => {
-      // These tests are about picking and images, not the agent's review of new models.
-      settings.put({ ...(read.result ?? {}), id: 'app', activeProfileId: 'fake-vision', activeModel: 'fake-vision', autoFixAttempts: 0, reviewNewModels: false })
+      settings.put({ ...(read.result ?? {}), id: 'app', activeProfileId: 'fake-vision', activeModel: 'fake-vision', autoFixAttempts: 0 })
     }
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve()
@@ -82,6 +81,8 @@ async function seedVisionProfile(page: Page) {
   }, BASE)
   await page.reload()
   await waitForAppReady(page)
+  // These tests are about picking and images: one builder turn each, without the agent.
+  await page.getByRole('radio', { name: 'Edit' }).click()
 }
 
 test('tap a part, ask for a change, and only that part changes', async ({ page }) => {

@@ -1,4 +1,6 @@
 import { useMemo } from 'react'
+import type { AgentMode } from '../db/db'
+import { useProjectStore } from '../history/projectStore'
 import { useChatStore } from '../chat/chatStore'
 import { useAgentStore } from './agentStore'
 import { selectActiveModel, selectActiveProfile, useProvidersStore } from '../settings/providersStore'
@@ -23,4 +25,11 @@ export function useReviewer(): ReviewerChoice | null {
     () => selectReviewer({ profiles, activeProfile, activeModel, reviewProfileId, reviewModel }),
     [profiles, activeProfile, activeModel, reviewProfileId, reviewModel],
   )
+}
+
+/** The mode the composer sends in: the project's choice, or Edit while no model can review. */
+export function useAgentMode(): AgentMode {
+  const reviewer = useReviewer()
+  const stored = useProjectStore((s) => s.project?.agentMode ?? 'agent')
+  return reviewer ? stored : 'edit'
 }

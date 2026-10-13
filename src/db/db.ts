@@ -58,8 +58,8 @@ export interface Settings {
   /** Agent review: the reviewer's profile and model; null uses the active builder model when it takes images. */
   reviewProfileId: string | null
   reviewModel: string | null
-  /** Review a model on its own after its first build (the editor was empty when the request was sent). */
-  reviewNewModels: boolean
+  /** Agent mode: wait for the user to approve the planned checks before the first build. */
+  reviewApprovePlan: boolean
   /** Rounds of review and fixing before the agent stops asking or fixing on its own. */
   reviewRounds: number
   /** 'ask': the user ticks fixes each round; 'auto': fixes go back to the builder until every check passes. */
@@ -85,7 +85,7 @@ export const DEFAULT_SETTINGS: Settings = {
   transcriptionModel: 'whisper-1',
   reviewProfileId: null,
   reviewModel: null,
-  reviewNewModels: true,
+  reviewApprovePlan: true,
   reviewRounds: 3,
   reviewMode: 'ask',
   panelLayout: null,
@@ -101,7 +101,11 @@ export interface Project {
   origin: 'blank' | 'gallery' | 'shared-link'
   /** The agent's checks for this project; absent until a plan is approved or a check is added. */
   checks?: Check[]
+  /** The composer mode: Edit sends one builder turn, Agent plans, builds and reviews. Absent means Agent. */
+  agentMode?: AgentMode
 }
+
+export type AgentMode = 'edit' | 'agent'
 
 export interface Version {
   id: string; projectId: string; parentId: string | null
@@ -131,6 +135,8 @@ export interface StoredMessage {
   reasoning?: string | null // the model's reasoning; absent on rows saved before it was kept
   reasoningMs?: number | null
   reasoningTokens?: number | null
+  /** The agent run the message belongs to; null for an edit. Absent on rows saved before runs existed. */
+  runId?: string | null
 }
 
 export interface Preset { id: string; projectId: string; name: string; params: Record<string, ParamValue> }

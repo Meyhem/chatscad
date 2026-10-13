@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAgentStore } from '../agent/agentStore'
-import { ReviewButton } from '../agent/ui/ReviewButton'
+import { ModeNote, ModeRow } from '../agent/ui/ModeSwitch'
+import { useAgentMode } from '../agent/useReviewer'
 import { AttachButton } from '../images/AttachButton'
 import { AttachmentTray } from '../images/AttachmentTray'
 import { useAttachments } from '../images/attachments'
@@ -13,7 +14,7 @@ import { usePrefs } from '../settings/prefsStore'
 import { startVariants } from '../variants/startVariants'
 import { VariantCountButton } from '../variants/VariantCountButton'
 import { selectActiveModel, selectActiveProfile, useProvidersStore } from '../settings/providersStore'
-import { IconSend, IconStop } from '../ui/icons'
+import { IconAgent, IconSend, IconStop } from '../ui/icons'
 import { useChatStore } from './chatStore'
 import { EffortPicker } from './EffortPicker'
 import { ModelPicker } from './ModelPicker'
@@ -31,6 +32,8 @@ export function Composer() {
   const profile = useProvidersStore(selectActiveProfile)
   const model = useProvidersStore(selectActiveModel)
   const vision = useVisionSupport()
+  const mode = useAgentMode()
+  const agent = mode === 'agent'
   const [sketching, setSketching] = useState(false)
   const dictation = useComposerDictation({
     value: draft,
@@ -44,26 +47,28 @@ export function Composer() {
     if (!canSend) return
     // Taken on every send, so a transcript never sticks to a later, typed message.
     const audioTranscript = useVoiceStore.getState().takeTranscript()
-    // Variants take a plain-text prompt; images and a picked part go with one scoped turn.
+    // Variants (Edit only) take a plain-text prompt; images and a picked part go with one scoped turn.
     const withExtras = useAttachments.getState().items.length > 0 || useRefineStore.getState().pick !== null
-    if (usePrefs.getState().variantCount === 3 && !withExtras) {
+    if (!agent && usePrefs.getState().variantCount === 3 && !withExtras) {
+      useChatStore.getState().setActiveRun(null)
       if (startVariants(draft)) setDraft('')
       return
     }
-    // The agent decides whether to plan, build and review (spec A3, A4).
-    const text = draft
-    void useAgentStore.getState().submit(text, undefined, audioTranscript ? { audioTranscript } : {})
+    // The mode on screen is the mode sent: Edit is one builder turn, Agent plans, builds and reviews.
+    void useAgentStore.getState().submit(draft, undefined, { mode, ...(audioTranscript ? { audioTranscript } : {}) })
   }
 
   return (
-    <>
-      <div className="pc-composer">
+    <div className="flex flex-col gap-2">
+      <ModeRow />
+      <ModeNote />
+      <div className={`pc-composer${agent ? ' is-agent' : ''}`}>
         <PickChip />
         <AttachmentTray />
         <textarea
           rows={2}
           aria-label="Prompt"
-          placeholder="Describe a part, or ask for a change"
+          placeholder={agent ? 'Describe the part. The agent plans, builds and reviews it.' : 'Describe a small change'}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
@@ -75,9 +80,6 @@ export function Composer() {
         />
         <div className="pc-composer-bar">
           <AttachButton vision={vision} onSketch={() => setSketching(true)} />
-          <ModelPicker />
-          <EffortPicker />
-          <span className="pc-spacer" />
           {dictation.mode && (
             <MicButton
               listening={dictation.state.phase === 'listening'}
@@ -85,24 +87,32 @@ export function Composer() {
               onToggle={dictation.toggle}
             />
           )}
-          <VariantCountButton />
-          <ReviewButton />
+          <span className="pc-spacer" />
           {busy ? (
-            <button type="button" className="pc-btn is-icon is-sm" aria-label="Stop" title="Stop" onClick={() => useAgentStore.getState().stop()}>
+            <button type="button" className="pc-btn is-sm" aria-label="Stop" title="Stop" onClick={() => useAgentStore.getState().stop()}>
               <IconStop className="pc-i" aria-hidden="true" />
+              {agentBusy ? 'Stop agent' : 'Stop'}
             </button>
           ) : (
-            <button
-              type="button"
-              className="pc-btn is-icon is-sm is-primary"
-              aria-label="Send"
-              title={blocked ?? undefined}
-              disabled={!canSend}
-              onClick={send}
-            >
-              <IconSend className="pc-i" aria-hidden="true" />
+            <button type="button" className="pc-btn is-sm is-primary" title={blocked ?? undefined} disabled={!canSend} onClick={send}>
+              {agent ? (
+                <>
+                  <IconAgent className="pc-i" aria-hidden="true" />
+                  Run agent
+                </>
+              ) : (
+                <>
+                  Send
+                  <IconSend className="pc-i" aria-hidden="true" />
+                </>
+              )}
             </button>
           )}
+        </div>
+        <div className="pc-opt-row">
+          <ModelPicker />
+          <EffortPicker />
+          {!agent && <VariantCountButton />}
         </div>
         {sketching && (
           <SketchDialog
@@ -115,6 +125,6 @@ export function Composer() {
         )}
       </div>
       <DictationCaption state={dictation.state} mode={dictation.mode} />
-    </>
+    </div>
   )
 }

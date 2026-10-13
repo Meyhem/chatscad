@@ -78,7 +78,7 @@ it('creates a fresh database at version 2 with M3 settings defaults', () => {
     transcriptionModel: 'whisper-1',
     reviewProfileId: null,
     reviewModel: null,
-    reviewNewModels: true,
+    reviewApprovePlan: true,
     reviewRounds: 3,
     reviewMode: 'ask',
     panelLayout: null,

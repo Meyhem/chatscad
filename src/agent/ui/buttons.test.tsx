@@ -7,7 +7,7 @@ import { useAppStore } from '../../state/store'
 import { useAgentStore, type ReviewCard } from '../agentStore'
 import { NO_REVIEWER } from '../reviewer'
 import { ChecksButton } from './ChecksButton'
-import { ReviewButton } from './ReviewButton'
+import { ModeNote, ModeRow } from './ModeSwitch'
 
 const profile = (vision: boolean): ProviderProfile => ({
   id: 'p1',
@@ -29,13 +29,15 @@ const project = (checks = [{ id: 'c1', kind: 'part' as const, text: 'A body' }, 
 
 const update = vi.fn(async () => {})
 const setChecks = vi.fn(async () => {})
+const setAgentMode = vi.fn(async () => {})
 
 beforeEach(() => {
   update.mockClear()
   setChecks.mockClear()
+  setAgentMode.mockClear()
   useAppStore.setState(useAppStore.getInitialState(), true)
-  useProjectStore.setState({ project: project(), setChecks })
-  useAgentStore.setState({ cards: {}, reviewNext: false })
+  useProjectStore.setState({ project: project(), setChecks, setAgentMode })
+  useAgentStore.setState({ cards: {} })
   useSettingsStore.setState({ settings: DEFAULT_SETTINGS, update })
   useProvidersStore.setState({ profiles: [profile(true)], settings: { ...DEFAULT_SETTINGS, activeProfileId: 'p1', activeModel: 'gpt-5' } })
 })
@@ -73,30 +75,47 @@ describe('Checks button', () => {
   })
 })
 
-describe('Review button', () => {
-  it('is disabled with the reason when no model takes images', () => {
+describe('Mode switch', () => {
+  it('starts in Agent, says what a run does, and saves Edit to the project', () => {
+    render(<ModeRow />)
+    expect(screen.getByRole('radio', { name: 'Agent' })).toBeChecked()
+    expect(screen.getByText('Reviewer gpt-5 · 3 rounds max')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('radio', { name: 'Edit' }))
+    expect(setAgentMode).toHaveBeenCalledWith('edit')
+  })
+
+  it('in Edit says there is no review and has no agent settings', () => {
+    useProjectStore.setState({ project: { ...project(), agentMode: 'edit' } })
+    render(<ModeRow />)
+    expect(screen.getByRole('radio', { name: 'Edit' })).toBeChecked()
+    expect(screen.getByText('One builder turn · no review')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Agent settings' })).toBeNull()
+  })
+
+  it('without a model that takes images, Agent is disabled and a note says how to fix it', () => {
     useProvidersStore.setState({ profiles: [profile(false)] })
-    render(<ReviewButton />)
-    const button = screen.getByRole('button', { name: `Review. ${NO_REVIEWER}` })
-    expect(button).toBeDisabled()
-    expect(button).toHaveAttribute('title', NO_REVIEWER)
+    render(
+      <>
+        <ModeRow />
+        <ModeNote />
+      </>,
+    )
+    expect(screen.getByRole('radio', { name: 'Edit' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Agent' })).toBeDisabled()
+    expect(screen.getByRole('radio', { name: 'Agent' })).toHaveAttribute('title', NO_REVIEWER)
+    expect(screen.getByText('Agent mode needs a model that takes images. Turn on Vision for a provider.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Set up' }))
+    expect(useAppStore.getState().view).toBe('settings')
   })
 
-  it('is on for a new model, off for an edit unless switched on', () => {
-    const { rerender } = render(<ReviewButton />)
-    expect(screen.getByRole('button', { name: 'Review: on for the next request, by gpt-5' })).toBeInTheDocument()
-    useAppStore.setState({ code: 'cube(1);' })
-    rerender(<ReviewButton />)
-    expect(screen.getByRole('button', { name: 'Review: off' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Review: off' }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Review this request' }))
-    expect(useAgentStore.getState().reviewNext).toBe(true)
-    expect(screen.getByRole('button', { name: /^Review: on/ })).toBeInTheDocument()
+  it('has no note while a model can review', () => {
+    render(<ModeNote />)
+    expect(screen.queryByText(/needs a model that takes images/)).toBeNull()
   })
 
-  it('saves the reviewer model, rounds and approval mode', () => {
-    render(<ReviewButton />)
-    fireEvent.click(screen.getByRole('button', { name: /^Review: on/ }))
+  it('saves the reviewer model, rounds, fixes and plan approval', () => {
+    render(<ModeRow />)
+    fireEvent.click(screen.getByRole('button', { name: 'Agent settings' }))
     const select = screen.getByRole('combobox', { name: 'Reviewer model' })
     expect([...(select as HTMLSelectElement).options].map((o) => o.text)).toEqual(['Same as the builder', 'gpt-5 · OpenRouter', 'claude-sonnet-5-5 · OpenRouter'])
     fireEvent.change(select, { target: { value: 'p1\nclaude-sonnet-5-5' } })
@@ -105,7 +124,7 @@ describe('Review button', () => {
     expect(update).toHaveBeenCalledWith({ reviewRounds: 2 })
     fireEvent.click(screen.getByRole('radio', { name: 'Fix until every check passes' }))
     expect(update).toHaveBeenCalledWith({ reviewMode: 'auto' })
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Review new models on their own' }))
-    expect(update).toHaveBeenCalledWith({ reviewNewModels: false })
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Approve the checks before the first build' }))
+    expect(update).toHaveBeenCalledWith({ reviewApprovePlan: false })
   })
 })

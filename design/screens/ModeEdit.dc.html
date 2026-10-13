@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Composer modes · Edit</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/chatscad/components/bundle.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6e9bff}a:hover{color:#8db1ff}
+</style>
+</helmet>
+<div class="app pc-root" data-theme="{{theme}}" style="width: 1440px; height: 900px;">
+
+<header class="topbar">
+  <span class="brand"><span class="brand-dot"></span>ChatSCAD</span>
+  <span class="sep"></span>
+  <button class="project" type="button">18650 holder<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button>
+  <nav class="pc-tabs" role="tablist" aria-label="Views">
+    <button class="pc-tab" role="tab" aria-selected="true" type="button" title="Project (Alt+1)"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l5.5 3v6L8 14l-5.5-3V5z M2.5 5L8 8l5.5-3 M8 8v6"/></svg>Project</button>
+    <button class="pc-tab" role="tab" aria-selected="false" type="button" title="History (Alt+2)"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11z M8 5v3.5l2.5 1.5"/></svg>History</button>
+    <button class="pc-tab" role="tab" aria-selected="false" type="button" title="Settings (Alt+3)"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z M8 1.5v2 M8 12.5v2 M1.5 8h2 M12.5 8h2 M3.4 3.4l1.4 1.4 M11.2 11.2l1.4 1.4 M3.4 12.6l1.4-1.4 M11.2 4.8l1.4-1.4"/></svg>Settings</button>
+  </nav>
+  <span class="sep"></span>
+  <span class="pc-status is-ok"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5L6.5 12 13 4.5"/></svg>Rendered <span class="pc-mono">436 ms</span></span>
+  <span class="pc-dims">90 × 61.2 × 22 mm</span>
+  <span class="grow"></span>
+  <button class="pc-btn is-ghost is-sm is-icon" type="button" aria-label="Undo" title="Undo (Ctrl+Z)"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 3.5L2.5 6.5l3 3 M2.5 6.5H10a3.5 3.5 0 0 1 0 7H7"/></svg></button>
+  <button class="pc-btn is-ghost is-sm is-icon" type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 3.5l3 3-3 3 M13.5 6.5H6a3.5 3.5 0 0 0 0 7h3"/></svg></button>
+  <span class="sep"></span>
+  <button class="pc-btn is-sm" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8 M4.5 6L8 2.5 11.5 6 M3 9.5v4h10v-4"/></svg>Share</button>
+  <button class="pc-btn is-sm is-primary" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8 M4.5 7L8 10.5 11.5 7 M3 13.5h10"/></svg>Export STL</button>
+</header>
+
+<main class="workbench" style="grid-template-columns: 420px minmax(0, 1fr) 440px;">
+
+  <section class="col" aria-label="Agent">
+    <div class="pane-head"><span class="pc-label">Agent</span><span class="grow"></span><button class="pc-btn is-sm is-ghost" type="button" aria-haspopup="dialog"><span style="color: var(--ok); display: inline-flex;"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5L6.5 12 13 4.5"/></svg></span>Checks · 7 of 7 pass</button><span class="pc-caption pc-mono">$0.110</span></div>
+    <div class="chat-scroll scroll-col" style="justify-content: flex-end;">
+      <div class="run is-folded"><div class="run-head"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5v-3h3 M10.5 2.5h3v3 M13.5 10.5v3h-3 M5.5 13.5h-3v-3 M5.5 8.2l1.8 1.8 3.3-3.6"/></svg><span style="font-weight: 600;">Agent run</span><span class="pc-caption">Passed in round 2 · v3</span><span class="grow"></span><span class="pc-caption pc-mono">$0.104</span><button class="pc-btn is-sm is-ghost" type="button">Show</button></div></div>
+      <div class="pc-msg is-user"><div class="pc-msg-body">Make the walls 3 mm.</div></div>
+      <div class="pc-msg is-assistant"><div class="pc-msg-body">Set <code>wall = 3</code>. The body grows to 90 mm long; the bores, rails and lid follow the parameters.</div>
+        <div class="pc-msg-meta"><span class="pc-chip"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5l3 3-8 8h-3v-3z"/></svg>Edit</span><span class="pc-chip is-accent"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2c.6 3.2 2.8 5.4 6 6-3.2.6-5.4 2.8-6 6-.6-3.2-2.8-5.4-6-6 3.2-.6 5.4-2.8 6-6z"/></svg>v4</span><span>claude-sonnet-5-5</span><span class="pc-mono">1,180 tok · $0.006</span></div></div>
+      <div class="pc-msg is-user"><div class="pc-msg-body">Round the outer edges, 1 mm.</div></div>
+      <div class="pc-msg is-assistant"><div class="pc-msg-body">Wrapped the body in <code>minkowski()</code> with a 1 mm sphere and took 1 mm off each side first, so the size stays 90 × 61.2 × 22 mm.</div>
+        <div class="pc-msg-meta"><span class="pc-chip"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5l3 3-8 8h-3v-3z"/></svg>Edit</span><span class="pc-chip is-accent"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2c.6 3.2 2.8 5.4 6 6-3.2.6-5.4 2.8-6 6-.6-3.2-2.8-5.4-6-6 3.2-.6 5.4-2.8 6-6z"/></svg>v5</span><span>claude-sonnet-5-5</span><span class="pc-mono">1,420 tok · $0.007</span></div></div>
+      <div class="pc-row pc-caption" style="gap: 6px;"><span style="display: inline-flex;"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8s-2.4 4.5-6.5 4.5S1.5 8 1.5 8z M8 6a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg></span><span>Edits are not reviewed.</span><span class="grow"></span><button class="pc-btn is-sm" type="button">Review v5</button></div>
+    </div>
+    <div class="chat-foot composer-stack" style="position: relative;">
+      
+      <div class="mode-row"><div class="pc-tabs mode-seg" role="radiogroup" aria-label="Mode"><button class="pc-tab" role="radio" aria-checked="true" aria-selected="true" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5l3 3-8 8h-3v-3z"/></svg>Edit</button><button class="pc-tab is-agent" role="radio" aria-checked="false" aria-selected="false" type="button"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5v-3h3 M10.5 2.5h3v3 M13.5 10.5v3h-3 M5.5 13.5h-3v-3 M5.5 8.2l1.8 1.8 3.3-3.6"/></svg>Agent</button></div><span class="mode-sum">One builder turn · no review</span><span class="grow"></span></div>
+      
+      <div class="pc-composer">
+        <textarea rows="3" placeholder="Describe a small change" aria-label="Request"></textarea>
+        <div class="pc-composer-bar">
+          <button class="pc-btn is-icon is-sm is-ghost" type="button" aria-label="Attach image or sketch"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z M2.5 10.5l3.5-3 3 2.5 2-1.5 2.5 2"/></svg></button>
+          <button class="pc-btn is-icon is-sm is-ghost" type="button" aria-label="Dictate"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5a2 2 0 0 1 4 0v4a2 2 0 0 1-4 0z M3.5 7.5a4.5 4.5 0 0 0 9 0 M8 12v2"/></svg></button>
+          <span class="pc-spacer"></span>
+          <button class="pc-btn is-sm is-primary" type="button">Send<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8h10 M8.5 4l4 4-4 4"/></svg></button>
+        </div>
+        <div class="opt-row"><button class="opt" type="button">claude-sonnet-5-5<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button><button class="opt is-sans" type="button"><span class="opt-k">Effort</span>Medium<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button><button class="opt is-sans" type="button"><span class="opt-k">Variants</span>1<svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button></div>
+      </div>
+    </div>
+  </section>
+  <section class="col" aria-label="3D view">
+    <div class="viewer">
+      <div class="model filament" style="position: absolute; left: 12%; right: 12%; top: 14%; bottom: 16%;"><svg viewBox="-55.5 -28.8 139.8 107.8" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><polygon class="pf pt3 s-y" points="0.0,-20.4 76.9,24.0 76.9,22.4 0.0,-22.0"/><polygon class="pf pt3 s-x" points="78.3,23.2 76.9,24.0 76.9,22.4 78.3,21.6"/><polygon class="pf pt3" points="1.4,-22.8 78.3,21.6 76.9,22.4 0.0,-22.0"/><polygon class="pf pt1 s-y" points="-20.6,11.9 56.3,56.3 56.3,34.3 -20.6,-10.1"/><polygon class="pf pt1 s-x" points="76.9,44.4 56.3,56.3 56.3,34.3 76.9,22.4"/><polygon class="pf pt1" points="0.0,-22.0 76.9,22.4 56.3,34.3 -20.6,-10.1"/><polygon class="pf pt2 s-cut" points="9.1,-4.9 7.1,-3.9 4.7,-3.3 2.2,-2.9 -0.4,-2.9 -3.0,-3.3 -5.3,-3.9 -7.4,-4.9 -9.0,-6.0 -10.1,-7.4 -10.7,-8.8 -10.7,-10.4 -10.1,-11.8 -9.0,-13.2 -7.4,-14.3 -5.3,-15.3 -3.0,-15.9 -0.4,-16.3 2.2,-16.3 4.7,-15.9 7.1,-15.3 9.1,-14.4 10.7,-13.2 11.8,-11.8 12.4,-10.4 12.4,-8.8 11.8,-7.4 10.7,-6.0"/><polygon class="pf pt2 s-cut" points="27.3,5.6 25.2,6.6 22.9,7.2 20.4,7.6 17.7,7.6 15.2,7.2 12.9,6.6 10.8,5.6 9.2,4.5 8.1,3.1 7.5,1.7 7.5,0.1 8.1,-1.3 9.2,-2.7 10.8,-3.9 12.9,-4.8 15.2,-5.4 17.7,-5.8 20.4,-5.8 22.9,-5.4 25.2,-4.8 27.3,-3.9 28.9,-2.7 30.0,-1.3 30.6,0.1 30.6,1.7 30.0,3.1 28.9,4.5"/><polygon class="pf pt2 s-cut" points="45.5,16.2 43.4,17.1 41.1,17.7 38.5,18.1 35.9,18.1 33.4,17.7 31.0,17.1 29.0,16.1 27.4,15.0 26.3,13.6 25.7,12.2 25.7,10.6 26.3,9.2 27.4,7.8 29.0,6.6 31.0,5.7 33.4,5.1 35.9,4.7 38.5,4.7 41.1,5.1 43.4,5.7 45.5,6.6 47.1,7.8 48.2,9.2 48.8,10.6 48.8,12.2 48.2,13.6 47.1,15.0"/><polygon class="pf pt2 s-cut" points="63.7,26.7 61.6,27.6 59.3,28.2 56.7,28.6 54.1,28.6 51.6,28.2 49.2,27.6 47.2,26.7 45.6,25.5 44.4,24.1 43.9,22.7 43.9,21.1 44.4,19.7 45.6,18.3 47.2,17.2 49.2,16.2 51.6,15.6 54.1,15.2 56.7,15.2 59.3,15.6 61.6,16.2 63.7,17.2 65.3,18.3 66.4,19.7 67.0,21.1 67.0,22.7 66.4,24.1 65.3,25.5"/><polygon class="pf pt3 s-y" points="-22.0,-7.7 54.9,36.7 54.9,35.1 -22.0,-9.3"/><polygon class="pf pt3 s-x" points="56.3,35.9 54.9,36.7 54.9,35.1 56.3,34.3"/><polygon class="pf pt3" points="-20.6,-10.1 56.3,34.3 54.9,35.1 -22.0,-9.3"/><polygon class="pf pt5 s-y" points="-49.5,28.6 27.4,73.0 27.4,71.0 -49.5,26.6"/><polygon class="pf pt5 s-x" points="48.0,61.1 27.4,73.0 27.4,71.0 48.0,59.1"/><polygon class="pf pt5" points="-28.9,14.7 48.0,59.1 27.4,71.0 -49.5,26.6"/><polygon class="pf pt7 s-cut" points="33.5,58.7 34.3,59.2 34.8,59.9 35.0,60.6 34.8,61.4 34.3,62.1 33.5,62.7 32.5,63.1 31.3,63.4 30.1,63.5 28.8,63.4 27.6,63.1 26.6,62.7 16.2,56.7 15.4,56.1 14.9,55.4 14.8,54.7 14.9,53.9 15.4,53.2 16.2,52.7 17.2,52.2 18.4,51.9 19.7,51.8 20.9,51.9 22.1,52.2 23.1,52.7"/></svg></div>
+      <div class="viewer-tl"><span class="pc-dims"><span><span class="x">X</span> 90</span><span><span class="y">Y</span> 61.2</span><span><span class="z">Z</span> 22</span><span class="pc-muted">mm</span></span></div>
+      <div class="viewer-tr">
+        <button class="vbtn" type="button" aria-label="Part colours" aria-pressed="false" title="Part colours: what the reviewer sees"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 0 0 11c.9 0 1.2-.6 1-1.3-.3-.9.3-1.7 1.2-1.7h1.3a2.5 2.5 0 0 0 2.5-2.5c0-3-2.5-5.5-6-5.5z M5 7.5h.01 M7 5h.01 M10 5.5h.01"/></svg></button>
+        <button class="vbtn" type="button" aria-label="Fit view"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5v-3h3 M10.5 2.5h3v3 M13.5 10.5v3h-3 M5.5 13.5h-3v-3"/></svg></button>
+        <button class="vbtn" type="button" aria-label="Camera presets"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l5.5 3v6L8 14l-5.5-3V5z M2.5 5L8 8l5.5-3 M8 8v6"/></svg></button>
+        <button class="vbtn" type="button" aria-label="Save image"><svg class="pc-i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v9h-11z M2.5 10.5l3.5-3 3 2.5 2-1.5 2.5 2"/></svg></button>
+      </div>
+      <div class="viewer-bl"><span class="pc-caption pc-mono">21,904 triangles · tap a part to edit it</span></div>
+    </div>
+    <div class="dock">
+      <div class="pc-row"><div class="pc-tabs" role="tablist"><button class="pc-tab" role="tab" aria-selected="true" type="button">Cells</button><button class="pc-tab" role="tab" aria-selected="false" type="button">Body</button></div><span class="grow"></span><button class="pc-btn is-sm is-ghost" type="button">Reset</button><button class="pc-btn is-sm" type="button">Bake into code</button></div>
+      <div class="pc-param"><div class="pc-param-name">cells<small>[1 : 1 : 8]</small></div><input class="pc-range" type="range" min="1" max="8" value="4" aria-label="cells"><div class="pc-input is-mono"><input value="4" aria-label="cells value"></div></div>
+      <div class="pc-param"><div class="pc-param-name">bore<small>[18.6 : 0.1 : 20]</small></div><input class="pc-range" type="range" min="18.6" max="20" step="0.1" value="19" aria-label="bore"><div class="pc-input is-mono"><input value="19" aria-label="bore value"><span class="pc-unit">mm</span></div></div>
+    </div>
+  </section>
+  <section class="col" aria-label="Code">
+    <div class="pane-head">
+      <div class="pc-tabs" role="tablist"><button class="pc-tab" role="tab" aria-selected="true" type="button">main.scad</button></div>
+      <span class="grow"></span>
+      <span class="pc-caption">v4 · by the builder</span>
+    </div>
+    <div class="editor" role="textbox" aria-label="main.scad" aria-multiline="true">
+      <div class="cl"><span class="n">1</span><span class="gm"></span><span><span class="c">// 18650 cell holder with a sliding lid</span></span></div>
+      <div class="cl"><span class="n">2</span><span class="gm"></span><span><span class="c">/* [Cells] */</span></span></div>
+      <div class="cl"><span class="n">3</span><span class="gm"></span><span>cells = <span class="num">4</span>;      <span class="c">// [1:1:8]</span></span></div>
+      <div class="cl"><span class="n">4</span><span class="gm"></span><span>bore = <span class="num">19</span>;      <span class="c">// [18.6:0.1:20]</span></span></div>
+      <div class="cl"><span class="n">5</span><span class="gm"></span><span>pitch = <span class="num">21</span>;     <span class="c">// [19:0.5:26]</span></span></div>
+      <div class="cl"><span class="n">6</span><span class="gm"></span><span><span class="c">/* [Body] */</span></span></div>
+      <div class="cl"><span class="n">7</span><span class="gm"></span><span>wall = <span class="num">3</span>;       <span class="c">// [1.2:0.2:4]</span></span></div>
+      <div class="cl"><span class="n">8</span><span class="gm"></span><span>height = <span class="num">22</span>;    <span class="c">// [10:1:60]</span></span></div>
+      <div class="cl"><span class="n">9</span><span class="gm"></span><span>rail = <span class="num">1.6</span>;     <span class="c">// [1:0.1:3]</span></span></div>
+      <div class="cl"><span class="n">10</span><span class="gm"></span><span> </span></div>
+      <div class="cl"><span class="n">11</span><span class="gm"></span><span>length = cells * pitch + wall * <span class="num">2</span>;</span></div>
+      <div class="cl"><span class="n">12</span><span class="gm"></span><span>width = bore + wall * <span class="num">2</span>;</span></div>
+      <div class="cl"><span class="n">13</span><span class="gm"></span><span> </span></div>
+      <div class="cl"><span class="n">14</span><span class="gm"></span><span><span class="k">module</span> body() <span class="b">cube</span>([length, width, height]);</span></div>
+      <div class="cl"><span class="n">15</span><span class="gm"></span><span> </span></div>
+      <div class="cl"><span class="n">16</span><span class="gm"></span><span><span class="k">module</span> bores()</span></div>
+      <div class="cl"><span class="n">17</span><span class="gm"></span><span>  <span class="k">for</span> (i = [<span class="num">0</span> : cells - <span class="num">1</span>])</span></div>
+      <div class="cl"><span class="n">18</span><span class="gm"></span><span>    <span class="b">translate</span>([wall + pitch / <span class="num">2</span> + i * pitch, width / <span class="num">2</span>, wall])</span></div>
+      <div class="cl"><span class="n">19</span><span class="gm"></span><span>      <span class="b">cylinder</span>(h = height, d = bore, $fn = <span class="num">64</span>);</span></div>
+      <div class="cl"><span class="n">20</span><span class="gm"></span><span> </span></div>
+      <div class="cl"><span class="n">21</span><span class="gm"></span><span><span class="k">module</span> lid_rail()</span></div>
+      <div class="cl"><span class="n">22</span><span class="gm"></span><span>  <span class="k">for</span> (y = [-rail, width])</span></div>
+      <div class="cl"><span class="n">23</span><span class="gm"></span><span>    <span class="b">translate</span>([<span class="num">0</span>, y, height - rail])</span></div>
+      <div class="cl"><span class="n">24</span><span class="gm"></span><span>      <span class="b">cube</span>([length, rail, rail]);</span></div>
+      <div class="cl"><span class="n">25</span><span class="gm"></span><span> </span></div>
+      <div class="cl"><span class="n">26</span><span class="gm"></span><span><span class="k">module</span> lid() <span class="b">translate</span>([<span class="num">0</span>, width + <span class="num">10</span>, <span class="num">0</span>])</span></div>
+      <div class="cl"><span class="n">27</span><span class="gm"></span><span>  <span class="b">cube</span>([length, width - <span class="num">0.3</span>, <span class="num">2</span>]);</span></div>
+      <div class="cl"><span class="n">28</span><span class="gm"></span><span> </span></div>
+      <div class="cl"><span class="n">29</span><span class="gm"></span><span><span class="b">difference</span>() {</span></div>
+      <div class="cl"><span class="n">30</span><span class="gm"></span><span>  body();</span></div>
+      <div class="cl"><span class="n">31</span><span class="gm"></span><span>  bores();</span></div>
+      <div class="cl"><span class="n">32</span><span class="gm"></span><span>}</span></div>
+      <div class="cl"><span class="n">33</span><span class="gm"></span><span>lid_rail();</span></div>
+    </div>
+    <div class="console-wrap" style="height: 120px;">
+      <div class="pc-console" aria-label="Console">
+        <div class="pc-console-head"><span class="pc-label">Console</span><span class="pc-caption" style="margin-left: auto;">OpenSCAD 2025.03 · manifold</span></div>
+        <div class="pc-log is-muted">Rendering Polygon Mesh using Manifold...</div>
+        <div class="pc-log">Top level object is a 3D object (manifold): Facets: 18432</div>
+        <div class="pc-log is-ok">Total rendering time: 0:00:00.412</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'dark' };
+  }
+}
+</script>
+</body>
+</html>

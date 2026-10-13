@@ -135,6 +135,16 @@ it('stores and restores the reasoning, and loads rows saved before reasoning exi
   expect(restored).not.toHaveProperty('reasoningMs')
 })
 
+it('stores and restores the agent run a message belongs to', async () => {
+  const { toStored, fromStored } = await import('./chatPersistence')
+  const meta = { projectId: 'p', versionId: null, usageId: null, createdAt: 1 }
+  const row = toStored(msg({ runId: 'run-1' }), meta)
+  expect(row.runId).toBe('run-1')
+  expect(fromStored(row, undefined, undefined).runId).toBe('run-1')
+  expect(toStored(msg({}), meta).runId).toBeNull()
+  expect(fromStored(toStored(msg({}), meta), undefined, undefined)).not.toHaveProperty('runId')
+})
+
 it('saves the partial reasoning of a stopped reply', async () => {
   const id = crypto.randomUUID()
   useChatStore.setState({ messages: [msg({ id, role: 'assistant', text: '', status: 'streaming', reasoning: 'Half' })] })

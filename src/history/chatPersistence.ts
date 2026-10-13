@@ -26,6 +26,7 @@ export function toStored(
     reasoning: m.reasoning ?? null,
     reasoningMs: m.reasoningMs ?? null,
     reasoningTokens: m.reasoningTokens ?? null,
+    runId: m.runId ?? null,
     model: m.model,
     usageId: meta.usageId,
     createdAt: meta.createdAt,
@@ -48,6 +49,7 @@ export function fromStored(m: StoredMessage, version: Version | undefined, usage
     ...(m.reasoning ? { reasoning: m.reasoning } : {}),
     ...(typeof m.reasoningMs === 'number' ? { reasoningMs: m.reasoningMs } : {}),
     ...(typeof m.reasoningTokens === 'number' ? { reasoningTokens: m.reasoningTokens } : {}),
+    ...(m.runId ? { runId: m.runId } : {}),
   }
 }
 

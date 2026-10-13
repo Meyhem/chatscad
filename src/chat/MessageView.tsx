@@ -3,7 +3,7 @@ import { useAgentStore } from '../agent/agentStore'
 import { AgentCardView } from '../agent/ui/AgentCardView'
 import { MessageImages } from '../images/MessageImages'
 import { formatCost, formatTokens } from '../ui/format'
-import { IconSparkle, IconSpinner, IconWarning, IconX } from '../ui/icons'
+import { IconManual, IconSparkle, IconSpinner, IconWarning, IconX } from '../ui/icons'
 import type { ChatMessage } from './chatStore'
 import { ReasoningBox } from './ReasoningBox'
 import { streamingText } from './streamingText'
@@ -25,6 +25,12 @@ function MetaLine({ message }: { message: ChatMessage }) {
         <span className="pc-chip is-accent">
           <Icon className="pc-i" aria-hidden="true" />
           {chip}
+        </span>
+      )}
+      {message.runId === undefined && (
+        <span className="pc-chip" title="Sent in Edit mode: not planned or reviewed">
+          <IconManual className="pc-i" aria-hidden="true" />
+          Edit
         </span>
       )}
       {message.model && <span>{message.model}</span>}

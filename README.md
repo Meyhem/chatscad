@@ -57,7 +57,7 @@ If you make a typo, ChatSCAD tells you where. Here a `)` is missing after `trans
 
 ## What is coming
 
-- **Ask the agent** to create and change parts in plain words, with automatic fixes when the generated code does not compile. With a vision model, the agent plans checks for a new part, reviews coloured renders of each part against them, and proposes fixes you approve. You bring your own key for Anthropic, OpenAI, OpenRouter, or a local model such as Ollama. Keys stay on your device.
+- **Ask the agent** to create and change parts in plain words, with automatic fixes when the generated code does not compile. Switch between Edit, for a quick change, and Agent, which with a vision model plans checks for a part, reviews coloured renders of each part against them, and proposes fixes you approve. You bring your own key for Anthropic, OpenAI, OpenRouter, or a local model such as Ollama. Keys stay on your device.
 - **Sliders for every parameter**, version history you can restore or branch from, and a gallery of starter models.
 - **Phone layout and offline install**, three variants per prompt to pick from, voice prompts, share links, PNG and turntable GIF export.
 - **Tap a part to change just that part**, and start from a photo or a sketch.

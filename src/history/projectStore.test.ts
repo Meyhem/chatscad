@@ -188,6 +188,14 @@ it('stores the checks of a project and keeps them when it is opened again', asyn
   expect(store().project?.checks).toHaveLength(1)
 })
 
+it('stores the composer mode of a project', async () => {
+  const project = await store().newProject({ code: CODE, origin: 'blank' })
+  expect(store().project?.agentMode).toBeUndefined()
+  await store().setAgentMode('edit')
+  expect(store().project?.agentMode).toBe('edit')
+  expect((await getProject(project.id))?.agentMode).toBe('edit')
+})
+
 it('keeps checks saved while a version is being committed', async () => {
   await store().newProject({ code: CODE, origin: 'blank' })
   const committing = commit('cube(2);')

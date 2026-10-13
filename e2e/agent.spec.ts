@@ -123,10 +123,12 @@ test('plans a new model, builds it, reviews coloured views, fixes the failed che
   const csp = watchCspViolations(page)
   await seedVisionProvider(page)
 
-  const agent = page.getByRole('region', { name: 'Agent' })
-  await expect(page.getByRole('button', { name: 'Review: on for the next request, by fake-vision' })).toBeVisible()
+  const agent = page.getByRole('region', { name: 'Agent', exact: true })
+  // A new project starts in Agent mode, and the composer says what a run does.
+  await expect(page.getByRole('radio', { name: 'Agent' })).toBeChecked()
+  await expect(agent.getByText('Reviewer fake-vision · 3 rounds max')).toBeVisible()
   await page.getByRole('textbox', { name: 'Prompt' }).fill('A 40 mm holder with a rail on each long side')
-  await page.getByRole('button', { name: 'Send' }).click()
+  await page.getByRole('button', { name: 'Run agent' }).click()
 
   // The plan comes first; nothing is built until it is approved.
   const plan = agent.getByTestId('plan-card')
@@ -152,6 +154,15 @@ test('plans a new model, builds it, reviews coloured views, fixes the failed che
   expect(JSON.stringify(seen.build[1].messages)).toContain('lid_rail: Mirror the rail onto the other long side.')
   await expect(agent.getByText('Fix 1 issue from the review')).toBeVisible()
   await expect(agent.getByRole('button', { name: 'Checks · 2 of 2 pass' })).toBeVisible()
+  // The whole run is one group, with its steps in order.
+  await expect(agent.getByRole('region', { name: 'Agent run' })).toHaveCount(1)
+  await expect(agent.getByRole('list', { name: 'Steps' }).getByRole('listitem')).toHaveText([
+    'Plan · 2 checks',
+    /^Build v\d+$/,
+    'Review 1 · 1 fail',
+    /^Fix v\d+$/,
+    'Review 2 · pass',
+  ])
 
   // The viewer shows the same part colours.
   await page.getByRole('button', { name: 'Part colours' }).click()
@@ -163,19 +174,27 @@ test('plans a new model, builds it, reviews coloured views, fixes the failed che
   expect(csp).toEqual([])
 })
 
-test('an edit is not reviewed unless asked, and Review vN reviews it', async ({ page }) => {
+test('Edit mode sends one builder turn without review, and Review vN reviews it', async ({ page }) => {
   const seen = await fakeAgent(page)
   await seedVisionProvider(page)
+  await page.getByRole('radio', { name: 'Edit' }).click()
+  await expect(page.getByText('One builder turn · no review')).toBeVisible()
   await page.getByRole('textbox', { name: 'Prompt' }).fill('A 40 mm holder with a rail on each long side')
   await page.getByRole('button', { name: 'Send' }).click()
-  await page.getByTestId('plan-card').getByRole('button', { name: 'Skip plan' }).click()
   await expect(page.getByTestId('dims')).toHaveText('40 × 22 × 10 mm', { timeout: RENDER_TIMEOUT })
+  expect(seen.plan).toHaveLength(0)
   expect(seen.review).toHaveLength(0)
-  await expect(page.getByRole('button', { name: 'Review: off' })).toBeVisible()
+  await expect(page.getByTestId('chat-reply').getByText('Edit', { exact: true })).toBeVisible()
 
   // Without checks, Review vN plans them first, then reviews the model on screen.
+  await expect(page.getByText('Edits are not reviewed.')).toBeVisible()
   await page.getByRole('button', { name: /^Review v\d+$/ }).click()
   await page.getByTestId('plan-card').last().getByRole('button', { name: 'Approve and review' }).click()
   await expect(page.getByTestId('review-card')).toContainText('1 of 2 fail', { timeout: RENDER_TIMEOUT })
   expect(seen.build).toHaveLength(1)
+
+  // The mode is kept with the project.
+  await page.reload()
+  await waitForAppReady(page)
+  await expect(page.getByRole('radio', { name: 'Edit' })).toBeChecked()
 })

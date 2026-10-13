@@ -133,3 +133,10 @@ describe('agent cards', () => {
     expect(screen.getByTestId('chat-note')).toHaveTextContent('Plan · 2 checks')
   })
 })
+
+it('tags a reply outside an agent run as an edit', () => {
+  const { rerender } = render(<MessageView message={reply({})} />)
+  expect(screen.getByTestId('chat-reply').querySelector('.pc-msg-meta')).toHaveTextContent('Edit')
+  rerender(<MessageView message={reply({ runId: 'a' })} />)
+  expect(screen.getByTestId('chat-reply').querySelector('.pc-msg-meta')).not.toHaveTextContent('Edit')
+})

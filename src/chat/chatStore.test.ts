@@ -67,3 +67,14 @@ it('stamps when reasoning ended at the first reply text', () => {
   vi.useRealTimers()
   expect(useChatStore.getState().messages[0]).toMatchObject({ reasoningStartedAt: 1_000, reasoningEndedAt: 9_000 })
 })
+
+it('stamps messages added during an agent run with its id', () => {
+  const chat = useChatStore.getState()
+  chat.setActiveRun('run-1')
+  const inRun = chat.addMessage(assistant(null))
+  chat.setActiveRun(null)
+  const after = chat.addMessage(assistant(null))
+  const byId = new Map(useChatStore.getState().messages.map((m) => [m.id, m]))
+  expect(byId.get(inRun)?.runId).toBe('run-1')
+  expect(byId.get(after)).not.toHaveProperty('runId')
+})

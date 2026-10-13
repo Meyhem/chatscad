@@ -14,6 +14,8 @@ export interface ChatMessage {
   imageBlobIds?: string[] // M5
   /** Agent: a note that stands for a plan or review card; the text is its one-line summary. */
   cardId?: string
+  /** The agent run this message belongs to; absent for an Edit turn. */
+  runId?: string
   audioTranscript?: string // what was dictated, when the prompt was spoken
   reasoning?: string // the model's reasoning, shown collapsed; never sent back
   reasoningMs?: number
@@ -45,7 +47,10 @@ export interface ChatState {
   codeByLabel: Record<string, string>
   /** Composer text; the suggestions fill it. */
   draft: string
+  /** The agent run new messages belong to; null while editing. */
+  activeRun: string | null
   setDraft(text: string): void
+  setActiveRun(id: string | null): void
   addMessage(m: Omit<ChatMessage, 'id'>): string
   patchMessage(id: string, patch: Partial<Omit<ChatMessage, 'id'>>): void
   appendText(id: string, delta: string): void
@@ -63,10 +68,13 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   turnCount: 0,
   codeByLabel: {},
   draft: '',
+  activeRun: null,
   setDraft: (draft) => set({ draft }),
+  setActiveRun: (activeRun) => set({ activeRun }),
   addMessage: (m) => {
     const id = crypto.randomUUID()
-    set((s) => ({ messages: [...s.messages, { ...m, id }] }))
+    const run = get().activeRun
+    set((s) => ({ messages: [...s.messages, { ...(run !== null && m.runId === undefined ? { runId: run } : {}), ...m, id }] }))
     return id
   },
   patchMessage: (id, patch) => set((s) => ({ messages: s.messages.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),

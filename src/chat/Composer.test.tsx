@@ -9,6 +9,8 @@ import { Composer } from './Composer'
 import { sendPrompt, stopTurn } from './sendPrompt'
 import { usePrefs } from '../settings/prefsStore'
 import { startVariants } from '../variants/startVariants'
+import { useAgentStore } from '../agent/agentStore'
+import { useProjectStore } from '../history/projectStore'
 
 vi.mock('./sendPrompt', () => ({ sendPrompt: vi.fn(async () => {}), stopTurn: vi.fn() }))
 vi.mock('../variants/startVariants', () => ({ startVariants: vi.fn(() => true) }))
@@ -149,5 +151,51 @@ describe('M5: attachments and the picked part', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Prompt' }), 'Wider{Enter}')
     expect(startVariants).not.toHaveBeenCalled()
     expect(sendPrompt).toHaveBeenCalledWith('Wider')
+  })
+})
+
+describe('Edit and Agent modes', () => {
+  const vision = { ...profile, capabilities: { ...profile.capabilities, vision: true } }
+  const project = { id: 'x', name: 'X', createdAt: 0, updatedAt: 0, headVersionId: null, providerProfileId: null, enabledLibraries: [], origin: 'blank' as const }
+  const submit = vi.fn(async () => {})
+
+  beforeEach(() => {
+    submit.mockClear()
+    useAgentStore.setState({ submit })
+    useProvidersStore.setState({ profiles: [vision], settings: { ...DEFAULT_SETTINGS, activeProfileId: profile.id, activeModel: 'm1' } })
+    useProjectStore.setState({ project })
+    usePrefs.setState({ variantCount: 1 })
+  })
+
+  it('in Agent the action reads Run agent and sends the request in Agent mode', async () => {
+    render(<Composer />)
+    expect(screen.getByRole('radio', { name: 'Agent' })).toBeChecked()
+    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull()
+    await userEvent.type(screen.getByLabelText('Prompt'), 'A hook')
+    await userEvent.click(screen.getByRole('button', { name: 'Run agent' }))
+    expect(submit).toHaveBeenCalledWith('A hook', undefined, { mode: 'agent' })
+  })
+
+  it('in Agent there are no variants, even when 3 are chosen', async () => {
+    usePrefs.setState({ variantCount: 3 })
+    render(<Composer />)
+    expect(screen.queryByRole('button', { name: 'Variants per prompt' })).toBeNull()
+    await userEvent.type(screen.getByLabelText('Prompt'), 'A hook{Enter}')
+    expect(startVariants).not.toHaveBeenCalled()
+    expect(submit).toHaveBeenCalledWith('A hook', undefined, { mode: 'agent' })
+  })
+
+  it('in Edit the action reads Send and the variants are offered', async () => {
+    useProjectStore.setState({ project: { ...project, agentMode: 'edit' } })
+    render(<Composer />)
+    expect(screen.getByRole('button', { name: 'Variants per prompt' })).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Prompt'), 'Taller')
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(submit).toHaveBeenCalledWith('Taller', undefined, { mode: 'edit' })
+  })
+
+  it('keeps the model options inside the input box', () => {
+    render(<Composer />)
+    expect(screen.getByRole('button', { name: 'Model: m1' }).closest('.pc-composer')).not.toBeNull()
   })
 })

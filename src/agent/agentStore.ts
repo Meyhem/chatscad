@@ -5,7 +5,7 @@ import { describeProviderError } from '../ai/errors'
 import type { LlmProvider, Usage } from '../ai/types'
 import { useChatStore } from '../chat/chatStore'
 import { sendPrompt, stopTurn, type TurnOutcome } from '../chat/sendPrompt'
-import type { ProviderProfile } from '../db/db'
+import type { AgentMode, ProviderProfile } from '../db/db'
 import type { PresetView } from '../export/frames'
 import { useProjectStore } from '../history/projectStore'
 import { blobToBase64 } from '../images/base64'
@@ -94,8 +94,6 @@ const browserDeps: AgentDeps = {
 
 export interface AgentState {
   cards: Record<string, AgentCard>
-  /** The Review switch for the next request; it resets after each send. */
-  reviewNext: boolean
   busy: 'planning' | 'reviewing' | null
   /** The request that started the current model: what every review judges against. */
   anchor: string | null
@@ -104,8 +102,8 @@ export interface AgentState {
   /** The viewer paints each part in its review colour (spec A9). */
   partColours: boolean
   setPartColours(on: boolean): void
-  setReviewNext(on: boolean): void
-  submit(text: string, deps?: AgentDeps, extra?: { audioTranscript?: string }): Promise<void>
+  /** Sends a request in `mode` (the project's mode by default): Edit is one builder turn, Agent plans, builds and reviews. */
+  submit(text: string, deps?: AgentDeps, extra?: { audioTranscript?: string; mode?: AgentMode }): Promise<void>
   approvePlan(cardId: string, deps?: AgentDeps): Promise<void>
   skipPlan(cardId: string, deps?: AgentDeps): Promise<void>
   setPlanChecks(cardId: string, checks: Check[]): void
@@ -129,6 +127,23 @@ export function currentReviewer(): ReviewerChoice | null {
     reviewProfileId: settings.reviewProfileId,
     reviewModel: settings.reviewModel,
   })
+}
+
+/** The mode a request is sent in: the project's choice, or Edit when no model can review. */
+export function currentMode(): AgentMode {
+  if (!currentReviewer()) return 'edit'
+  return useProjectStore.getState().project?.agentMode ?? 'agent'
+}
+
+/** Messages added from here on belong to a new agent run. */
+function startRun(): void {
+  useChatStore.getState().setActiveRun(crypto.randomUUID())
+}
+
+/** A card's buttons continue the run its note belongs to. */
+function resumeRun(card: AgentCard): void {
+  const runId = useChatStore.getState().messages.find((m) => m.id === card.noteId)?.runId
+  useChatStore.getState().setActiveRun(runId ?? null)
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -241,11 +256,11 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     return card.id
   }
 
-  async function plan(request: string, then: PlanCard['then'], deps: AgentDeps, transcript?: string): Promise<void> {
+  async function plan(request: string, then: PlanCard['then'], deps: AgentDeps, transcript?: string): Promise<string | null> {
     const providers = useProvidersStore.getState()
     const profile = selectActiveProfile(providers)
     const model = selectActiveModel(providers)
-    if (!profile || !model) return
+    if (!profile || !model) return null
     const id = addCard({
       kind: 'plan',
       id: crypto.randomUUID(),
@@ -272,6 +287,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       if (running === controller) running = null
       set({ busy: null })
     }
+    return id
   }
 
   /** A newer change makes open cards stale: their issues and plans describe older code. */
@@ -363,31 +379,35 @@ export const useAgentStore = create<AgentState>()((set, get) => {
 
   return {
     cards: {},
-    reviewNext: false,
     busy: null,
     anchor: null,
     latest: null,
     partColours: false,
 
     setPartColours: (on) => set({ partColours: on }),
-    setReviewNext: (on) => set({ reviewNext: on }),
 
     async submit(text, deps = browserDeps, extra = {}) {
       const request = text.trim()
       if (request === '' || isBusy()) return
       const newModel = isEmptyCode(useAppStore.getState().code)
-      const reviewer = currentReviewer()
-      const review = reviewer !== null && (get().reviewNext || (useSettingsStore.getState().settings.reviewNewModels && newModel))
-      set({ reviewNext: false, latest: request, ...(newModel ? { anchor: request } : {}) })
+      const agentRun = (extra.mode ?? currentMode()) === 'agent' && currentReviewer() !== null
+      set({ latest: request, ...(newModel ? { anchor: request } : {}) })
+      if (!agentRun) {
+        useChatStore.getState().setActiveRun(null)
+        await build(request, undefined, false, 1, deps, extra.audioTranscript)
+        return
+      }
+      startRun()
       const checks = useProjectStore.getState().project?.checks ?? []
-      if (review && checks.length === 0) {
+      if (checks.length === 0) {
         // The request now lives on the plan card; an Enter on the same text would plan it twice.
         useChatStore.getState().setDraft('')
         supersedeOpenCards()
-        await plan(request, 'build', deps, extra.audioTranscript)
+        const id = await plan(request, 'build', deps, extra.audioTranscript)
+        if (id && !useSettingsStore.getState().settings.reviewApprovePlan) await get().approvePlan(id, deps)
         return
       }
-      await build(request, undefined, review, 1, deps, extra.audioTranscript)
+      await build(request, undefined, true, 1, deps, extra.audioTranscript)
     },
 
     async approvePlan(cardId, deps = browserDeps) {
@@ -400,6 +420,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
         })
         return
       }
+      resumeRun(card)
       patch<PlanCard>(cardId, { status: 'approved' })
       await useProjectStore.getState().setChecks(card.checks)
       set({ anchor: card.request })
@@ -410,6 +431,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     async skipPlan(cardId, deps = browserDeps) {
       const card = get().cards[cardId]
       if (card?.kind !== 'plan' || card.status !== 'ready' || isBusy()) return
+      resumeRun(card)
       patch<PlanCard>(cardId, { status: 'skipped' })
       if (card.then === 'build') await build(card.request, undefined, false, 1, deps, card.transcript)
     },
@@ -422,6 +444,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
 
     async reviewNow(deps = browserDeps) {
       if (isBusy() || !currentReviewer()) return
+      startRun()
       const checks = useProjectStore.getState().project?.checks ?? []
       if (checks.length > 0) {
         await reviewRound(1, deps)
@@ -446,6 +469,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       if (card?.kind !== 'review' || card.status !== 'ready' || !card.review || isBusy()) return
       const issues = card.review.issues.filter((i) => card.selected.includes(i.id))
       if (issues.length === 0) return
+      resumeRun(card)
       patch<ReviewCard>(cardId, { status: 'fixed' })
       await build(fixText(issues, card.legend), `Fix ${plural(issues.length, 'issue')} from the review`, true, card.round + 1, deps)
     },
@@ -471,7 +495,8 @@ export const useAgentStore = create<AgentState>()((set, get) => {
 
     reset() {
       for (const card of Object.values(get().cards)) if (card.kind === 'review') for (const f of card.frames) URL.revokeObjectURL?.(f.url)
-      set({ cards: {}, reviewNext: false, anchor: null, latest: null })
+      set({ cards: {}, anchor: null, latest: null })
+      useChatStore.getState().setActiveRun(null)
     },
   }
 })
