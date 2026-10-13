@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAgentStore } from '../agent/agentStore'
 import { useChatStore } from '../chat/chatStore'
-import { loadImage, saveImage as defaultSaveImage } from '../db/images'
+import { deleteUnreferencedImages, loadImage, saveImage as defaultSaveImage } from '../db/images'
 import { useProjectStore } from '../history/projectStore'
 import { nextLabel } from '../history/versions'
 import type { PreparedImage } from '../images/prepareImage'
@@ -18,13 +18,17 @@ interface Props {
   objectUrl?(blob: Blob): string
   prepare?(blob: Blob): Promise<PreparedImage>
   saveImage?(blob: Blob): Promise<string>
+  /** Deletes photo blobs the project no longer uses; by default keeps those a message of the project still shows. */
+  deleteImages?(ids: string[]): Promise<void>
 }
 
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
 /** The project's reference photos and description: add angles, save, or refine the model against them (spec P10). */
-export function PhotosDialog({ onClose, load = loadImage, objectUrl = (b) => URL.createObjectURL(b), prepare, saveImage = defaultSaveImage }: Props) {
+export function PhotosDialog({ onClose, load = loadImage, objectUrl = (b) => URL.createObjectURL(b), prepare, saveImage = defaultSaveImage, deleteImages }: Props) {
   const project = useProjectStore((s) => s.project)
+  const projectId = useRef(project?.id ?? null)
+  const removeBlobs = useRef(deleteImages ?? ((ids: string[]) => deleteUnreferencedImages(projectId.current, ids)))
   const head = useProjectStore((s) => s.head)
   const versions = useProjectStore((s) => s.versions)
   const chatBusy = useChatStore((s) => s.busy)
@@ -36,10 +40,28 @@ export function PhotosDialog({ onClose, load = loadImage, objectUrl = (b) => URL
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  /** The photos already on the project, by id; a draft photo not in here is new. */
+  /** The photos on the project, by id; updated by each save. */
   const stored = useRef(new Map<string, ProjectPhoto>())
-  /** Blobs saved by an attempt that failed later on, so a retry does not save them twice. */
+  /** The ids of the photos the project had when the dialog opened; the others are new to a refine. */
+  const original = useRef(new Set<string>())
+  /** Blobs saved by an attempt that failed later on, not yet on the project: a retry reuses them, closing deletes them. */
   const savedBlobs = useRef(new Map<string, string>())
+  const saving = useRef<Promise<unknown> | null>(null)
+
+  // Blobs of a failed save that never reached the project would be orphans: delete them on close,
+  // after any save still running has settled.
+  useEffect(
+    () => () => {
+      void Promise.resolve(saving.current)
+        .then(() => {
+          const ids = [...savedBlobs.current.values()]
+          savedBlobs.current.clear()
+          if (ids.length > 0) return removeBlobs.current(ids)
+        })
+        .catch(() => {})
+    },
+    [],
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -61,6 +83,7 @@ export function PhotosDialog({ onClose, load = loadImage, objectUrl = (b) => URL
         return
       }
       stored.current = new Map(photos.map((p) => [p.id, p]))
+      original.current = new Set(photos.map((p) => p.id))
       commit({ photos: shown, error: null })
       setLoaded(true)
     })()
@@ -74,7 +97,12 @@ export function PhotosDialog({ onClose, load = loadImage, objectUrl = (b) => URL
   const ready = loaded && loadError === null && !busy
 
   /** Saves the draft and the description; null when saving failed (the dialog then says why and keeps the draft). */
-  const persist = async (): Promise<ProjectPhoto[] | null> => {
+  const persist = (): Promise<ProjectPhoto[] | null> => {
+    const run = save()
+    saving.current = run
+    return run
+  }
+  const save = async (): Promise<ProjectPhoto[] | null> => {
     setBusy(true)
     setSaveError(null)
     try {
@@ -91,6 +119,12 @@ export function PhotosDialog({ onClose, load = loadImage, objectUrl = (b) => URL
       }
       const store = useProjectStore.getState()
       await store.setPhotos(photos)
+      // The project now holds `photos`: blobs of removed photos, and of picks saved earlier and removed since, go.
+      const kept = new Set(photos.map((p) => p.blobId))
+      const unused = [...[...stored.current.values()].map((p) => p.blobId), ...savedBlobs.current.values()].filter((id) => !kept.has(id))
+      stored.current = new Map(photos.map((p) => [p.id, p]))
+      savedBlobs.current.clear()
+      await removeBlobs.current(unused).catch(() => {})
       await store.setBrief(brief.trim())
       return photos
     } catch (err) {
@@ -110,16 +144,21 @@ export function PhotosDialog({ onClose, load = loadImage, objectUrl = (b) => URL
     if (!ready || working || count === 0) return
     const photos = await persist()
     if (!photos || !mounted.current) return
-    const newAngles = photos.filter((p) => !stored.current.has(p.id)).map((p) => p.angle)
+    const newAngles = photos.filter((p) => !original.current.has(p.id)).map((p) => p.angle)
     onClose()
     void useAgentStore.getState().refineWithPhotos(newAngles)
+  }
+
+  /** Closing mid-save would lose the outcome of the save; Cancel, Close and Escape wait for it. */
+  const close = () => {
+    if (!busy) onClose()
   }
 
   const next = head ? nextLabel(head, versions.filter((v) => v.parentId === head.id)) : null
   const alert = loadError ?? saveError
 
   return (
-    <Modal labelledBy="photos-title" onClose={onClose} className="pc-dialog max-w-[760px] gap-0 p-0">
+    <Modal labelledBy="photos-title" onClose={close} className="pc-dialog max-w-[760px] gap-0 p-0">
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -131,7 +170,7 @@ export function PhotosDialog({ onClose, load = loadImage, objectUrl = (b) => URL
             <h2 id="photos-title">Photos</h2>
             <p className="pc-muted">Every build and review in this project sees these photos and the description.</p>
           </div>
-          <button type="button" className="pc-btn is-icon is-ghost" aria-label="Close" onClick={onClose}>
+          <button type="button" className="pc-btn is-icon is-ghost" aria-label="Close" disabled={busy} onClick={close}>
             <IconX className="pc-i" aria-hidden="true" />
           </button>
         </div>
@@ -186,7 +225,7 @@ export function PhotosDialog({ onClose, load = loadImage, objectUrl = (b) => URL
           ) : (
             <span className="pc-caption min-w-[12rem] flex-1">{head ? `${head.label} stays in History.` : ''}</span>
           )}
-          <button type="button" className="pc-btn" onClick={onClose}>
+          <button type="button" className="pc-btn" disabled={busy} onClick={close}>
             Cancel
           </button>
           <button type="button" className="pc-btn" disabled={!ready} onClick={() => void saveOnly()}>

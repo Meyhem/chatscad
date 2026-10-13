@@ -1,7 +1,11 @@
+import 'fake-indexeddb/auto'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useAgentStore } from '../agent/agentStore'
 import { useChatStore } from '../chat/chatStore'
+import { db } from '../db/db'
+import { loadImage } from '../db/images'
 import { useProjectStore } from '../history/projectStore'
+import { resetDb } from '../test/resetDb'
 import { PhotosDialog } from './PhotosDialog'
 
 const project = {
@@ -119,4 +123,98 @@ it('says when the photos cannot be loaded, and will not save over them', async (
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not load the photos: Database closed')
   expect(screen.getByRole('button', { name: 'Save photos only' })).toBeDisabled()
   expect(screen.getByRole('button', { name: /^Refine with/ })).toBeDisabled()
+})
+
+describe('photo blobs', () => {
+  const jpeg = (text: string) => new Blob([text], { type: 'image/jpeg' })
+  const prepare = async (b: Blob) => ({ blob: b, mediaType: 'image/jpeg' as const, width: 1, height: 1 })
+  const message = (imageBlobIds: string[]) => ({ id: 'm', projectId: 'p', versionId: null, role: 'user' as const, content: 'A bracket', imageBlobIds, audioTranscript: null, model: null, usageId: null, createdAt: 1 })
+
+  beforeEach(async () => {
+    await resetDb()
+    await db.blobs.put({ id: 'blob-a', kind: 'image', data: jpeg('f') })
+  })
+
+  async function removeFrontAndSave() {
+    useProjectStore.setState({ setPhotos: vi.fn(async () => {}), setBrief: vi.fn(async () => {}) } as never)
+    const onClose = vi.fn()
+    render(<PhotosDialog onClose={onClose} objectUrl={() => 'blob:a'} />)
+    await screen.findByRole('img', { name: 'Front photo' })
+    fireEvent.click(screen.getByRole('button', { name: 'Remove front photo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save photos only' }))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+  }
+
+  it('deletes the blob of a removed photo once saved, when no message shows it', async () => {
+    await removeFrontAndSave()
+    await waitFor(async () => expect(await loadImage('blob-a')).toBeNull())
+  })
+
+  it('keeps the blob of a removed photo that a message still shows', async () => {
+    await db.messages.put(message(['blob-a']))
+    await removeFrontAndSave()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(await loadImage('blob-a')).not.toBeNull()
+  })
+
+  async function failedSave() {
+    const setPhotos = vi.fn(async (): Promise<void> => {
+      throw new Error('Quota exceeded')
+    })
+    useProjectStore.setState({ setPhotos, setBrief: vi.fn(async () => {}) } as never)
+    const onClose = vi.fn()
+    const view = render(<PhotosDialog onClose={onClose} objectUrl={() => 'blob:a'} prepare={prepare} />)
+    await screen.findByRole('img', { name: 'Front photo' })
+    fireEvent.change(screen.getByLabelText('Add top photo'), { target: { files: [new File(['t'], 'top.jpg', { type: 'image/jpeg' })] } })
+    await screen.findByRole('img', { name: 'Top photo' })
+    fireEvent.click(screen.getByRole('button', { name: 'Save photos only' }))
+    await screen.findByRole('alert')
+    const orphan = (await db.blobs.toCollection().primaryKeys()).find((id) => id !== 'blob-a')!
+    expect(await loadImage(orphan)).not.toBeNull()
+    return { setPhotos, onClose, view, orphan }
+  }
+
+  it('deletes a photo saved by a failed attempt when the dialog closes', async () => {
+    const { view, orphan } = await failedSave()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    view.unmount()
+    await waitFor(async () => expect(await loadImage(orphan)).toBeNull())
+    expect(await loadImage('blob-a')).not.toBeNull()
+  })
+
+  it('deletes a photo saved by a failed attempt and then removed, once a save succeeds', async () => {
+    const { setPhotos, onClose, orphan } = await failedSave()
+    setPhotos.mockImplementation(async () => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Remove top photo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save photos only' }))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    await waitFor(async () => expect(await loadImage(orphan)).toBeNull())
+  })
+
+  it('keeps a retried photo saved once, and its blob after the dialog closes', async () => {
+    const { setPhotos, onClose, view, orphan } = await failedSave()
+    setPhotos.mockImplementation(async () => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Save photos only' }))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(setPhotos).toHaveBeenLastCalledWith([project.photos[0], expect.objectContaining({ blobId: orphan, angle: 'top' })])
+    view.unmount()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(await loadImage(orphan)).not.toBeNull()
+    expect(await db.blobs.count()).toBe(2)
+  })
+
+  it('cannot be closed while saving', async () => {
+    let finish = () => {}
+    useProjectStore.setState({ setPhotos: vi.fn(() => new Promise<void>((r) => (finish = r))), setBrief: vi.fn(async () => {}) } as never)
+    const onClose = vi.fn()
+    render(<PhotosDialog onClose={onClose} objectUrl={() => 'blob:a'} />)
+    await screen.findByRole('img', { name: 'Front photo' })
+    fireEvent.click(screen.getByRole('button', { name: 'Save photos only' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled())
+    expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled()
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+    expect(onClose).not.toHaveBeenCalled()
+    finish()
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
 })
