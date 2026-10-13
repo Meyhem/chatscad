@@ -2,6 +2,7 @@ import { useProjectStore } from '../../history/projectStore'
 import { formatCost, formatTokens } from '../../ui/format'
 import { IconAutofix, IconCheck, IconChevronRight, IconEye, IconSpinner, IconStop, IconUnclear, IconWarning, IconX } from '../../ui/icons'
 import { useAgentStore, type ReviewCard } from '../agentStore'
+import { useAgentBusy } from '../useReviewer'
 import { CHECK_KIND_LABEL, NO_CHECKS, type Check } from '../checks'
 import type { CheckStatus, CheckVerdict, Issue, LegendEntry } from '../review'
 import { Legend, Swatch } from './Legend'
@@ -43,7 +44,7 @@ function PartChip({ part, legend }: { part: string | null; legend: LegendEntry[]
 
 const SEVERITY: Record<Issue['severity'], string> = { high: 'High', medium: 'Medium', low: 'Low' }
 
-function headPill(card: ReviewCard, failed: number, total: number) {
+function headPill(card: ReviewCard, failed: number, unclear: number, total: number) {
   switch (card.status) {
     case 'reviewing':
       return (
@@ -63,7 +64,17 @@ function headPill(card: ReviewCard, failed: number, total: number) {
       return <span className="pc-status is-error">Failed</span>
     case 'stopped':
       return <span className="pc-status">Stopped</span>
+    case 'superseded':
+      return <span className="pc-status">Out of date</span>
     default:
+      if (failed === 0 && unclear > 0) {
+        return (
+          <span className="pc-status is-warn">
+            <IconUnclear className="pc-i" aria-hidden="true" />
+            {unclear} of {total} unclear
+          </span>
+        )
+      }
       return (
         <span className={`pc-status ${failed > 0 ? 'is-warn' : 'is-ok'}`}>
           {failed > 0 ? <IconWarning className="pc-i" aria-hidden="true" /> : <IconCheck className="pc-i" aria-hidden="true" />}
@@ -86,6 +97,8 @@ export function ReviewCardView({ card }: { card: ReviewCard }) {
   const open = verdicts.filter((v) => v.status !== 'pass')
   const passing = verdicts.filter((v) => v.status === 'pass')
   const failed = verdicts.filter((v) => v.status === 'fail').length
+  const unclear = verdicts.filter((v) => v.status === 'unclear').length
+  const busy = useAgentBusy()
   const ready = card.status === 'ready'
   const selected = card.selected.length
 
@@ -98,7 +111,7 @@ export function ReviewCardView({ card }: { card: ReviewCard }) {
           {card.versionLabel ? ` · ${card.versionLabel}` : ''}
         </span>
         <span className="flex-1" />
-        {headPill(card, failed, verdicts.length)}
+        {headPill(card, failed, unclear, verdicts.length)}
       </div>
 
       {card.frames.length > 0 && (
@@ -200,7 +213,7 @@ export function ReviewCardView({ card }: { card: ReviewCard }) {
         <div className="pc-row">
           {ready && (
             <>
-              <button type="button" className="pc-btn is-sm is-primary" disabled={selected === 0} onClick={() => void fix(card.id)}>
+              <button type="button" className="pc-btn is-sm is-primary" disabled={selected === 0 || busy} onClick={() => void fix(card.id)}>
                 <IconAutofix className="pc-i" aria-hidden="true" />
                 Fix {selected} {selected === 1 ? 'issue' : 'issues'}
               </button>
@@ -219,6 +232,7 @@ export function ReviewCardView({ card }: { card: ReviewCard }) {
       )}
       {card.status === 'accepted' && <span className="pc-caption">Accepted as it is.</span>}
       {card.status === 'fixed' && <span className="pc-caption">Fixes sent to the builder.</span>}
+      {card.status === 'superseded' && <span className="pc-caption">A newer change was built after this review.</span>}
 
       {card.usage && (
         <span className="pc-caption">

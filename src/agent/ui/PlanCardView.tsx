@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { formatCost, formatTokens } from '../../ui/format'
 import { IconChecks, IconSend, IconPlus, IconSpinner, IconWarning, IconX } from '../../ui/icons'
 import { useAgentStore, type PlanCard } from '../agentStore'
+import { useAgentBusy } from '../useReviewer'
 import { CHECK_KIND_LABEL, CHECK_KINDS, MAX_CHECK_CHARS, MAX_CHECKS, newCheck, type Check, type CheckKind } from '../checks'
 
 function StatusPill({ card }: { card: PlanCard }) {
@@ -21,6 +22,8 @@ function StatusPill({ card }: { card: PlanCard }) {
       return <span className="pc-status">Skipped</span>
     case 'stopped':
       return <span className="pc-status">Stopped</span>
+    case 'superseded':
+      return <span className="pc-status">Not used</span>
     case 'error':
       return <span className="pc-status is-error">Failed</span>
   }
@@ -68,6 +71,7 @@ export function PlanCardView({ card }: { card: PlanCard }) {
   const skip = useAgentStore((s) => s.skipPlan)
   const setChecks = useAgentStore((s) => s.setPlanChecks)
   const [draft, setDraft] = useState<Check[] | null>(null)
+  const busy = useAgentBusy()
   const ready = card.status === 'ready'
   const editing = ready && draft !== null
 
@@ -139,7 +143,7 @@ export function PlanCardView({ card }: { card: PlanCard }) {
             </>
           ) : (
             <>
-              <button type="button" className="pc-btn is-sm is-primary" onClick={() => void approve(card.id)}>
+              <button type="button" className="pc-btn is-sm is-primary" disabled={busy} onClick={() => void approve(card.id)}>
                 <IconSend className="pc-i" aria-hidden="true" />
                 {card.then === 'build' ? 'Approve and build' : 'Approve and review'}
               </button>
@@ -147,7 +151,7 @@ export function PlanCardView({ card }: { card: PlanCard }) {
                 Edit checks
               </button>
               <span className="flex-1" />
-              <button type="button" className="pc-btn is-sm is-ghost" onClick={() => void skip(card.id)}>
+              <button type="button" className="pc-btn is-sm is-ghost" disabled={busy} onClick={() => void skip(card.id)}>
                 {card.then === 'build' ? 'Skip plan' : 'Cancel'}
               </button>
             </>

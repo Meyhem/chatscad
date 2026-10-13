@@ -35,7 +35,7 @@ export interface PlanCard {
   request: string
   /** What approving does: build the model, or review the model already there ("Review vN" without checks). */
   then: 'build' | 'review'
-  status: 'planning' | 'ready' | 'approved' | 'skipped' | 'error' | 'stopped'
+  status: 'planning' | 'ready' | 'approved' | 'skipped' | 'error' | 'stopped' | 'superseded'
   checks: Check[]
   parts: string[]
   model: string
@@ -50,7 +50,8 @@ export interface ReviewCard {
   id: string
   noteId: string
   round: number
-  status: 'reviewing' | 'ready' | 'passed' | 'fixed' | 'accepted' | 'error' | 'stopped'
+  /** 'superseded': a newer change was built, so its issues describe older code. */
+  status: 'reviewing' | 'ready' | 'passed' | 'fixed' | 'accepted' | 'error' | 'stopped' | 'superseded'
   model: string
   versionLabel: string | null
   frames: Array<{ view: PresetView; url: string }>
@@ -98,6 +99,8 @@ export interface AgentState {
   busy: 'planning' | 'reviewing' | null
   /** The request that started the current model: what every review judges against. */
   anchor: string | null
+  /** The user's latest request (fix rounds excluded): the reviewer's "latest request". */
+  latest: string | null
   /** The viewer paints each part in its review colour (spec A9). */
   partColours: boolean
   setPartColours(on: boolean): void
@@ -162,6 +165,8 @@ function planSummary(card: PlanCard): string {
       return 'Plan stopped.'
     case 'skipped':
       return `Plan skipped · ${plural(card.checks.length, 'check')}`
+    case 'superseded':
+      return `Plan · ${plural(card.checks.length, 'check')} · not used`
     default:
       return `Plan · ${plural(card.checks.length, 'check')}`
   }
@@ -172,9 +177,13 @@ function reviewSummary(card: ReviewCard): string {
   if (card.status === 'reviewing') return `${head}: reviewing…`
   if (card.status === 'error') return `${head}: failed.`
   if (card.status === 'stopped') return `${head}: stopped.`
+  if (card.status === 'superseded') return `${head}: out of date`
   const verdicts = card.review?.verdicts ?? []
   const failed = verdicts.filter((v) => v.status === 'fail').length
-  return failed === 0 ? `${head}: all ${plural(verdicts.length, 'check')} pass` : `${head}: ${failed} of ${plural(verdicts.length, 'check')} fail`
+  const unclear = verdicts.filter((v) => v.status === 'unclear').length
+  if (failed > 0) return `${head}: ${failed} of ${plural(verdicts.length, 'check')} fail`
+  if (unclear > 0) return `${head}: ${unclear} of ${plural(verdicts.length, 'check')} unclear`
+  return `${head}: all ${plural(verdicts.length, 'check')} pass`
 }
 
 const note = (text: string, cardId: string) =>
@@ -195,6 +204,17 @@ function stopOnEdit(controller: AbortController): () => void {
   return useAppStore.subscribe((s, prev) => {
     if ((s.code !== prev.code && s.codeSource === 'manual') || (s.params !== prev.params && s.code === prev.code)) controller.abort()
   })
+}
+
+/** The builder or the agent is working; card actions wait until it is done. */
+export function isBusy(): boolean {
+  return useAgentStore.getState().busy !== null || useChatStore.getState().busy
+}
+
+/** The editor's code is the code of the last successful render. */
+function currentModelRendered(): boolean {
+  const app = useAppStore.getState()
+  return app.lastRender?.code === app.code && app.lastRender.result.ok
 }
 
 function firstUserText(): string | null {
@@ -254,7 +274,13 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     }
   }
 
+  /** A newer change makes open cards stale: their issues and plans describe older code. */
+  function supersedeOpenCards(): void {
+    for (const card of Object.values(get().cards)) if (card.status === 'ready') patch(card.id, { status: 'superseded' })
+  }
+
   async function build(text: string, display: string | undefined, review: boolean, round: number, deps: AgentDeps, transcript?: string): Promise<void> {
+    supersedeOpenCards()
     const outcome = await deps.send(text, display, transcript)
     if (!review || !outcome?.sent || outcome.stopped || !outcome.rendered?.ok) return
     await reviewRound(round, deps)
@@ -264,7 +290,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     const reviewer = currentReviewer()
     const checks = useProjectStore.getState().project?.checks ?? []
     const app = useAppStore.getState()
-    const base: RenderResult | null = app.lastRender?.code === app.code ? app.lastRender.result : null
+    const base: RenderResult | null = currentModelRendered() && app.lastRender ? app.lastRender.result : null
     if (!reviewer || checks.length === 0 || !base?.ok) return
     const settings = useSettingsStore.getState().settings
     const id = addCard({
@@ -296,7 +322,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
           provider: deps.provider(reviewer.profile),
           model: reviewer.model,
           request,
-          latest: lastUserText() ?? request,
+          latest: get().latest ?? request,
           checks,
           code: app.code,
           params: app.params,
@@ -308,7 +334,9 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       )
       void deps.recordUsage({ ...reviewer, usage: outcome.usage, projectId: useProjectStore.getState().project?.id ?? null }).catch(() => {})
       const failed = new Set(outcome.review.verdicts.filter((v) => v.status === 'fail').map((v) => v.checkId))
-      const passed = failed.size === 0
+      const allPass = outcome.review.verdicts.every((v) => v.status === 'pass')
+      // Passed means nothing left to do; defects outside the checks keep the card open for fixing.
+      const passed = allPass && outcome.review.issues.length === 0
       const auto = settings.reviewMode === 'auto'
       patch<ReviewCard>(id, {
         status: passed ? 'passed' : 'ready',
@@ -317,7 +345,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
         coloured: outcome.coloured,
         frames: outcome.frames.map((f) => ({ view: f.view, url: deps.objectUrl(f.png) })),
         selected: outcome.review.issues.filter((i) => i.checkId !== null && failed.has(i.checkId)).map((i) => i.id),
-        limitReached: auto && !passed && round >= settings.reviewRounds,
+        limitReached: auto && !allPass && round >= settings.reviewRounds,
         usage: cardUsage(reviewer, outcome.usage),
       })
       next = get().cards[id] as ReviewCard
@@ -338,6 +366,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     reviewNext: false,
     busy: null,
     anchor: null,
+    latest: null,
     partColours: false,
 
     setPartColours: (on) => set({ partColours: on }),
@@ -345,13 +374,16 @@ export const useAgentStore = create<AgentState>()((set, get) => {
 
     async submit(text, deps = browserDeps, extra = {}) {
       const request = text.trim()
-      if (request === '' || get().busy || useChatStore.getState().busy) return
+      if (request === '' || isBusy()) return
       const newModel = isEmptyCode(useAppStore.getState().code)
       const reviewer = currentReviewer()
       const review = reviewer !== null && (get().reviewNext || (useSettingsStore.getState().settings.reviewNewModels && newModel))
-      set({ reviewNext: false, ...(newModel ? { anchor: request } : {}) })
+      set({ reviewNext: false, latest: request, ...(newModel ? { anchor: request } : {}) })
       const checks = useProjectStore.getState().project?.checks ?? []
       if (review && checks.length === 0) {
+        // The request now lives on the plan card; an Enter on the same text would plan it twice.
+        useChatStore.getState().setDraft('')
+        supersedeOpenCards()
         await plan(request, 'build', deps, extra.audioTranscript)
         return
       }
@@ -360,7 +392,14 @@ export const useAgentStore = create<AgentState>()((set, get) => {
 
     async approvePlan(cardId, deps = browserDeps) {
       const card = get().cards[cardId]
-      if (card?.kind !== 'plan' || card.status !== 'ready' || card.checks.length === 0) return
+      if (card?.kind !== 'plan' || card.status !== 'ready' || card.checks.length === 0 || isBusy()) return
+      if (card.then === 'review' && !currentModelRendered()) {
+        patch<PlanCard>(cardId, {
+          status: 'error',
+          error: { title: 'The model changed since the plan', body: 'Wait until it has rendered, then press Review again.' },
+        })
+        return
+      }
       patch<PlanCard>(cardId, { status: 'approved' })
       await useProjectStore.getState().setChecks(card.checks)
       set({ anchor: card.request })
@@ -370,7 +409,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
 
     async skipPlan(cardId, deps = browserDeps) {
       const card = get().cards[cardId]
-      if (card?.kind !== 'plan' || card.status !== 'ready') return
+      if (card?.kind !== 'plan' || card.status !== 'ready' || isBusy()) return
       patch<PlanCard>(cardId, { status: 'skipped' })
       if (card.then === 'build') await build(card.request, undefined, false, 1, deps, card.transcript)
     },
@@ -382,14 +421,17 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     },
 
     async reviewNow(deps = browserDeps) {
-      if (get().busy || useChatStore.getState().busy || !currentReviewer()) return
+      if (isBusy() || !currentReviewer()) return
       const checks = useProjectStore.getState().project?.checks ?? []
       if (checks.length > 0) {
         await reviewRound(1, deps)
         return
       }
       const request = get().anchor ?? firstUserText() ?? lastUserText()
-      if (request) await plan(request, 'review', deps)
+      if (request) {
+        supersedeOpenCards()
+        await plan(request, 'review', deps)
+      }
     },
 
     toggleIssue(cardId, issueId) {
@@ -401,7 +443,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
 
     async fixIssues(cardId, deps = browserDeps) {
       const card = get().cards[cardId]
-      if (card?.kind !== 'review' || card.status !== 'ready' || !card.review) return
+      if (card?.kind !== 'review' || card.status !== 'ready' || !card.review || isBusy()) return
       const issues = card.review.issues.filter((i) => card.selected.includes(i.id))
       if (issues.length === 0) return
       patch<ReviewCard>(cardId, { status: 'fixed' })
@@ -429,7 +471,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
 
     reset() {
       for (const card of Object.values(get().cards)) if (card.kind === 'review') for (const f of card.frames) URL.revokeObjectURL?.(f.url)
-      set({ cards: {}, reviewNext: false, anchor: null })
+      set({ cards: {}, reviewNext: false, anchor: null, latest: null })
     },
   }
 })

@@ -34,3 +34,9 @@ it('keeps well-formed checks, drops empty ones, caps the count and the length', 
 it('keeps ids it is given, so stored checks keep theirs', () => {
   expect(cleanChecks([{ id: 'c1', kind: 'part', text: 'Lid' }])[0].id).toBe('c1')
 })
+
+it('gives repeated ids from untrusted data new ones', () => {
+  const checks = cleanChecks([{ id: 'c1', text: 'A' }, { id: 'c1', text: 'B' }])
+  expect(checks[0].id).toBe('c1')
+  expect(checks[1].id).not.toBe('c1')
+})

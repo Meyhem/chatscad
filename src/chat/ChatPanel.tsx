@@ -54,7 +54,8 @@ export function ChatPanel() {
   const appStatus = useAppStore((s) => s.status)
   const codeSource = useAppStore((s) => s.codeSource)
   const agentBusy = useAgentStore((s) => s.busy)
-  const cards = useAgentStore((s) => s.cards)
+  // Scroll on new cards and status changes, not on ticking an issue in an older card.
+  const cardStates = useAgentStore((s) => Object.values(s.cards).map((c) => c.status).join())
   const reviewer = useReviewer()
   const current = useAppStore((s) => s.status === 'ok' && s.renderedCode === s.code)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -64,7 +65,7 @@ export function ChatPanel() {
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages, fixing, cards])
+  }, [messages, fixing, cardStates])
 
   // findLast needs lib ES2023; tsconfig targets ES2022.
   const lastReply = [...messages].reverse().find((m) => m.role === 'assistant')

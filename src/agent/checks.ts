@@ -37,13 +37,16 @@ export function newCheck(kind: CheckKind, text: string): Check {
 export function cleanChecks(raw: unknown): Check[] {
   if (!Array.isArray(raw)) return []
   const out: Check[] = []
+  const seen = new Set<string>()
   for (const item of raw) {
     if (out.length >= MAX_CHECKS) break
     if (typeof item !== 'object' || item === null) continue
     const o = item as Record<string, unknown>
     const text = typeof o.text === 'string' ? o.text.replace(/\s+/g, ' ').trim().slice(0, MAX_CHECK_CHARS) : ''
     if (text === '') continue
-    const id = typeof o.id === 'string' && o.id.length > 0 && o.id.length <= 100 ? o.id : crypto.randomUUID()
+    const given = typeof o.id === 'string' && o.id.length > 0 && o.id.length <= 100 ? o.id : null
+    const id = given !== null && !seen.has(given) ? given : crypto.randomUUID()
+    seen.add(id)
     out.push({ id, kind: parseCheckKind(o.kind), text })
   }
   return out

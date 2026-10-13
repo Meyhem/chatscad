@@ -149,9 +149,11 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
         variantGroupId: null,
         thumbnailBlobId: null,
       })
-      const updated: Project = { ...project, headVersionId: version.id, updatedAt: version.createdAt }
+      // Re-read: checks or a rename may have been saved while the version was written.
+      const latest = get().project?.id === project.id ? get().project! : project
+      const updated: Project = { ...latest, headVersionId: version.id, updatedAt: version.createdAt }
       await putProject(updated)
-      set((s) => ({ project: updated, versions: [...s.versions, version], head: version, redoStack: [] }))
+      set((s) => ({ project: s.project?.id === updated.id ? { ...s.project, headVersionId: updated.headVersionId, updatedAt: updated.updatedAt } : s.project, versions: [...s.versions, version], head: version, redoStack: [] }))
       return version
     },
 

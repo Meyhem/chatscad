@@ -162,3 +162,27 @@ describe('review card', () => {
     expect(container).toBeEmptyDOMElement()
   })
 })
+
+describe('busy and stale cards', () => {
+  it('disables the card actions while the builder works', async () => {
+    const { useChatStore } = await import('../../chat/chatStore')
+    useChatStore.setState({ busy: true })
+    render(<AgentCardView cardId="r" />)
+    expect(screen.getByRole('button', { name: 'Fix 1 issue' })).toBeDisabled()
+    useChatStore.setState({ busy: false })
+  })
+
+  it('says a review is out of date once a newer change was built', () => {
+    useAgentStore.setState({ cards: { r: { ...review, status: 'superseded' } } })
+    render(<AgentCardView cardId="r" />)
+    expect(screen.getByText('Out of date')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Fix/ })).not.toBeInTheDocument()
+  })
+
+  it('reports unclear checks when none failed', () => {
+    const verdicts = review.review!.verdicts.map((v) => (v.status === 'fail' ? { ...v, status: 'pass' as const } : v))
+    useAgentStore.setState({ cards: { r: { ...review, review: { ...review.review!, verdicts } } } })
+    render(<AgentCardView cardId="r" />)
+    expect(screen.getByText('1 of 3 unclear')).toBeInTheDocument()
+  })
+})

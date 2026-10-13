@@ -187,3 +187,12 @@ it('stores the checks of a project and keeps them when it is opened again', asyn
   await store().openProject(project.id)
   expect(store().project?.checks).toHaveLength(1)
 })
+
+it('keeps checks saved while a version is being committed', async () => {
+  await store().newProject({ code: CODE, origin: 'blank' })
+  const committing = commit('cube(2);')
+  await store().setChecks([{ id: 'c1', kind: 'part', text: 'A lid' }])
+  await committing
+  expect(store().project?.checks).toEqual([{ id: 'c1', kind: 'part', text: 'A lid' }])
+  expect((await getProject(store().project!.id))?.checks).toEqual([{ id: 'c1', kind: 'part', text: 'A lid' }])
+})

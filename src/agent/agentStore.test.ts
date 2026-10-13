@@ -53,6 +53,9 @@ function setup(replies: string[], opts: { visionOn?: boolean; settings?: Partial
     provider: () => scripted.provider as LlmProvider,
     send: async (text, display): Promise<TurnOutcome> => {
       sent.push({ text, display })
+      // Like sendPrompt: the bubble shows the short text and the draft clears.
+      useChatStore.getState().addMessage({ role: 'user', text: display ?? text, turnLabel: null, model: null, usage: null, status: 'done' })
+      useChatStore.getState().setDraft('')
       const startedEmpty = useAppStore.getState().code.trim() === ''
       useAppStore.getState().setCode(MODEL_CODE, 'ai')
       useAppStore.getState().renderFinished(ok, MODEL_CODE, {})
@@ -198,4 +201,83 @@ it('shows a provider error on the card', async () => {
   deps.provider = () => scriptedProvider(new Error('boom')).provider
   await agent().submit('A box', deps)
   expect(cards()[0]).toMatchObject({ kind: 'plan', status: 'error' })
+})
+
+describe('review findings', () => {
+  const UNCLEAR = JSON.stringify({ summary: 'Only judged one.', checks: [{ n: 1, status: 'pass', evidence: 'a' }], issues: [] })
+  const PASS_WITH_DEFECT = JSON.stringify({ ...JSON.parse(PASSES), issues: [{ severity: 'low', part: 'body', check: null, change: 'The body floats 1 mm above the bed.' }] })
+
+  async function withChecks() {
+    useAppStore.getState().setCode(MODEL_CODE)
+    useAppStore.getState().renderFinished(okResult(), MODEL_CODE, {})
+    await useProjectStore.getState().setChecks([{ id: 'c1', kind: 'part', text: 'A body' }, { id: 'c2', kind: 'part', text: 'Rails' }])
+  }
+
+  it('does not count unclear checks as passing', async () => {
+    const { deps } = setup([UNCLEAR])
+    await withChecks()
+    await agent().reviewNow(deps)
+    expect(reviewCards()[0].status).toBe('ready')
+    expect(useChatStore.getState().messages.at(-1)?.text).toBe('Review · round 1: 1 of 2 checks unclear')
+  })
+
+  it('keeps fixing open for defects outside the checks when every check passes', async () => {
+    const { deps } = setup([PASS_WITH_DEFECT])
+    await withChecks()
+    await agent().reviewNow(deps)
+    const card = reviewCards()[0]
+    expect(card.status).toBe('ready')
+    expect(card.selected).toEqual([])
+    expect(useChatStore.getState().messages.at(-1)?.text).toBe('Review · round 1: all 2 checks pass')
+  })
+
+  it('ignores actions on cards while the builder or the agent is busy', async () => {
+    const { deps, sent } = setup([FAILS])
+    await withChecks()
+    await agent().reviewNow(deps)
+    const card = reviewCards()[0]
+    useChatStore.setState({ busy: true })
+    await agent().fixIssues(card.id, deps)
+    expect(sent).toEqual([])
+    expect(agent().cards[card.id]).toMatchObject({ status: 'ready' })
+  })
+
+  it('marks older open cards out of date when a newer change is built', async () => {
+    const { deps } = setup([FAILS])
+    await withChecks()
+    await agent().reviewNow(deps)
+    const old = reviewCards()[0]
+    await agent().submit('Make it taller', deps)
+    expect(agent().cards[old.id]).toMatchObject({ status: 'superseded' })
+    expect(useChatStore.getState().messages.find((m) => m.id === old.noteId)?.text).toBe('Review · round 1: out of date')
+  })
+
+  it('clears the composer when a request goes to planning', async () => {
+    const { deps } = setup([PLAN])
+    useChatStore.getState().setDraft('A holder')
+    await agent().submit('A holder', deps)
+    expect(useChatStore.getState().draft).toBe('')
+  })
+
+  it('tells the reviewer the user request, not the fix round, as the latest request', async () => {
+    const { deps, requests } = setup([PLAN, FAILS, PASSES])
+    await agent().submit('A holder', deps)
+    await agent().approvePlan(cards()[0].id, deps)
+    await agent().fixIssues(reviewCards()[0].id, deps)
+    const text = JSON.stringify(requests[2].messages)
+    expect(text).toContain('Original request: A holder')
+    expect(text).not.toContain('Latest request: Fix')
+  })
+
+  it('says so when the model changed before a review plan was approved', async () => {
+    const { deps } = setup([PLAN])
+    useAppStore.getState().setCode(MODEL_CODE)
+    useAppStore.getState().renderFinished(okResult(), MODEL_CODE, {})
+    useChatStore.getState().addMessage({ role: 'user', text: 'A holder', turnLabel: null, model: null, usage: null, status: 'done' })
+    await agent().reviewNow(deps)
+    useAppStore.getState().setCode(`${MODEL_CODE}// edited\n`)
+    await agent().approvePlan(cards()[0].id, deps)
+    expect(cards()[0]).toMatchObject({ status: 'error', error: { title: 'The model changed since the plan' } })
+    expect(reviewCards()).toEqual([])
+  })
 })
