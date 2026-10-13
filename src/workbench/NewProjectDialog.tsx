@@ -4,7 +4,7 @@ import { NO_VISION_EXPLANATION } from '../images/attachments'
 import type { PreparedImage } from '../images/prepareImage'
 import { addDraftPhotos, layoutFor, removeDraftPhoto, type DraftPhoto, type DraftState } from '../photos/photoDraft'
 import { PhotoSlots } from '../photos/PhotoSlots'
-import { MAX_BRIEF_CHARS, type PhotoAngle, type PhotoScale } from '../photos/projectPhotos'
+import { MAX_BRIEF_CHARS, MAX_PROJECT_PHOTOS, tooManyPhotos, type PhotoAngle, type PhotoScale } from '../photos/projectPhotos'
 import { useVisionSupport } from '../refine/useVisionSupport'
 import { LIBRARY_NAMES, type LibraryName } from '../render/libraries'
 import { useAppStore } from '../state/store'
@@ -21,7 +21,8 @@ export interface NewProjectResult {
 }
 
 interface Props {
-  onCreate(result: NewProjectResult): void
+  /** May return a promise: the dialog stays open, with the draft, until it resolves, and shows why if it rejects. */
+  onCreate(result: NewProjectResult): void | Promise<void>
   onClose(): void
   /** Whether the active model takes images; read from the providers by default. */
   vision?: boolean
@@ -88,10 +89,14 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
   const [brief, setBrief] = useState('')
   const [scale, setScale] = useState<PhotoScale>('reference')
   const [showLibraries, setShowLibraries] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
   const start: Start = chosenStart === 'photos' && vision ? 'photos' : 'blank'
 
-  // Photos are prepared one batch at a time against the latest draft, so quick picks do not overwrite each other.
+  // Photos are prepared one batch at a time; each batch joins the draft as it is when the batch is ready,
+  // so removals and layout changes made in the meantime stay.
   const latest = useRef(draft)
+  const layoutNow = useRef(layout)
   const queue = useRef<Promise<void>>(Promise.resolve())
   const open = useRef(true)
   const commit = (next: DraftState) => {
@@ -107,15 +112,26 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
   )
 
   const onAdd = (files: File[], angle: PhotoAngle) => {
-    queue.current = queue.current.then(async () => {
-      const before = latest.current
-      const next = await addDraftPhotos(before, files, angle, prepare, objectUrl)
-      if (open.current) commit(next)
-      else for (const p of next.photos.slice(before.photos.length)) URL.revokeObjectURL(p.url)
-    })
+    queue.current = queue.current
+      .then(async () => {
+        const before = latest.current
+        const next = await addDraftPhotos(before, files, angle, prepare, objectUrl)
+        const added = next.photos.slice(before.photos.length)
+        if (!open.current) {
+          for (const p of added) URL.revokeObjectURL(p.url)
+          return
+        }
+        const photos = layoutFor(layoutNow.current, [...latest.current.photos, ...added]).slice(0, MAX_PROJECT_PHOTOS)
+        const dropped = added.filter((p) => !photos.some((kept) => kept.id === p.id))
+        for (const p of dropped) URL.revokeObjectURL(p.url)
+        const overCap = layoutNow.current === 'angles' && dropped.length > 0
+        commit({ photos, error: overCap ? tooManyPhotos(dropped[0]!.name) : next.error })
+      })
+      .catch(() => {}) // one failed batch must not stop later picks
   }
   const onRemove = (id: string) => commit(removeDraftPhoto(latest.current, id))
   const changeLayout = (next: Layout) => {
+    layoutNow.current = next
     setLayout(next)
     const photos = layoutFor(next, latest.current.photos)
     for (const p of latest.current.photos) if (!photos.some((kept) => kept.id === p.id)) URL.revokeObjectURL(p.url)
@@ -138,14 +154,22 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
   return (
     <Modal labelledBy="new-project-title" onClose={onClose} className={`pc-dialog ${start === 'photos' ? 'max-w-[920px]' : 'max-w-[600px]'} gap-0 p-0`}>
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault()
-          if (!ready) return
-          onCreate({
-            name: name.trim(),
-            enabledLibraries: enabled,
-            ...(start === 'photos' ? { photos: { photos: layoutFor(layout, draft.photos), brief: brief.trim(), scale } } : {}),
-          })
+          if (!ready || saving) return
+          setSaving(true)
+          setCreateError(null)
+          try {
+            await onCreate({
+              name: name.trim(),
+              enabledLibraries: enabled,
+              ...(start === 'photos' ? { photos: { photos: layoutFor(layout, draft.photos), brief: brief.trim(), scale } } : {}),
+            })
+          } catch (err) {
+            if (open.current) setCreateError(`Could not create the project: ${err instanceof Error ? err.message : String(err)}`)
+          } finally {
+            if (open.current) setSaving(false)
+          }
         }}
       >
         <div className="flex items-start gap-4 px-6 pt-6">
@@ -318,15 +342,21 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
         </div>
 
         <div className="pc-dialog-actions items-center border-t border-line px-6 py-4">
-          <span className="pc-caption min-w-[12rem] flex-1">
-            {start === 'photos'
-              ? 'The agent plans checks from your description and photos, then builds v1.'
-              : 'Opens an empty project. Describe a part, write code, or start from an example.'}
-          </span>
+          {createError ? (
+            <span role="alert" className="pc-caption min-w-[12rem] flex-1 text-error">
+              {createError}
+            </span>
+          ) : (
+            <span className="pc-caption min-w-[12rem] flex-1">
+              {start === 'photos'
+                ? 'The agent plans checks from your description and photos, then builds v1.'
+                : 'Opens an empty project. Describe a part, write code, or start from an example.'}
+            </span>
+          )}
           <button type="button" className="pc-btn" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="pc-btn is-primary" disabled={!ready}>
+          <button type="submit" className="pc-btn is-primary" disabled={!ready || saving}>
             {start === 'photos' ? 'Create and build' : 'Create project'}
           </button>
         </div>

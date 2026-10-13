@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useAppStore } from '../state/store'
 import { NewProjectDialog } from './NewProjectDialog'
 
@@ -133,4 +133,80 @@ it('moves between the start options with the arrow keys, skipping Photos without
   fireEvent.keyDown(screen.getByRole('radio', { name: 'Blank' }), { key: 'ArrowRight' })
   expect(screen.getByRole('radio', { name: 'Photos' })).toBeChecked()
   expect(screen.getByRole('radio', { name: 'Photos' })).toHaveFocus()
+})
+
+describe('while a photo is being prepared', () => {
+  const ready = async (b: Blob) => ({ blob: b, mediaType: 'image/jpeg' as const, width: 1, height: 1 })
+  function deferredPrepare() {
+    let release: (() => void) | null = null
+    let calls = 0
+    const prepare = (b: Blob) => {
+      calls++
+      if (calls === 1) return ready(b)
+      return new Promise<Awaited<ReturnType<typeof ready>>>((resolve) => (release = () => resolve({ blob: b, mediaType: 'image/jpeg', width: 1, height: 1 })))
+    }
+    let n = 0
+    const objectUrl = () => `blob:${++n}`
+    return {
+      prepare,
+      objectUrl,
+      pending: () => waitFor(() => expect(release).not.toBeNull()),
+      release: () => release?.(),
+    }
+  }
+  const pick = (label: string, name: string) =>
+    fireEvent.change(screen.getByLabelText(label), { target: { files: [new File(['x'], name, { type: 'image/jpeg' })] } })
+
+  it('keeps a photo removed in the meantime removed', async () => {
+    const d = deferredPrepare()
+    const { onCreate } = setup({ prepare: d.prepare, objectUrl: d.objectUrl })
+    fireEvent.click(screen.getByRole('radio', { name: 'Photos' }))
+    pick('Add front photo', 'front.jpg')
+    await screen.findByRole('img', { name: 'Front photo' })
+    pick('Add top photo', 'top.jpg')
+    await d.pending()
+    fireEvent.click(screen.getByRole('button', { name: 'Remove front photo' }))
+    await act(async () => d.release())
+    await screen.findByRole('img', { name: 'Top photo' })
+    expect(screen.queryByRole('img', { name: 'Front photo' })).toBeNull()
+    fireEvent.change(screen.getByLabelText('Describe it'), { target: { value: 'A bracket' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create and build' }))
+    expect(onCreate.mock.calls[0]![0].photos.photos.map((p: { name: string }) => p.name)).toEqual(['top.jpg'])
+  })
+
+  it('keeps the one-photo layout to one photo', async () => {
+    const d = deferredPrepare()
+    setup({ prepare: d.prepare, objectUrl: d.objectUrl })
+    fireEvent.click(screen.getByRole('radio', { name: 'Photos' }))
+    pick('Add front photo', 'front.jpg')
+    await screen.findByRole('img', { name: 'Front photo' })
+    pick('Add top photo', 'top.jpg')
+    await d.pending()
+    fireEvent.click(screen.getByRole('radio', { name: 'One photo' }))
+    await act(async () => d.release())
+    expect(screen.getAllByRole('img')).toHaveLength(1)
+    expect(screen.getByRole('img', { name: 'Photo' })).toHaveAttribute('src', 'blob:1')
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:2')
+  })
+})
+
+it('stays open with the draft and says why when creating fails', async () => {
+  const prepare = async (b: Blob) => ({ blob: b, mediaType: 'image/jpeg' as const, width: 1, height: 1 })
+  let fail = (_: Error) => {}
+  const onCreate = vi.fn(() => new Promise<void>((_, reject) => (fail = reject)))
+  const { onClose } = setup({ prepare, onCreate })
+  fireEvent.click(screen.getByRole('radio', { name: 'Photos' }))
+  fireEvent.change(screen.getByLabelText('Add front photo'), { target: { files: [new File(['x'], 'front.jpg', { type: 'image/jpeg' })] } })
+  await screen.findByRole('img', { name: 'Front photo' })
+  fireEvent.change(screen.getByLabelText('Describe it'), { target: { value: 'A bracket' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create and build' }))
+  expect(screen.getByRole('button', { name: 'Create and build' })).toBeDisabled()
+  await act(async () => fail(new Error('Storage is full')))
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not create the project: Storage is full')
+  expect(screen.getByRole('dialog', { name: 'New project' })).toBeInTheDocument()
+  expect(screen.getByRole('img', { name: 'Front photo' })).toHaveAttribute('src', 'blob:test')
+  expect(screen.getByLabelText('Describe it')).toHaveValue('A bracket')
+  expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'Create and build' })).toBeEnabled()
+  expect(onClose).not.toHaveBeenCalled()
 })

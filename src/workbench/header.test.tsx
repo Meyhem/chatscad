@@ -106,6 +106,18 @@ describe('ProjectMenu', () => {
     expect(useAppStore.getState().view).toBe('workbench')
   })
 
+  it('keeps the new project dialog open with the error when the project cannot be saved', async () => {
+    actions.newProject.mockRejectedValueOnce(new Error('Storage is full'))
+    useAppStore.getState().setView('history')
+    render(<ProjectMenu />)
+    openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New project…' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create project' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not create the project: Storage is full')
+    expect(screen.getByRole('dialog', { name: 'New project' })).toBeInTheDocument()
+    expect(useAppStore.getState().view).toBe('history')
+  })
+
   it('renames, opens a recent project, opens the examples and exports', async () => {
     render(<ProjectMenu />)
     openMenu()

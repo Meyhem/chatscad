@@ -214,18 +214,18 @@ export function ProjectMenu() {
         <NewProjectDialog
           onClose={() => setCreating(false)}
           onCreate={async ({ name, enabledLibraries, photos }) => {
-            setCreating(false)
+            // The dialog stays open until the project is saved; it shows the error and keeps the draft if saving fails.
+            // Closing it afterwards releases the thumbnails.
             if (!photos) {
               await store().newProject({ name, code: '', origin: 'blank', enabledLibraries })
+              setCreating(false)
               toWorkbench()
               return
             }
             const saved: ProjectPhoto[] = []
-            for (const p of photos.photos) {
-              saved.push({ id: p.id, blobId: await saveImage(p.blob), angle: p.angle, addedAt: Date.now() })
-              URL.revokeObjectURL(p.url)
-            }
+            for (const p of photos.photos) saved.push({ id: p.id, blobId: await saveImage(p.blob), angle: p.angle, addedAt: Date.now() })
             await store().newProject({ name, code: '', origin: 'photos', enabledLibraries, photos: saved, brief: photos.brief, scale: photos.scale })
+            setCreating(false)
             toWorkbench()
             void useAgentStore.getState().submit(photos.brief, undefined, { mode: 'agent', showPhotos: true })
           }}
