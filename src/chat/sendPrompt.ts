@@ -1,14 +1,16 @@
 import { computeCost, priceFor } from '../ai/cost'
 import { effortFor } from '../ai/effort'
-import { currentLibraries } from '../history/projectStore'
+import { currentLibraries, useProjectStore } from '../history/projectStore'
 import { createProvider as defaultCreateProvider } from '../ai/createProvider'
 import { describeProviderError } from '../ai/errors'
 import { runTurn, type GenerateResult, type TurnEvent } from '../ai/runTurn'
-import type { LlmProvider } from '../ai/types'
+import type { PromptContext } from '../ai/prompt'
+import type { ContentPart, LlmProvider } from '../ai/types'
 import type { ProviderProfile } from '../db/db'
 import { addUsage } from '../db/usage'
 import { calloutHeadline } from '../editor/diagnosticsExtension'
 import { useAttachments } from '../images/attachments'
+import { loadPhotos as defaultLoadPhotos, photoParts } from '../photos/projectPhotos'
 import { useRefineStore } from '../refine/refineStore'
 import { prepareTurnInput, type TurnInput, type TurnInputDeps } from '../refine/turnInput'
 import { awaitRender } from '../render/awaitRender'
@@ -28,6 +30,10 @@ export interface SendDeps {
   audioTranscript?: string | null
   /** M5: how images are stored, encoded and captured; the browser's by default. */
   turnInput?: TurnInputDeps
+  /** Spec P4: the user bubble shows the project's photos (the first request of a photo project). */
+  showPhotos?: boolean
+  /** How the project's photos are read; the database by default. */
+  loadPhotos?: typeof defaultLoadPhotos
 }
 
 /** How a turn ended, for the agent: whether it reviews the result (spec A3). */
@@ -83,11 +89,28 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<Tur
   // M5: images, sketches and the picked part travel with the prompt.
   useChatStore.setState({ busy: true })
   let input: TurnInput
+  // Spec P6: a photo project's reference photos go with every request.
+  const project = useProjectStore.getState().project
+  const photos = project?.photos ?? []
+  let modelText: TurnInput['userText']
+  let photoCtx: PromptContext['photos'] | undefined
+  let missingPhotos = 0
   try {
     input = await prepareTurnInput(
       { text: userText, attachments: useAttachments.getState().items, pick: useRefineStore.getState().pick, vision: profile.capabilities.vision },
       deps.turnInput,
     )
+    modelText = input.userText
+    if (photos.length > 0) {
+      const { loaded, missing } = await (deps.loadPhotos ?? defaultLoadPhotos)(photos)
+      missingPhotos = missing
+      if (loaded.length > 0) {
+        const parts = await photoParts(loaded, deps.turnInput?.toBase64)
+        const head: ContentPart[] = typeof modelText === 'string' ? [{ type: 'text', text: modelText }] : modelText
+        modelText = [...head, ...parts]
+        photoCtx = { angles: loaded.map((l) => l.photo.angle), scale: project?.scale ?? 'reference' }
+      }
+    }
   } catch (err) {
     useAttachments.getState().setError(errorMessage(err))
     useChatStore.setState({ busy: false })
@@ -113,6 +136,7 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<Tur
     }
   })
 
+  const shownImages = [...input.imageBlobIds, ...(deps.showPhotos ? photos.map((p) => p.blobId) : [])]
   chat.addMessage({
     role: 'user',
     text: deps.displayText?.trim() || userText,
@@ -121,8 +145,9 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<Tur
     usage: null,
     status: 'done',
     ...(deps.audioTranscript ? { audioTranscript: deps.audioTranscript } : {}),
-    ...(input.imageBlobIds.length > 0 ? { imageBlobIds: input.imageBlobIds } : {}),
+    ...(shownImages.length > 0 ? { imageBlobIds: shownImages } : {}),
   })
+  if (missingPhotos > 0) chat.addMessage(note(`${missingPhotos} ${missingPhotos === 1 ? 'photo' : 'photos'} could not be loaded`))
   const openReply = () => chat.addMessage({ role: 'assistant', text: '', turnLabel: null, model, usage: null, status: 'streaming' })
   let current = openReply()
   useChatStore.setState({ busy: true, fixing: null, draft: '', backTo: { label: chat.labelForCode(startCode), code: startCode } })
@@ -206,12 +231,14 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<Tur
       model,
       ...(reasoningEffort ? { reasoningEffort } : {}),
       history: chat.history,
-      userText: input.userText,
+      userText: modelText,
       // A selection's line numbers refer to the real code, even when it is the sample.
       ctx: {
         code: isEmptyCode(startCode) && !input.selection ? '' : startCode,
         libraries: currentLibraries(),
         ...(input.selection ? { selection: input.selection } : {}),
+        ...(photoCtx ? { photos: photoCtx } : {}),
+        ...(photos.length > 0 && Object.keys(useAppStore.getState().params).length > 0 ? { keepParams: useAppStore.getState().params } : {}),
       },
       maxFixAttempts: providers.settings.autoFixAttempts,
       render: deps.render ?? awaitRender,

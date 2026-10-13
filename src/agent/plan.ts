@@ -1,4 +1,5 @@
-import type { LlmProvider, Usage } from '../ai/types'
+import type { ContentPart, LlmProvider, Usage } from '../ai/types'
+import { PHOTO_PLAN_NOTE } from '../photos/photoPrompt'
 import { cleanChecks, MAX_CHECKS, type Check } from './checks'
 import { askForJson } from './llm'
 
@@ -29,12 +30,22 @@ export function parsePlan(value: unknown): Plan {
   return { checks, parts }
 }
 
-export async function runPlan(opts: { provider: LlmProvider; model: string; request: string; signal?: AbortSignal }): Promise<Plan & { usage: Usage }> {
+export async function runPlan(opts: {
+  provider: LlmProvider
+  model: string
+  request: string
+  /** Spec P6: the project's reference photos, sent after the request. */
+  photos?: ContentPart[]
+  signal?: AbortSignal
+}): Promise<Plan & { usage: Usage }> {
+  const request = `Request: ${opts.request}`
+  const content: string | ContentPart[] =
+    opts.photos && opts.photos.length > 0 ? [{ type: 'text', text: `${PHOTO_PLAN_NOTE}\n\n${request}` }, ...opts.photos] : request
   const { value, usage } = await askForJson({
     provider: opts.provider,
     model: opts.model,
     system: PLAN_SYSTEM,
-    content: `Request: ${opts.request}`,
+    content,
     parse: parsePlan,
     signal: opts.signal,
   })

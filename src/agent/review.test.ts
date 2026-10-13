@@ -149,3 +149,25 @@ it('reviews plain frames when the tagged render fails', async () => {
   expect(outcome.legend).toEqual([])
   expect((requests[0].messages[0].content as ContentPart[])[0]).toMatchObject({ text: expect.stringContaining('could not be coloured') })
 })
+
+it('appends the reference photos and the review note to the content', async () => {
+  const { provider, requests } = scriptedProvider(ANSWER)
+  await runReview(
+    {
+      provider,
+      model: 'seer',
+      request: 'A holder',
+      latest: 'A holder',
+      checks: CHECKS,
+      code: CODE,
+      params: {},
+      libraries: [],
+      base: ok,
+      photos: [{ type: 'text', text: 'Reference photo (top)' }, { type: 'image', mediaType: 'image/png', data: 'y' }],
+    },
+    fakeDeps(),
+  )
+  const content = requests[0].messages[0].content as ContentPart[]
+  expect((content.at(-3) as { text: string }).text).toContain('Compare the rendered front view with the front photo')
+  expect(content.slice(-2)).toEqual([{ type: 'text', text: 'Reference photo (top)' }, { type: 'image', mediaType: 'image/png', data: 'y' }])
+})

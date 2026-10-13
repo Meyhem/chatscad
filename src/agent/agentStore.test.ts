@@ -3,7 +3,6 @@ import 'fake-indexeddb/auto'
 import type { LlmProvider } from '../ai/types'
 import { useChatStore } from '../chat/chatStore'
 import type { TurnOutcome } from '../chat/sendPrompt'
-import { DEFAULT_SETTINGS, type ProviderProfile } from '../db/db'
 import { useProjectStore } from '../history/projectStore'
 import { useProvidersStore } from '../settings/providersStore'
 import { useSettingsStore } from '../settings/settingsStore'
@@ -12,7 +11,8 @@ import { scriptedProvider } from '../test/providers'
 import { resetDb } from '../test/resetDb'
 import { okResult } from '../test/results'
 import type { RenderResult } from '../render/types'
-import { fixText, useAgentStore, type AgentDeps, type ReviewCard } from './agentStore'
+import { db, DEFAULT_SETTINGS, type ProviderProfile } from '../db/db'
+import { fixText, useAgentStore, type AgentDeps, type ReviewCard, type SendOptions } from './agentStore'
 
 const MODEL_CODE = 'module body() cube([40, 20, 10]);\nmodule lid_rail() translate([0, 20, 8]) cube([40, 2, 2]);\nbody();\nlid_rail();\n'
 
@@ -48,11 +48,14 @@ function setup(replies: string[], opts: { visionOn?: boolean; settings?: Partial
   useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, ...opts.settings }, loaded: true })
   const scripted = scriptedProvider(...replies)
   const sent: Array<{ text: string; display?: string }> = []
+  const sendOpts: Array<SendOptions | undefined> = []
   const ok = okResult() as Extract<RenderResult, { ok: true }>
   const deps: AgentDeps = {
     provider: () => scripted.provider as LlmProvider,
-    send: async (text, display): Promise<TurnOutcome> => {
+    send: async (text, opts): Promise<TurnOutcome> => {
+      const display = opts?.display
       sent.push({ text, display })
+      sendOpts.push(opts)
       // Like sendPrompt: the bubble shows the short text and the draft clears.
       useChatStore.getState().addMessage({ role: 'user', text: display ?? text, turnLabel: null, model: null, usage: null, status: 'done' })
       useChatStore.getState().setDraft('')
@@ -69,7 +72,7 @@ function setup(replies: string[], opts: { visionOn?: boolean; settings?: Partial
     recordUsage: async () => {},
     objectUrl: () => 'blob:frame',
   }
-  return { deps, sent, requests: scripted.requests }
+  return { deps, sent, sendOpts, requests: scripted.requests }
 }
 
 const agent = () => useAgentStore.getState()
@@ -320,4 +323,24 @@ describe('review findings', () => {
     expect(cards()[0]).toMatchObject({ status: 'error', error: { title: 'The model changed since the plan' } })
     expect(reviewCards()).toEqual([])
   })
+})
+
+it('passes the project photos to the planner and the reviewer, and shows them on the first request', async () => {
+  const project = useProjectStore.getState().project!
+  useProjectStore.setState({ project: { ...project, origin: 'photos', photos: [{ id: 'a', blobId: 'blob-a', angle: 'front', addedAt: 1 }], scale: 'reference' } })
+  await db.blobs.put({ id: 'blob-a', kind: 'image', data: new Blob(['f'], { type: 'image/jpeg' }) })
+  const { deps, sendOpts, requests } = setup([PLAN, PASSES], { settings: { reviewApprovePlan: false } })
+  await agent().submit('A bracket', deps, { showPhotos: true })
+  const planContent = requests[0].messages[0].content as Array<{ type: string; text?: string }>
+  expect(planContent.map((p) => p.type)).toEqual(['text', 'text', 'image'])
+  expect(planContent[1]).toEqual({ type: 'text', text: 'Reference photo (front)' })
+  expect(sendOpts[0]).toEqual({ display: 'A bracket', transcript: undefined, showPhotos: true })
+  const reviewContent = requests[1].messages[0].content as Array<{ type: string; text?: string; data?: string }>
+  expect(reviewContent.slice(-2)).toEqual([{ type: 'text', text: 'Reference photo (front)' }, { type: 'image', mediaType: 'image/jpeg', data: btoa('f') }])
+})
+
+it('keeps the first request without photos in the bubble when it was not asked to show them', async () => {
+  const { deps, sendOpts } = setup([], { visionOn: false })
+  await agent().submit('A box', deps)
+  expect(sendOpts[0]).toEqual({ display: undefined, transcript: undefined, showPhotos: false })
 })

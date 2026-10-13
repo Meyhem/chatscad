@@ -1,5 +1,6 @@
 import type { ContentPart, LlmProvider, Usage } from '../ai/types'
 import type { PresetView } from '../export/frames'
+import { PHOTO_REVIEW_NOTE } from '../photos/photoPrompt'
 import { formatDims } from '../render/dims'
 import type { MeshData, ParamValue, RenderRequest, RenderResult } from '../render/types'
 import { formatLines, listTaggableStatements, resolveEditScope } from '../scad/statements'
@@ -193,6 +194,8 @@ export async function runReview(
     libraries: string[]
     /** The successful untagged render of `code` the review is about. */
     base: Extract<RenderResult, { ok: true }>
+    /** Spec P6: the project's reference photos, sent after the rendered views. */
+    photos?: ContentPart[]
     signal?: AbortSignal
   },
   deps: ReviewDeps,
@@ -227,7 +230,10 @@ export async function runReview(
     provider: opts.provider,
     model: opts.model,
     system: REVIEW_SYSTEM,
-    content: buildReviewContent({ request: opts.request, latest: opts.latest, checks: opts.checks, code: opts.code, facts, legend, images }),
+    content: [
+      ...buildReviewContent({ request: opts.request, latest: opts.latest, checks: opts.checks, code: opts.code, facts, legend, images }),
+      ...(opts.photos && opts.photos.length > 0 ? [{ type: 'text' as const, text: PHOTO_REVIEW_NOTE }, ...opts.photos] : []),
+    ],
     parse: (v) => parseReview(v, opts.checks),
     signal: opts.signal,
   })

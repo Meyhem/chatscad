@@ -34,3 +34,19 @@ it('asks the builder model for checks with the request, and reports usage', asyn
   expect(requests[0].system).toBe(PLAN_SYSTEM)
   expect(requests[0].messages[0].content).toContain('A holder for four 18650 cells with a sliding lid')
 })
+
+it('sends the photos after the request, with the planning note', async () => {
+  const { provider, requests } = scriptedProvider(REPLY)
+  await runPlan({ provider, model: 'm', request: 'A bracket', photos: [{ type: 'text', text: 'Reference photo (front)' }, { type: 'image', mediaType: 'image/jpeg', data: 'x' }] })
+  expect(requests[0].messages[0].content).toEqual([
+    { type: 'text', text: 'Reference photos of the real object are attached. Plan checks for the features they show and for every size in the description.\n\nRequest: A bracket' },
+    { type: 'text', text: 'Reference photo (front)' },
+    { type: 'image', mediaType: 'image/jpeg', data: 'x' },
+  ])
+})
+
+it('sends the plain request when there are no photos', async () => {
+  const { provider, requests } = scriptedProvider(REPLY)
+  await runPlan({ provider, model: 'm', request: 'A bracket', photos: [] })
+  expect(requests[0].messages[0].content).toBe('Request: A bracket')
+})

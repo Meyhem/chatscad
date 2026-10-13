@@ -2,6 +2,7 @@ import { ProviderError, type LlmProvider } from '../ai/types'
 import { DEFAULT_SETTINGS, db } from '../db/db'
 import { newProfile } from '../db/profiles'
 import { useRefineStore } from '../refine/refineStore'
+import { useProjectStore } from '../history/projectStore'
 import { useProvidersStore } from '../settings/providersStore'
 import { useAppStore } from '../state/store'
 import { resetDb } from '../test/db'
@@ -352,4 +353,44 @@ it('agent: shows the short text in the bubble and sends the full text to the mod
   await sendPrompt('A block\n\nThe model must meet these checks: …', { createProvider: () => provider, render: async () => okResult(), displayText: 'A block' })
   expect(chat().messages[0]).toMatchObject({ role: 'user', text: 'A block' })
   expect(JSON.stringify(requests[0].messages)).toContain('The model must meet these checks')
+})
+
+describe('P6: a photo project', () => {
+  afterEach(() => useProjectStore.setState({ project: null }))
+
+  it('sends the project photos with the request, notes a missing one and keeps the user’s sizes', async () => {
+    useProjectStore.setState({
+      project: {
+        id: 'p', name: 'P', createdAt: 1, updatedAt: 1, headVersionId: null, providerProfileId: null, enabledLibraries: [], origin: 'photos',
+        photos: [
+          { id: 'a', blobId: 'blob-front', angle: 'front', addedAt: 1 },
+          { id: 'b', blobId: 'blob-gone', angle: 'top', addedAt: 2 },
+        ],
+        scale: 'reference',
+      },
+    })
+    useAppStore.setState({ code: 'h = 10;', params: { h: 12 } })
+    const { provider, requests } = scriptedProvider({ text: 'Done.\n\n```openscad\nh = 12; // [1:20] from description\ncube(h);\n```' })
+    await sendPrompt('Make it taller', {
+      createProvider: () => provider,
+      render: async () => okResult(),
+      showPhotos: true,
+      loadPhotos: async (photos) => ({
+        loaded: photos.filter((p) => p.blobId === 'blob-front').map((photo) => ({ photo, blob: new Blob(['f'], { type: 'image/jpeg' }), mediaType: 'image/jpeg' as const })),
+        missing: 1,
+      }),
+      turnInput: { saveImage: async () => 'saved', toBase64: async (b) => `b64:${await b.text()}`, captureViewport: async () => null },
+    })
+    expect(requests[0]!.system).toContain('Reference photos of the real object are attached')
+    const content = requests[0]!.messages.at(-1)!.content as Array<{ type: string; text?: string; data?: string }>
+    expect(content.map((p) => p.type)).toEqual(['text', 'text', 'text', 'image'])
+    expect(content[0]!.text).toContain('The user set these sizes; keep them: h = 12.')
+    expect(content[1]).toEqual({ type: 'text', text: 'Make it taller' })
+    expect(content[2]).toEqual({ type: 'text', text: 'Reference photo (front)' })
+    expect(content[3]).toMatchObject({ type: 'image', mediaType: 'image/jpeg', data: 'b64:f' })
+    const messages = useChatStore.getState().messages
+    expect(messages[0]!.imageBlobIds).toEqual(['blob-front', 'blob-gone'])
+    expect(messages.some((m) => m.role === 'note' && m.text === '1 photo could not be loaded')).toBe(true)
+    expect(chat().history[0]).toEqual({ role: 'user', content: 'Make it taller' })
+  })
 })

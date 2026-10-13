@@ -2,13 +2,14 @@ import { create } from 'zustand'
 import { computeCost, priceFor } from '../ai/cost'
 import { createProvider } from '../ai/createProvider'
 import { describeProviderError } from '../ai/errors'
-import type { LlmProvider, Usage } from '../ai/types'
+import type { ContentPart, LlmProvider, Usage } from '../ai/types'
 import { useChatStore } from '../chat/chatStore'
 import { sendPrompt, stopTurn, type TurnOutcome } from '../chat/sendPrompt'
 import type { AgentMode, ProviderProfile } from '../db/db'
 import type { PresetView } from '../export/frames'
 import { useProjectStore } from '../history/projectStore'
 import { blobToBase64 } from '../images/base64'
+import { loadPhotos, photoParts } from '../photos/projectPhotos'
 import { errorMessage } from '../render/result'
 import { getRenderQueue } from '../render/sharedQueue'
 import type { RenderResult } from '../render/types'
@@ -43,6 +44,8 @@ export interface PlanCard {
   error: { title: string; body: string } | null
   /** The dictated transcript behind the request, kept for the build. */
   transcript?: string
+  /** Spec P4: the build's user bubble shows the project photos. */
+  showPhotos?: boolean
 }
 
 export interface ReviewCard {
@@ -69,8 +72,17 @@ export interface ReviewCard {
 
 export type AgentCard = PlanCard | ReviewCard
 
+export interface SendOptions {
+  /** What the user bubble shows when the model gets a longer text. */
+  display?: string
+  /** The dictated transcript behind the request. */
+  transcript?: string
+  /** Spec P4: the user bubble shows the project photos. */
+  showPhotos?: boolean
+}
+
 export interface AgentDeps {
-  send(text: string, display?: string, transcript?: string): Promise<TurnOutcome>
+  send(text: string, opts?: SendOptions): Promise<TurnOutcome>
   provider(profile: ProviderProfile): LlmProvider
   review: ReviewDeps
   recordUsage(input: { profile: ProviderProfile; model: string; usage: Usage; projectId: string | null }): Promise<unknown>
@@ -78,8 +90,12 @@ export interface AgentDeps {
 }
 
 const browserDeps: AgentDeps = {
-  send: (text, display, transcript) => {
-    const extra = { ...(display ? { displayText: display } : {}), ...(transcript ? { audioTranscript: transcript } : {}) }
+  send: (text, opts = {}) => {
+    const extra = {
+      ...(opts.display ? { displayText: opts.display } : {}),
+      ...(opts.transcript ? { audioTranscript: opts.transcript } : {}),
+      ...(opts.showPhotos ? { showPhotos: true } : {}),
+    }
     return Object.keys(extra).length > 0 ? sendPrompt(text, extra) : sendPrompt(text)
   },
   provider: createProvider,
@@ -90,6 +106,14 @@ const browserDeps: AgentDeps = {
   },
   recordUsage: (input) => recordAgentUsage(input),
   objectUrl: (blob) => URL.createObjectURL(blob),
+}
+
+/** The open project's reference photos as content parts (spec P6); empty for other projects. */
+export async function projectPhotoParts(): Promise<{ parts: ContentPart[]; missing: number }> {
+  const photos = useProjectStore.getState().project?.photos ?? []
+  if (photos.length === 0) return { parts: [], missing: 0 }
+  const { loaded, missing } = await loadPhotos(photos)
+  return { parts: await photoParts(loaded), missing }
 }
 
 export interface AgentState {
@@ -103,7 +127,7 @@ export interface AgentState {
   partColours: boolean
   setPartColours(on: boolean): void
   /** Sends a request in `mode` (the project's mode by default): Edit is one builder turn, Agent plans, builds and reviews. */
-  submit(text: string, deps?: AgentDeps, extra?: { audioTranscript?: string; mode?: AgentMode }): Promise<void>
+  submit(text: string, deps?: AgentDeps, extra?: { audioTranscript?: string; mode?: AgentMode; showPhotos?: boolean }): Promise<void>
   approvePlan(cardId: string, deps?: AgentDeps): Promise<void>
   skipPlan(cardId: string, deps?: AgentDeps): Promise<void>
   setPlanChecks(cardId: string, checks: Check[]): void
@@ -256,7 +280,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     return card.id
   }
 
-  async function plan(request: string, then: PlanCard['then'], deps: AgentDeps, transcript?: string): Promise<string | null> {
+  async function plan(request: string, then: PlanCard['then'], deps: AgentDeps, transcript?: string, showPhotos = false): Promise<string | null> {
     const providers = useProvidersStore.getState()
     const profile = selectActiveProfile(providers)
     const model = selectActiveModel(providers)
@@ -273,12 +297,14 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       usage: null,
       error: null,
       ...(transcript ? { transcript } : {}),
+      ...(showPhotos ? { showPhotos } : {}),
     })
     const controller = new AbortController()
     running = controller
     set({ busy: 'planning' })
     try {
-      const result = await runPlan({ provider: deps.provider(profile), model, request, signal: controller.signal })
+      const { parts } = await projectPhotoParts()
+      const result = await runPlan({ provider: deps.provider(profile), model, request, photos: parts, signal: controller.signal })
       void deps.recordUsage({ profile, model, usage: result.usage, projectId: useProjectStore.getState().project?.id ?? null }).catch(() => {})
       patch<PlanCard>(id, { status: 'ready', checks: result.checks, parts: result.parts, usage: cardUsage({ profile, model }, result.usage) })
     } catch (err) {
@@ -295,9 +321,17 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     for (const card of Object.values(get().cards)) if (card.status === 'ready') patch(card.id, { status: 'superseded' })
   }
 
-  async function build(text: string, display: string | undefined, review: boolean, round: number, deps: AgentDeps, transcript?: string): Promise<void> {
+  async function build(
+    text: string,
+    display: string | undefined,
+    review: boolean,
+    round: number,
+    deps: AgentDeps,
+    transcript?: string,
+    showPhotos = false,
+  ): Promise<void> {
     supersedeOpenCards()
-    const outcome = await deps.send(text, display, transcript)
+    const outcome = await deps.send(text, { display, transcript, showPhotos })
     if (!review || !outcome?.sent || outcome.stopped || !outcome.rendered?.ok) return
     await reviewRound(round, deps)
   }
@@ -333,6 +367,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     let next: ReviewCard | null = null
     try {
       const request = get().anchor ?? firstUserText() ?? lastUserText() ?? ''
+      const { parts } = await projectPhotoParts()
       const outcome = await runReview(
         {
           provider: deps.provider(reviewer.profile),
@@ -344,6 +379,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
           params: app.params,
           libraries: app.libraries,
           base,
+          photos: parts,
           signal: controller.signal,
         },
         deps.review,
@@ -394,7 +430,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       set({ latest: request, ...(newModel ? { anchor: request } : {}) })
       if (!agentRun) {
         useChatStore.getState().setActiveRun(null)
-        await build(request, undefined, false, 1, deps, extra.audioTranscript)
+        await build(request, undefined, false, 1, deps, extra.audioTranscript, extra.showPhotos)
         return
       }
       startRun()
@@ -403,11 +439,11 @@ export const useAgentStore = create<AgentState>()((set, get) => {
         // The request now lives on the plan card; an Enter on the same text would plan it twice.
         useChatStore.getState().setDraft('')
         supersedeOpenCards()
-        const id = await plan(request, 'build', deps, extra.audioTranscript)
+        const id = await plan(request, 'build', deps, extra.audioTranscript, extra.showPhotos)
         if (id && !useSettingsStore.getState().settings.reviewApprovePlan) await get().approvePlan(id, deps)
         return
       }
-      await build(request, undefined, true, 1, deps, extra.audioTranscript)
+      await build(request, undefined, true, 1, deps, extra.audioTranscript, extra.showPhotos)
     },
 
     async approvePlan(cardId, deps = browserDeps) {
@@ -425,7 +461,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       await useProjectStore.getState().setChecks(card.checks)
       set({ anchor: card.request })
       if (card.then === 'review') await reviewRound(1, deps)
-      else await build(buildText(card.request, card.checks, card.parts), card.request, true, 1, deps, card.transcript)
+      else await build(buildText(card.request, card.checks, card.parts), card.request, true, 1, deps, card.transcript, card.showPhotos)
     },
 
     async skipPlan(cardId, deps = browserDeps) {
@@ -433,7 +469,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       if (card?.kind !== 'plan' || card.status !== 'ready' || isBusy()) return
       resumeRun(card)
       patch<PlanCard>(cardId, { status: 'skipped' })
-      if (card.then === 'build') await build(card.request, undefined, false, 1, deps, card.transcript)
+      if (card.then === 'build') await build(card.request, undefined, false, 1, deps, card.transcript, card.showPhotos)
     },
 
     setPlanChecks(cardId, checks) {
