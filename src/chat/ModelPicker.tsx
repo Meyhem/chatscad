@@ -39,6 +39,13 @@ export function ModelPicker() {
   }
 
   const typed = query.trim()
+  const groups = profiles
+    .map((p) => {
+      const names = new Map(p.cachedModels.map((m) => [m.id, m.name ?? '']))
+      return { profile: p, ids: fuzzyFilter(typed, modelIds(p), (id) => [id, names.get(id) ?? '']).slice(0, MAX_PER_PROFILE) }
+    })
+    .filter((g) => g.ids.length > 0)
+  const top = typed !== '' ? groups[0] : undefined
   const pick = (profileId: string, id: string) => {
     void chooseModel(profileId, id)
     setOpen(false)
@@ -81,33 +88,33 @@ export function ModelPicker() {
               spellCheck={false}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && typed !== '' && active) {
+                if (e.key !== 'Enter' || typed === '') return
+                if (top) {
+                  e.preventDefault()
+                  pick(top.profile.id, top.ids[0])
+                } else if (active) {
                   e.preventDefault()
                   pick(active.id, typed)
                 }
               }}
             />
           </div>
-          {profiles.map((p) => {
-            const ids = fuzzyFilter(typed, modelIds(p)).slice(0, MAX_PER_PROFILE)
-            if (ids.length === 0) return null
-            return (
-              <div key={p.id} role="group" aria-label={p.name} className="flex flex-col">
-                <span className="pc-label px-2 py-1">{p.name}</span>
-                {ids.map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className="pc-btn is-ghost is-sm justify-start font-mono"
-                    aria-pressed={p.id === active?.id && id === model}
-                    onClick={() => pick(p.id, id)}
-                  >
-                    {id}
-                  </button>
-                ))}
-              </div>
-            )
-          })}
+          {groups.map(({ profile: p, ids }) => (
+            <div key={p.id} role="group" aria-label={p.name} className="flex flex-col">
+              <span className="pc-label px-2 py-1">{p.name}</span>
+              {ids.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="pc-btn is-ghost is-sm justify-start font-mono"
+                  aria-pressed={p.id === active?.id && id === model}
+                  onClick={() => pick(p.id, id)}
+                >
+                  {id}
+                </button>
+              ))}
+            </div>
+          ))}
           {offerTyped && active && (
             <button type="button" className="pc-btn is-sm justify-start" onClick={() => pick(active.id, typed)}>
               Use “{typed}” with {active.name}

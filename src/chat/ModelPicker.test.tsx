@@ -89,3 +89,34 @@ it('closes on Escape', async () => {
 it('puts the default model first when the provider did not list it', () => {
   expect(modelIds({ ...anthropic, cachedModels: [{ id: 'claude-a' }] })).toEqual(['claude-sonnet-5-5', 'claude-a'])
 })
+
+const deepseek = newProfile({
+  name: 'DeepSeek router',
+  adapter: 'openai-compatible',
+  baseUrl: 'https://openrouter.ai/api/v1',
+  defaultModel: 'openai/gpt-5-mini',
+  cachedModels: [
+    { id: 'openai/gpt-5-mini', name: 'OpenAI: GPT-5 Mini' },
+    { id: 'deepseek/deepseek-v4-flash', name: 'DeepSeek: DeepSeek V4 Flash' },
+    { id: 'acme/m1', name: 'Acme Falcon' },
+  ],
+})
+
+it('finds a model by its display name', async () => {
+  seed([deepseek])
+  render(<ModelPicker />)
+  await userEvent.click(screen.getByRole('button', { name: 'Model: openai/gpt-5-mini' }))
+  await userEvent.type(screen.getByLabelText('Search models'), 'falcon')
+  expect(screen.getByRole('button', { name: 'acme/m1' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'openai/gpt-5-mini' })).toBeNull()
+})
+
+it('picks the top match with Enter for a loose multi-word query', async () => {
+  seed([deepseek])
+  render(<ModelPicker />)
+  await userEvent.click(screen.getByRole('button', { name: 'Model: openai/gpt-5-mini' }))
+  await userEvent.type(screen.getByLabelText('Search models'), 'dee fla 4')
+  await userEvent.keyboard('{Enter}')
+  expect(selectActiveModel(useProvidersStore.getState())).toBe('deepseek/deepseek-v4-flash')
+  expect(screen.queryByLabelText('Search models')).toBeNull()
+})
