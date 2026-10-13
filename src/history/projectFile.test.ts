@@ -6,7 +6,7 @@ import { putPreset } from '../db/presets'
 import { useSettingsStore } from '../settings/settingsStore'
 import { useAppStore } from '../state/store'
 import { resetDb } from '../test/resetDb'
-import { exportAllProjects, exportProject, importFromText, parseImport, projectFileName, type ProjectFile } from './projectFile'
+import { exportAllProjects, exportProject, importFromText, importProjectFile, parseImport, projectFileName, type ProjectFile } from './projectFile'
 import { useProjectStore } from './projectStore'
 import { listVersions } from './versions'
 
@@ -165,4 +165,20 @@ it('rejects a reasoning that is not text', async () => {
   const file = JSON.parse(JSON.stringify(await exportProject(project.id))) as ProjectFile
   ;(file.messages[0] as unknown as Record<string, unknown>).reasoning = 42
   expect(parseImport(file).ok).toBe(false)
+})
+
+it('exports and imports the checks, and imports files without them', async () => {
+  const project = await store().newProject({ name: 'Holder', code: 'cube(1);', origin: 'blank' })
+  await store().setChecks([{ id: 'c1', kind: 'size', text: 'Walls at least 2 mm' }])
+  const file = await exportProject(project.id)
+  expect(file.project.checks).toEqual([{ id: 'c1', kind: 'size', text: 'Walls at least 2 mm' }])
+  const copy = await importProjectFile(file)
+  expect(copy.checks).toEqual([{ id: 'c1', kind: 'size', text: 'Walls at least 2 mm' }])
+
+  const { checks: _, ...withoutChecks } = file.project
+  const parsed = parseImport({ ...file, project: withoutChecks })
+  expect(parsed.ok && parsed.files[0].project.checks).toBeUndefined()
+
+  const bad = parseImport({ ...file, project: { ...file.project, checks: 'all of them' } })
+  expect(bad).toEqual({ ok: false, error: 'project.checks must be a list' })
 })

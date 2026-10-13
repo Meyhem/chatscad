@@ -1,3 +1,4 @@
+import type { Check } from '../agent/checks'
 import type { PanelLayout } from '../layout/panelLayout'
 import Dexie, { type Table } from 'dexie'
 import type { AdapterKind, ModelInfo, ModelPrice, ProviderCapabilities, ReasoningEffort } from '../ai/types'
@@ -87,6 +88,8 @@ export interface Project {
   providerProfileId: string | null
   enabledLibraries: string[] // 'BOSL2' | 'MCAD'
   origin: 'blank' | 'gallery' | 'shared-link'
+  /** The agent's checks for this project; absent until a plan is approved or a check is added. */
+  checks?: Check[]
 }
 
 export interface Version {

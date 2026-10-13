@@ -8,6 +8,7 @@ import { getProject, listAllProjects } from '../db/projects'
 import { saveFile } from '../export/saveFile'
 import { isLibraryName } from '../render/libraries'
 import type { ParamValue } from '../render/types'
+import { cleanChecks, MAX_CHECKS, type Check } from '../agent/checks'
 import { listVersions } from './versions'
 
 export const PROJECT_FORMAT = 'chatscad-project'
@@ -23,7 +24,7 @@ export interface ProjectFile {
   format: typeof PROJECT_FORMAT
   version: 1
   exportedAt: number
-  project: { name: string; origin: Project['origin']; enabledLibraries: string[] }
+  project: { name: string; origin: Project['origin']; enabledLibraries: string[]; checks?: Check[] }
   headVersionId: string
   versions: FileVersion[]
   messages: FileMessage[]
@@ -119,6 +120,7 @@ function parseProject(v: unknown, at: string): ProjectFile {
   const enabledLibraries = list(project, 'enabledLibraries', `${p}project.`, 10).map((lib, i) =>
     typeof lib === 'string' && isLibraryName(lib) ? lib : fail(`${p}project.enabledLibraries[${i}]`, 'must be BOSL2 or MCAD'),
   )
+  const checks = project.checks === undefined ? undefined : cleanChecks(list(project, 'checks', `${p}project.`, MAX_CHECKS))
 
   const ids = new Set<string>()
   const labels = new Set<string>()
@@ -185,7 +187,7 @@ function parseProject(v: unknown, at: string): ProjectFile {
     format: PROJECT_FORMAT,
     version: 1,
     exportedAt: typeof o.exportedAt === 'number' ? o.exportedAt : 0,
-    project: { name, origin, enabledLibraries },
+    project: { name, origin, enabledLibraries, ...(checks ? { checks } : {}) },
     headVersionId: head,
     versions,
     messages,
@@ -216,7 +218,12 @@ export async function exportProject(projectId: string): Promise<ProjectFile> {
     format: PROJECT_FORMAT,
     version: 1,
     exportedAt: Date.now(),
-    project: { name: project.name, origin: project.origin, enabledLibraries: project.enabledLibraries },
+    project: {
+      name: project.name,
+      origin: project.origin,
+      enabledLibraries: project.enabledLibraries,
+      ...(project.checks ? { checks: project.checks } : {}),
+    },
     headVersionId: project.headVersionId,
     versions: versions.map((v) => ({
       id: v.id, parentId: v.parentId, code: v.code, params: v.params, source: v.source, kind: v.kind, variantGroupId: v.variantGroupId,
@@ -248,6 +255,7 @@ export async function importProjectFile(file: ProjectFile): Promise<Project> {
     providerProfileId: null,
     enabledLibraries: file.project.enabledLibraries,
     origin: file.project.origin,
+    ...(file.project.checks ? { checks: file.project.checks } : {}),
   }
   const versions: Version[] = file.versions.map((v) => ({
     ...v,

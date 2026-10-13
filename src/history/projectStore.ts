@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { Check } from '../agent/checks'
 import type { Project, Version, VersionSource } from '../db/db'
 import { deleteProjectCascade, getProject, listRecentProjects, putProject } from '../db/projects'
 import type { Params } from '../render/params'
@@ -38,6 +39,7 @@ export interface ProjectState {
   renameProject(name: string): Promise<void>
   deleteProject(id: string): Promise<void>
   setEnabledLibraries(libraries: string[]): Promise<void>
+  setChecks(checks: Check[]): Promise<void>
   refreshRecent(): Promise<void>
 }
 
@@ -226,6 +228,14 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
       const next = get().recent[0]
       if (next) await get().openProject(next.id)
       else await get().newProject({ code: useAppStore.getState().code, origin: 'blank' })
+    },
+
+    async setChecks(checks) {
+      const project = get().project
+      if (!project) return
+      const updated: Project = { ...project, checks, updatedAt: Date.now() }
+      set({ project: updated })
+      await putProject(updated)
     },
 
     async setEnabledLibraries(libraries) {

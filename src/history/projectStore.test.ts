@@ -177,3 +177,13 @@ it('shows new libraries at once, before the database write finishes, so a contro
   await pending
   expect((await getProject(store().project!.id))?.enabledLibraries).toEqual(['MCAD'])
 })
+
+it('stores the checks of a project and keeps them when it is opened again', async () => {
+  const project = await store().newProject({ code: CODE, origin: 'blank' })
+  expect(store().project?.checks).toBeUndefined()
+  await store().setChecks([{ id: 'c1', kind: 'part', text: 'A lid' }])
+  expect(store().project?.checks).toEqual([{ id: 'c1', kind: 'part', text: 'A lid' }])
+  expect((await getProject(project.id))?.checks).toEqual([{ id: 'c1', kind: 'part', text: 'A lid' }])
+  await store().openProject(project.id)
+  expect(store().project?.checks).toHaveLength(1)
+})
