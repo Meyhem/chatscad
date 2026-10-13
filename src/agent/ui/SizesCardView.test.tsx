@@ -69,3 +69,15 @@ it('shows the edited value once the sizes are accepted', () => {
   render(<SizesCardView card={accepted} />)
   expect(screen.getByText('3.4 mm')).toBeInTheDocument()
 })
+
+it('asks for the guessed sizes to be checked first, with no claim about their accuracy', () => {
+  render(<SizesCardView card={card} />)
+  expect(screen.getByText('Check the guessed sizes first. The model estimated them from the photos.')).toBeInTheDocument()
+  expect(screen.queryByText(/within about/)).toBeNull()
+})
+
+it('says every size was given when none is guessed', () => {
+  const given: SizesCard = { ...card, rows: card.rows.filter((r) => r.source !== 'guess') }
+  render(<SizesCardView card={given} />)
+  expect(screen.getByText('Every size came from the description or the photos.')).toBeInTheDocument()
+})

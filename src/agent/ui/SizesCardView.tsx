@@ -71,7 +71,7 @@ export function SizesCardView({ card }: { card: SizesCard }) {
         {card.status === 'accepted' && <span className="pc-status is-ok">Checked</span>}
         {card.status === 'superseded' && <span className="pc-status">Out of date</span>}
       </div>
-      {open && <span className="pc-caption">{guessed > 0 ? 'Check the guessed sizes first. Photo estimates are within about 1 mm.' : 'Every size came from the description or the photos.'}</span>}
+      {open && <span className="pc-caption">{guessed > 0 ? 'Check the guessed sizes first. The model estimated them from the photos.' : 'Every size came from the description or the photos.'}</span>}
       <div>
         {card.rows.map((row) => (
           <div key={row.name} className="grid items-center gap-2 border-b border-line py-1 text-[13px] last:border-b-0" style={{ gridTemplateColumns: 'minmax(0, 1fr) 96px 128px' }}>
