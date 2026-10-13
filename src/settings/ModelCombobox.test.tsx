@@ -100,3 +100,39 @@ it('scrolls the highlighted option into view', async () => {
   await userEvent.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}')
   expect(scrolled.at(-1)).toContain('model-2')
 })
+
+const ROUTER: ModelInfo[] = [
+  { id: 'openai/gpt-5-mini', name: 'OpenAI: GPT-5 Mini' },
+  { id: 'example/flash-lite', name: 'Example Flash Lite' },
+  { id: 'deepseek/deepseek-v4-flash', name: 'DeepSeek: DeepSeek V4 Flash' },
+]
+
+it('finds a model from loose words, punctuation and typos, best match first', async () => {
+  render(<Harness models={ROUTER} />)
+  await userEvent.type(box(), 'dee fla 4')
+  expect(options()[0]).toHaveTextContent('deepseek/deepseek-v4-flash')
+  expect(options()).toHaveLength(2) // the match and "Use … as typed"
+
+  await userEvent.clear(box())
+  await userEvent.type(box(), 'DeepSeek/V4')
+  expect(options()[0]).toHaveTextContent('deepseek/deepseek-v4-flash')
+
+  await userEvent.clear(box())
+  await userEvent.type(box(), 'flahs')
+  expect(options().map((o) => o.textContent)).toEqual([
+    expect.stringContaining('example/flash-lite'),
+    expect.stringContaining('deepseek/deepseek-v4-flash'),
+    'Use “flahs” as typed',
+  ])
+})
+
+it('highlights and counts the ranked list, not the provider order', async () => {
+  const onPick = vi.fn()
+  const listed = [ROUTER[2], ROUTER[0], ROUTER[1]] // DeepSeek first in the provider's order
+  render(<Harness models={listed} onPick={onPick} />)
+  await userEvent.type(box(), 'flash')
+  // "Example Flash Lite" has "flash" as a whole word earlier in its name than the DeepSeek entry.
+  expect(screen.getByText('2 of 3 models · prices per 1M input / output tokens')).toBeInTheDocument()
+  await userEvent.keyboard('{ArrowDown}{Enter}')
+  expect(onPick).toHaveBeenCalledWith(ROUTER[1])
+})

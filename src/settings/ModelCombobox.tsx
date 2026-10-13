@@ -1,5 +1,6 @@
 import { useEffect, useState, type KeyboardEvent } from 'react'
 import type { ModelInfo, ModelPrice } from '../ai/types'
+import { fuzzyFilter } from '../chat/fuzzy'
 import { IconPlus, IconSearch } from '../ui/icons'
 
 const MAX_SHOWN = 50
@@ -28,8 +29,7 @@ export function ModelCombobox({ id, value, models, priceTable, onChange, onPick 
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(-1)
-  const q = query.trim().toLowerCase()
-  const matches = q === '' ? models : models.filter((m) => m.id.toLowerCase().includes(q) || (m.name ?? '').toLowerCase().includes(q))
+  const matches = fuzzyFilter(query, models, (m) => [m.id, m.name ?? ''])
   const shown = matches.slice(0, MAX_SHOWN)
   const asTyped = query.trim() !== '' && !models.some((m) => m.id === query.trim())
   const count = shown.length + (asTyped ? 1 : 0)
