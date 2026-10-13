@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PreparedImage } from '../images/prepareImage'
 import { addDraftPhotos, layoutFor, removeDraftPhoto, type DraftState } from './photoDraft'
-import { MAX_PROJECT_PHOTOS, tooManyPhotos, type PhotoAngle } from './projectPhotos'
+import { MAX_PROJECT_PHOTOS, onePhotoOnly, tooManyPhotos, type PhotoAngle } from './projectPhotos'
 
 const revoke = (url: string) => URL.revokeObjectURL?.(url)
 
@@ -48,8 +48,10 @@ export function useDraftPhotos({ layout, prepare, objectUrl }: Options) {
         const photos = layoutFor(now, [...latest.current.photos, ...added]).slice(0, MAX_PROJECT_PHOTOS)
         const dropped = added.filter((p) => !photos.some((kept) => kept.id === p.id))
         for (const p of dropped) revoke(p.url)
-        const overCap = now === 'angles' && dropped.length > 0
-        commit({ photos, error: overCap ? tooManyPhotos(dropped[0]!.name) : next.error })
+        // A photo the layout had no room for is named, so it is not lost without a word.
+        const first = dropped[0]
+        const error = first ? (now === 'angles' ? tooManyPhotos(first.name) : onePhotoOnly(first.name)) : next.error
+        commit({ photos, error })
       })
       .catch(() => {}) // one failed batch must not stop later picks
   }

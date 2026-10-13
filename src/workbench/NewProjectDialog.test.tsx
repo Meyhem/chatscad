@@ -223,3 +223,14 @@ it('keeps picked photos under StrictMode, whose effects mount twice in developme
   fireEvent.change(screen.getByLabelText('Add front photo'), { target: { files: [new File(['x'], 'front.jpg', { type: 'image/jpeg' })] } })
   expect(await screen.findByRole('img', { name: 'Front photo' })).toBeInTheDocument()
 })
+
+it('takes the first of several photos picked for the one-photo slot and names the next one it left out', async () => {
+  const prepare = async (b: Blob) => ({ blob: b, mediaType: 'image/jpeg' as const, width: 1, height: 1 })
+  setup({ prepare })
+  fireEvent.click(screen.getByRole('radio', { name: 'Photos' }))
+  fireEvent.click(screen.getByRole('radio', { name: 'One photo' }))
+  const files = ['a.jpg', 'b.jpg', 'c.jpg'].map((n) => new File(['x'], n, { type: 'image/jpeg' }))
+  fireEvent.change(screen.getByLabelText('Add photo'), { target: { files } })
+  expect(await screen.findByRole('alert')).toHaveTextContent('One photo only. b.jpg was not added.')
+  expect(screen.getAllByRole('img')).toHaveLength(1)
+})

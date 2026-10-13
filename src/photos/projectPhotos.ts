@@ -32,6 +32,7 @@ export const PHOTO_LABEL: Record<PhotoAngle, string> = {
 }
 
 export const tooManyPhotos = (name: string): string => `Up to ${MAX_PROJECT_PHOTOS} photos per project. ${name} was not added.`
+export const onePhotoOnly = (name: string): string => `One photo only. ${name} was not added.`
 export const unreadablePhoto = (name: string): string => `Could not read ${name}. Add a PNG, JPEG or WebP image.`
 
 export function preparePhoto(blob: Blob, type: OutputType = outputTypeFor(blob.type), codec?: ImageCodec): Promise<PreparedImage> {
