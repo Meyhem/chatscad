@@ -1,7 +1,12 @@
 import { GizmoHelper, GizmoViewport, Grid, OrbitControls } from '@react-three/drei'
 import { Canvas, useThree, type ThreeEvent } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AxesHelper, Color, Object3D, type PerspectiveCamera, type Vector3 } from 'three'
+import { AxesHelper, BufferAttribute, Color, Object3D, type PerspectiveCamera, type Vector3 } from 'three'
+import { useAgentStore } from '../agent/agentStore'
+import { faceColourArray, PART_COLOUR_COUNT } from '../agent/partColours'
+import { buildLegend } from '../agent/review'
+import { Legend } from '../agent/ui/Legend'
+import { PartColoursToggle } from '../agent/ui/PartColoursToggle'
 import { focusComposer } from '../refine/focusComposer'
 import { isTap, resolvePick, type ScreenPoint } from '../refine/pick'
 import { PickPopover } from '../refine/PickPopover'
@@ -26,7 +31,8 @@ import { ViewportCapture } from './ViewportCapture'
 // OpenSCAD is Z-up. This must run before any camera or controls are created.
 Object3D.DEFAULT_UP.set(0, 0, 1)
 
-const TOKENS = ['viewport', 'filament', 'grid-minor', 'grid-major', 'axis-x', 'axis-y', 'axis-z', 'ink', 'pick'] as const
+const PART_TOKENS = [...Array.from({ length: PART_COLOUR_COUNT }, (_, i) => `part-${i + 1}` as const), 'part-none'] as const
+const TOKENS = ['viewport', 'filament', 'grid-minor', 'grid-major', 'axis-x', 'axis-y', 'axis-z', 'ink', 'pick', ...PART_TOKENS] as const
 
 /** The screens dim the last good model to 55 % while the current code fails (`scene.is-stale`). */
 const STALE_OPACITY = 0.55
@@ -34,15 +40,22 @@ const STALE_OPACITY = 0.55
 function Model({
   mesh,
   color,
+  colours,
   stale,
   onTap,
 }: {
   mesh: MeshData
   color: string
+  /** Per-vertex part colours; the filament colour when absent. */
+  colours?: Float32Array | null
   stale: boolean
   onTap?(faceIndex: number, at: ScreenPoint): void
 }) {
-  const geometry = useMemo(() => meshToGeometry(mesh), [mesh])
+  const geometry = useMemo(() => {
+    const g = meshToGeometry(mesh)
+    if (colours) g.setAttribute('color', new BufferAttribute(colours, 3))
+    return g
+  }, [mesh, colours])
   useEffect(() => () => geometry.dispose(), [geometry])
   // R3F raycasts click-only meshes on click, never on pointer moves.
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -52,7 +65,15 @@ function Model({
   }
   return (
     <mesh geometry={geometry} onClick={onTap ? handleClick : undefined}>
-      <meshStandardMaterial color={color} roughness={0.6} metalness={0.1} transparent={stale} opacity={stale ? STALE_OPACITY : 1} />
+      <meshStandardMaterial
+        key={colours ? 'parts' : 'filament'}
+        color={colours ? 'white' : color}
+        vertexColors={Boolean(colours)}
+        roughness={0.6}
+        metalness={0.1}
+        transparent={stale}
+        opacity={stale ? STALE_OPACITY : 1}
+      />
     </mesh>
   )
 }
@@ -184,6 +205,16 @@ export function Viewer({
   const tagState = refine ? partTagsState(mesh, tags, pendingBase) : 'none'
   const pick = refine ? storePick : null
   const shown = refine && tags && tagState === 'ready' ? tags.mesh : mesh
+  const partColoursOn = useAgentStore((s) => s.partColours)
+  const partsReady = refine && tags !== null && tagState === 'ready' && shown?.faceTags !== undefined && !stale
+  const showParts = partsReady && partColoursOn
+  const palette = PART_TOKENS.map((n) => t[n])
+  const paletteKey = palette.join(',')
+  const colours = useMemo(
+    () => (showParts && shown?.faceTags ? faceColourArray(shown.faceTags, paletteKey.split(',').slice(0, PART_COLOUR_COUNT), paletteKey.split(',')[PART_COLOUR_COUNT]) : null),
+    [showParts, shown, paletteKey],
+  )
+  const legend = useMemo(() => (showParts && tags && shown?.faceTags ? buildLegend(tags.code, shown.faceTags) : null), [showParts, tags, shown])
   const canPick = refine && shown !== null && !stale && !previewing && current && tagState !== 'pending'
   const onTap = (faceIndex: number, at: ScreenPoint) => {
     if (!canPick || !shown || !isTap(pointerDown.current, at)) return
@@ -223,7 +254,7 @@ export function Viewer({
           fadeDistance={400}
         />
         <Axes colors={axisColors} />
-        {shown && <Model mesh={shown} color={t.filament} stale={stale} onTap={refine ? onTap : undefined} />}
+        {shown && <Model mesh={shown} color={t.filament} colours={colours} stale={stale} onTap={refine ? onTap : undefined} />}
         {pick && shown && <PickHighlight pick={pick} mesh={shown} color={t.pick} />}
         {refine && <ViewportCapture />}
         <OrbitControls makeDefault />
@@ -254,7 +285,8 @@ export function Viewer({
         )}
       </div>
 
-      <div className="absolute top-3 right-3">
+      <div className="absolute top-3 right-3 flex gap-1">
+        {refine && <PartColoursToggle available={partsReady} />}
         <button
           type="button"
           aria-label="Fit view"
@@ -275,6 +307,10 @@ export function Viewer({
 
       {pick ? (
         <div className="pc-caption absolute bottom-3 left-3">Tap empty space to clear · Esc</div>
+      ) : legend ? (
+        <div className="absolute bottom-3 left-3 max-w-[calc(100%-120px)] rounded-sm border border-line bg-panel px-2 py-1">
+          <Legend entries={legend} />
+        </div>
       ) : (
         mesh && (
           <div className="absolute bottom-3 left-3 flex flex-col items-start gap-2">

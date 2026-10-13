@@ -98,6 +98,9 @@ export interface AgentState {
   busy: 'planning' | 'reviewing' | null
   /** The request that started the current model: what every review judges against. */
   anchor: string | null
+  /** The viewer paints each part in its review colour (spec A9). */
+  partColours: boolean
+  setPartColours(on: boolean): void
   setReviewNext(on: boolean): void
   submit(text: string, deps?: AgentDeps, extra?: { audioTranscript?: string }): Promise<void>
   approvePlan(cardId: string, deps?: AgentDeps): Promise<void>
@@ -335,7 +338,9 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     reviewNext: false,
     busy: null,
     anchor: null,
+    partColours: false,
 
+    setPartColours: (on) => set({ partColours: on }),
     setReviewNext: (on) => set({ reviewNext: on }),
 
     async submit(text, deps = browserDeps, extra = {}) {
