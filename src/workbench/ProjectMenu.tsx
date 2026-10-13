@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { useAgentStore } from '../agent/agentStore'
+import { saveImage } from '../db/images'
 import { importFromText, saveProjectFile } from '../history/projectFile'
 import { useProjectStore } from '../history/projectStore'
+import type { ProjectPhoto } from '../photos/projectPhotos'
 import { useAppStore } from '../state/store'
 import { NewProjectDialog } from './NewProjectDialog'
 import { IconChevronDown, IconGallery, IconImport, IconPlus, IconX } from '../ui/icons'
@@ -210,9 +213,21 @@ export function ProjectMenu() {
       {creating && (
         <NewProjectDialog
           onClose={() => setCreating(false)}
-          onCreate={({ name, enabledLibraries }) => {
+          onCreate={async ({ name, enabledLibraries, photos }) => {
             setCreating(false)
-            void store().newProject({ name, code: '', origin: 'blank', enabledLibraries }).then(toWorkbench)
+            if (!photos) {
+              await store().newProject({ name, code: '', origin: 'blank', enabledLibraries })
+              toWorkbench()
+              return
+            }
+            const saved: ProjectPhoto[] = []
+            for (const p of photos.photos) {
+              saved.push({ id: p.id, blobId: await saveImage(p.blob), angle: p.angle, addedAt: Date.now() })
+              URL.revokeObjectURL(p.url)
+            }
+            await store().newProject({ name, code: '', origin: 'photos', enabledLibraries, photos: saved, brief: photos.brief, scale: photos.scale })
+            toWorkbench()
+            void useAgentStore.getState().submit(photos.brief, undefined, { mode: 'agent', showPhotos: true })
           }}
         />
       )}

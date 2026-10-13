@@ -1,6 +1,7 @@
 export {
   ArrowRight as IconSend,
   Box as IconBox,
+  Camera as IconCamera,
   Brain as IconBrain,
   Check as IconCheck,
   ChevronDown as IconChevronDown,
@@ -10,6 +11,7 @@ export {
   Clock as IconClock,
   Code as IconCode,
   Copy as IconCopy,
+  File as IconFile,
   Download as IconDownload,
   GitBranch as IconBranch,
   History as IconHistory,

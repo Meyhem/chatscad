@@ -87,6 +87,14 @@
   .pc-steps li.is-active { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
   .pc-steps li.is-off { color: var(--ink-disabled); }
 
+  /* New project from photos (design/screens/PhotoNew.dc.html): segmented radios and the description box. */
+  .pc-seg .pc-tab[aria-checked="true"] { background: var(--accent-soft); color: var(--ink); }
+  .pc-seg .pc-tab[aria-disabled="true"] { color: var(--ink-disabled); cursor: not-allowed; }
+  .pc-area { display: flex; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--inset); padding: var(--space-2) var(--space-3); }
+  .pc-area:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+  .pc-area textarea { all: unset; flex: 1; min-width: 0; font: 400 14px/20px var(--font-sans); color: var(--ink); white-space: pre-wrap; overflow-y: auto; }
+  .pc-area textarea::placeholder { color: var(--ink-muted); }
+
   .pc-reasoning { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--inset); min-width: 0; }
   .pc-reasoning summary { display: flex; align-items: center; gap: var(--space-2); padding: 6px var(--space-3); font-size: 12px; line-height: 16px; color: var(--ink-muted); cursor: pointer; list-style: none; user-select: none; }
   .pc-reasoning summary::-webkit-details-marker { display: none; }

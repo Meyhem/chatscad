@@ -3,6 +3,8 @@ import type { Version } from '../db/db'
 import { importFromText, saveProjectFile } from '../history/projectFile'
 import { useProjectStore } from '../history/projectStore'
 import { renderedVersionLabel } from '../history/renderedVersion'
+import { useAgentStore } from '../agent/agentStore'
+import { saveImage } from '../db/images'
 import { useAppStore } from '../state/store'
 import { makeProject, makeVersion } from '../test/fixtures'
 import { HistoryControls } from './HistoryControls'
@@ -13,6 +15,13 @@ import { isEditableTarget, useUndoShortcuts } from './useUndoShortcuts'
 vi.mock('../history/projectFile', () => ({
   saveProjectFile: vi.fn(async () => {}),
   importFromText: vi.fn(async () => ({ ok: false, error: 'versions[2].code must be text' })),
+}))
+
+vi.mock('../db/images', () => ({ saveImage: vi.fn(async () => 'blob-1') }))
+vi.mock('../refine/useVisionSupport', () => ({ useVisionSupport: () => true }))
+vi.mock('../photos/projectPhotos', async (original) => ({
+  ...(await original<typeof import('../photos/projectPhotos')>()),
+  preparePhoto: async (blob: Blob) => ({ blob, mediaType: 'image/jpeg' as const, width: 1, height: 1 }),
 }))
 
 const actions = {
@@ -67,6 +76,33 @@ describe('ProjectMenu', () => {
       expect(actions.newProject).toHaveBeenCalledWith({ name: 'Hose filter', code: '', origin: 'blank', enabledLibraries: ['BOSL2'] }),
     )
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(useAppStore.getState().view).toBe('workbench')
+  })
+
+  it('starts a photo project: saves the photos, keeps the brief and scale, and sends the brief to the agent', async () => {
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:thumb'), revokeObjectURL: vi.fn() })
+    const submit = vi.fn(async () => {})
+    useAgentStore.setState({ submit })
+    render(<ProjectMenu />)
+    openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New project…' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Photos' }))
+    fireEvent.change(screen.getByLabelText('Add front photo'), { target: { files: [new File(['x'], 'front.jpg', { type: 'image/jpeg' })] } })
+    await screen.findByRole('img', { name: 'Front photo' })
+    fireEvent.change(screen.getByLabelText('Describe it'), { target: { value: 'A wall bracket for a 25 mm rod' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create and build' }))
+    await waitFor(() => expect(submit).toHaveBeenCalledWith('A wall bracket for a 25 mm rod', undefined, { mode: 'agent', showPhotos: true }))
+    expect(saveImage).toHaveBeenCalledTimes(1)
+    expect(actions.newProject).toHaveBeenCalledWith({
+      name: 'Untitled project',
+      code: '',
+      origin: 'photos',
+      enabledLibraries: ['BOSL2'],
+      photos: [expect.objectContaining({ blobId: 'blob-1', angle: 'front' })],
+      brief: 'A wall bracket for a 25 mm rod',
+      scale: 'reference',
+    })
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:thumb')
     expect(useAppStore.getState().view).toBe('workbench')
   })
 
