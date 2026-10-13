@@ -1,0 +1,20 @@
+# Agent with optional vision review — implementation plan
+
+**Spec:** [`docs/superpowers/specs/2026-10-13-agent-review-design.md`](../specs/2026-10-13-agent-review-design.md). **Branch:** `feat/agent-review` (not merged to `main` until tested locally).
+
+**Rules (CLAUDE.md):** TDD (failing test first), tokens only, copy voice, strict CSP, model output as text only, base-path-safe URLs. Each task ends with `npm run typecheck && npm test` green and one conventional commit; `npm run e2e` before every push.
+
+## Tasks
+
+1. **Part palette tokens.** Add `part-1`…`part-7`, `part-none`, `frame-ground` to `design/tokens.json` (same value in both themes), run `npm run tokens`, note the addition in `design/README.md`.
+2. **Part colours** (`src/agent/partColours.ts`): `PART_COLOUR_NAMES` (orange, sky blue, green, yellow, blue, vermillion, pink), `partToken(tag)` → `part-((tag-1) % 7 + 1)` or `part-none` for 0, `faceColourArray(faceTags, colours: string[], none: string): Float32Array` (3 vertices × rgb per triangle, linear colour space via three's `Color`).
+3. **Coloured frames.** `createGlFrameRenderer` takes optional per-vertex colours (`setMesh(mesh, colours?)`, material `vertexColors`). `presetPose` gains `'right'`. `src/agent/frames.ts`: `renderReviewFrames(mesh, colours | null) → { view, png: Blob }[]` for iso, front, top, right at 768 × 768 px on `frame-ground`.
+4. **Checks** (`src/agent/checks.ts`): `Check`, `CheckKind`, `newCheck`, `parseCheckKind`. `Project.checks?`, `projectStore.setChecks(checks)`, project file export and import of `checks` (validated, optional).
+5. **Settings and reviewer choice.** `Settings` fields from the spec with defaults; drop `visualCheck` and M5's visual check (`src/refine/visualCheck.ts`, `src/db/visualCheck.ts`, `VisualCheckSetting`, their tests and the call in `sendPrompt`). `src/agent/reviewer.ts`: `visionModels(profiles)`, `selectReviewer(state) → { profile, model } | null`, `NO_REVIEWER` text.
+6. **Planner** (`src/agent/plan.ts`): `PLAN_SYSTEM`, `buildPlanRequest(request)`, `parsePlan(text) → { checks, parts }` (tolerates fences and prose; throws a readable error), `runPlan({ provider, model, request, signal }) → { checks, parts, usage }`.
+7. **Reviewer** (`src/agent/review.ts`): `REVIEW_SYSTEM`, `buildReviewMessage({ request, latest, checks, code, facts, legend, images })`, `parseReview(text, checks)`, `runReview(deps)` doing the tagged render through the background queue, frames, the call, one JSON retry, usage. Returns `ReviewResult { checks: {id, status, evidence}[], issues: Issue[], newChecks, frames, legend, coloured }`.
+8. **Agent store** (`src/agent/agentStore.ts`): cards keyed by id (`PlanCard`, `ReviewCard`), `reviewNext`, `loop` ({ reviewRound, request }), actions `beforeSend(text)` (decides plan or send), `approvePlan`, `skipPlan`, `editPlanChecks`, `reviewNow`, `fixIssues(cardId, issueIds)`, `accept`, `stop`, `addSuggestedChecks`. Cards are linked to chat notes through `ChatMessage.cardId`.
+9. **sendPrompt integration.** `sendPrompt` returns `{ rendered: RenderResult | null, wasEmpty }`; after the turn the store decides whether to review (A3) and runs it. Usage rows for plan and review carry the project id.
+10. **Agent column UI.** Rename the Chat column and phone tab to Agent. `MessageView` renders `PlanCard` / `ReviewCard` for notes with a live card. `ChecksButton` with a popover editor in the column header. Composer `ReviewButton` with the settings popover (review this request, review new models, reviewer model, rounds, approval mode). "Review vN" under the latest reply.
+11. **Viewer part colours.** Toggle button and legend over the viewer; the model draws with vertex colours from the tagged mesh while on. Disabled until part tags are ready.
+12. **End to end.** Update specs that name the Chat column or tab. New `e2e/agent.spec.ts` with a fake vision provider: plan → approve → build → review with a failing check → fix → review passes. Update `docs/SPEC.md` (editing modes and auto-fix sections).
