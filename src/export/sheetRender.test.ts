@@ -97,6 +97,7 @@ it('renders the four views at the image size on paper, then returns the whole sh
     mesh,
     size: [layout.images.front.w, layout.images.front.h],
     background: 'paper',
+    edges: 'ink',
     cameras: sheetPoses(BOUNDS, layout),
   })
   expect(calls.filter((c) => c[0] === 'putImageData')).toHaveLength(4)

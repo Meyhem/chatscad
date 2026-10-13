@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
+import { project, sheetLayout, SHEET_SIZE } from '../src/export/sheet'
+import { previewSize } from '../src/export/sizes'
 import { openWithStarter, watchCspViolations } from './support'
 
 async function openExport(page: Page, tab: string) {
@@ -78,4 +80,26 @@ test('saves a dimensioned drawing with the model in the front view', async ({ pa
   expect(bytes.readUInt32BE(16)).toBe(2339)
   expect(bytes.readUInt32BE(20)).toBe(1654)
   expect(csp).toEqual([])
+})
+
+test('outlines detail inside the model, like the starter hole seen from the top', async ({ page }) => {
+  const dialog = await openExport(page, 'Drawing')
+  const preview = dialog.getByRole('img', { name: 'Preview of the drawing' })
+  await expect(preview).toBeVisible()
+  // The starter is 20 × 20 × 10 mm with a 5 mm radius blind hole in the middle of its top face.
+  const bounds = { min: [0, 0, 0], max: [20, 20, 10] } as { min: [number, number, number]; max: [number, number, number] }
+  const layout = sheetLayout(bounds, previewSize(SHEET_SIZE, 960))
+  const [cx, cy] = project('top', [10, 10, 10], bounds, layout)
+  const half = Math.floor(7 * layout.pxPerMm) // inside the 10 mm half-width outline, outside the 5 mm hole rim
+  const inkPixels = await preview.evaluate(
+    (el, box) => {
+      const c = el as HTMLCanvasElement
+      const { data } = c.getContext('2d')!.getImageData(box.x, box.y, box.size, box.size)
+      let n = 0
+      for (let i = 0; i < data.length; i += 4) if (data[i] < 90 && data[i + 1] < 90 && data[i + 2] < 90) n++
+      return n
+    },
+    { x: Math.round(cx - half), y: Math.round(cy - half), size: 2 * half },
+  )
+  expect(inkPixels).toBeGreaterThan(50)
 })

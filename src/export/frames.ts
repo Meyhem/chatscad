@@ -90,9 +90,17 @@ export async function* renderFrames(opts: {
   cameras: CameraPose[]
   /** Per-vertex colours (part colours); the filament token otherwise. */
   colours?: Float32Array
+  /** Feature edge colour; no edges when absent. */
+  edges?: string
 }): AsyncGenerator<ImageData> {
   const [width, height] = opts.size
-  const renderer = createGlFrameRenderer({ width, height, background: opts.background, filament: readToken('filament') })
+  const renderer = createGlFrameRenderer({
+    width,
+    height,
+    background: opts.background,
+    filament: readToken('filament'),
+    ...(opts.edges ? { edges: opts.edges } : {}),
+  })
   try {
     if (opts.colours) renderer.setMesh(opts.mesh, opts.colours)
     else renderer.setMesh(opts.mesh)

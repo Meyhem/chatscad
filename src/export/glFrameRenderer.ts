@@ -3,6 +3,9 @@ import {
   BufferAttribute,
   Color,
   DirectionalLight,
+  EdgesGeometry,
+  LineBasicMaterial,
+  LineSegments,
   Mesh,
   MeshStandardMaterial,
   OrthographicCamera,
@@ -22,6 +25,8 @@ export interface GlFrameRendererOptions {
   height: number
   background: string | null
   filament: string
+  /** Colour of feature edges (creases over 20°) drawn over the model; none when absent. */
+  edges?: string
 }
 
 export interface GlFrameRenderer {
@@ -39,7 +44,7 @@ function createCanvas(width: number, height: number): OffscreenCanvas | HTMLCanv
   return canvas
 }
 
-export function createGlFrameRenderer({ width, height, background, filament }: GlFrameRendererOptions): GlFrameRenderer {
+export function createGlFrameRenderer({ width, height, background, filament, edges }: GlFrameRendererOptions): GlFrameRenderer {
   const renderer = new WebGLRenderer({
     canvas: createCanvas(width, height),
     antialias: true,
@@ -66,7 +71,11 @@ export function createGlFrameRenderer({ width, height, background, filament }: G
   const material = new MeshStandardMaterial({ color: new Color(filament), roughness: 0.6, metalness: 0.1 })
   // Part colours replace the filament colour; white keeps them unchanged.
   const coloured = new MeshStandardMaterial({ color: new Color(1, 1, 1), roughness: 0.6, metalness: 0.1, vertexColors: true })
+  // Faces step back a little so edges drawn on them win the depth test.
+  if (edges) for (const m of [material, coloured]) Object.assign(m, { polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })
+  const edgeMaterial = edges ? new LineBasicMaterial({ color: new Color(edges) }) : null
   let model: Mesh<BufferGeometry, MeshStandardMaterial> | null = null
+  let outline: LineSegments<EdgesGeometry, LineBasicMaterial> | null = null
   const gl = renderer.getContext()
   const pixels = new Uint8Array(width * height * 4)
 
@@ -76,10 +85,19 @@ export function createGlFrameRenderer({ width, height, background, filament }: G
         scene.remove(model)
         model.geometry.dispose()
       }
+      if (outline) {
+        scene.remove(outline)
+        outline.geometry.dispose()
+        outline = null
+      }
       const geometry = meshToGeometry(mesh)
       if (colours) geometry.setAttribute('color', new BufferAttribute(colours, 3))
       model = new Mesh(geometry, colours ? coloured : material)
       scene.add(model)
+      if (edgeMaterial) {
+        outline = new LineSegments(new EdgesGeometry(geometry, 20), edgeMaterial)
+        scene.add(outline)
+      }
     },
     render(pose) {
       const cam = pose.ortho ? ortho : camera
@@ -105,6 +123,8 @@ export function createGlFrameRenderer({ width, height, background, filament }: G
     },
     dispose() {
       model?.geometry.dispose()
+      outline?.geometry.dispose()
+      edgeMaterial?.dispose()
       material.dispose()
       coloured.dispose()
       renderer.dispose()

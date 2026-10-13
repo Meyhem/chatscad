@@ -153,7 +153,7 @@ export async function renderSheet({
   const layout = sheetLayout(mesh.bounds, size)
   const { w, h } = layout.images.front
   const frames: ImageData[] = []
-  for await (const frame of render({ mesh, size: [w, h], background: colours.paper, cameras: sheetPoses(mesh.bounds, layout) })) frames.push(frame)
+  for await (const frame of render({ mesh, size: [w, h], background: colours.paper, edges: colours.ink, cameras: sheetPoses(mesh.bounds, layout) })) frames.push(frame)
   const ctx = sheetContext(...size)
   if (!ctx) throw new Error('The browser has no 2D canvas to draw the sheet')
   drawSheet(ctx, { layout, bounds: mesh.bounds, frames, colours })

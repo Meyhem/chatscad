@@ -9,6 +9,7 @@ interface RendererOpts {
   height: number
   background: string | null
   filament: string
+  edges?: string
 }
 interface FakeRenderer {
   opts: RendererOpts
@@ -149,4 +150,9 @@ it('hands orthographic poses to the renderer unchanged', async () => {
     // drain
   }
   expect(renderers.at(-1)!.render).toHaveBeenCalledWith(pose)
+})
+
+it('asks the renderer for feature edges in the given colour', async () => {
+  for await (const _ of renderFrames({ mesh, size: [8, 8], background: null, cameras: [orthoPose(mesh.bounds, 'top', 5)], edges: 'ink' })) break
+  expect(renderers.at(-1)!.opts.edges).toBe('ink')
 })
