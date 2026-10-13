@@ -108,6 +108,26 @@ it('cannot refine while the agent is working', async () => {
   useChatStore.setState({ busy: false })
 })
 
+it('saves the photos and says so when a run starts while they are saved, instead of refining', async () => {
+  useChatStore.setState({ messages: [], busy: false })
+  let finish = () => {}
+  const setPhotos = vi.fn(() => new Promise<void>((r) => (finish = r)))
+  useProjectStore.setState({ setPhotos, setBrief: vi.fn(async () => {}) } as never)
+  const refine = vi.fn(async () => {})
+  useAgentStore.setState({ refineWithPhotos: refine } as never)
+  const onClose = vi.fn()
+  render(<PhotosDialog onClose={onClose} load={async () => new Blob(['f'], { type: 'image/jpeg' })} objectUrl={() => 'blob:a'} />)
+  await screen.findByRole('img', { name: 'Front photo' })
+  fireEvent.click(screen.getByRole('button', { name: 'Refine with 1 photo' }))
+  await waitFor(() => expect(setPhotos).toHaveBeenCalled())
+  useChatStore.setState({ busy: true })
+  finish()
+  await waitFor(() => expect(onClose).toHaveBeenCalled())
+  expect(refine).not.toHaveBeenCalled()
+  expect(useChatStore.getState().messages).toEqual([expect.objectContaining({ role: 'note', text: 'Photos saved. Refine when the current run finishes.' })])
+  useChatStore.setState({ busy: false, messages: [] })
+})
+
 it('says when the photos cannot be loaded, and will not save over them', async () => {
   const setPhotos = vi.fn(async () => {})
   useProjectStore.setState({ setPhotos, setBrief: vi.fn(async () => {}) } as never)

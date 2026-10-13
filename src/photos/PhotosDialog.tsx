@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useAgentStore } from '../agent/agentStore'
+import { isBusy, useAgentStore } from '../agent/agentStore'
 import { useChatStore } from '../chat/chatStore'
 import { deleteUnreferencedImages, loadImage, saveImage as defaultSaveImage } from '../db/images'
 import { useProjectStore } from '../history/projectStore'
@@ -21,6 +21,8 @@ interface Props {
   /** Deletes photo blobs the project no longer uses; by default keeps those a message of the project still shows. */
   deleteImages?(ids: string[]): Promise<void>
 }
+
+const REFINE_LATER = 'Photos saved. Refine when the current run finishes.'
 
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
@@ -146,6 +148,11 @@ export function PhotosDialog({ onClose, load = loadImage, objectUrl = (b) => URL
     if (!photos || !mounted.current) return
     const newAngles = photos.filter((p) => !original.current.has(p.id)).map((p) => p.angle)
     onClose()
+    // A run that started while the photos were saved would make the refine do nothing: say so instead.
+    if (isBusy()) {
+      useChatStore.getState().addMessage({ role: 'note', text: REFINE_LATER, turnLabel: null, model: null, usage: null, status: 'done' })
+      return
+    }
     void useAgentStore.getState().refineWithPhotos(newAngles)
   }
 
