@@ -12,6 +12,8 @@ export interface ChatMessage {
   error?: { title: string; body: string }
   compileStatus?: 'ok' | 'error'
   imageBlobIds?: string[] // M5
+  /** Agent: a note that stands for a plan or review card; the text is its one-line summary. */
+  cardId?: string
   audioTranscript?: string // what was dictated, when the prompt was spoken
   reasoning?: string // the model's reasoning, shown collapsed; never sent back
   reasoningMs?: number

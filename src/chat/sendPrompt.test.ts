@@ -346,3 +346,10 @@ describe('agent: the turn outcome', () => {
     expect(await sendPrompt('   ')).toMatchObject({ sent: false, rendered: null })
   })
 })
+
+it('agent: shows the short text in the bubble and sends the full text to the model', async () => {
+  const { provider, requests } = scriptedProvider({ text: FULL })
+  await sendPrompt('A block\n\nThe model must meet these checks: …', { createProvider: () => provider, render: async () => okResult(), displayText: 'A block' })
+  expect(chat().messages[0]).toMatchObject({ role: 'user', text: 'A block' })
+  expect(JSON.stringify(requests[0].messages)).toContain('The model must meet these checks')
+})

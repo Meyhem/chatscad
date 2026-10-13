@@ -22,6 +22,8 @@ import { streamingText } from './streamingText'
 export interface SendDeps {
   createProvider?(profile: ProviderProfile): LlmProvider
   render?(code: string, signal: AbortSignal): Promise<RenderResult>
+  /** Agent: what the user bubble shows when the model gets a longer text (checks, review fixes). */
+  displayText?: string
   /** The dictated transcript behind this prompt, kept on the user message. */
   audioTranscript?: string | null
   /** M5: how images are stored, encoded and captured; the browser's by default. */
@@ -113,7 +115,7 @@ export async function sendPrompt(text: string, deps: SendDeps = {}): Promise<Tur
 
   chat.addMessage({
     role: 'user',
-    text: userText,
+    text: deps.displayText?.trim() || userText,
     turnLabel: null,
     model: null,
     usage: null,
