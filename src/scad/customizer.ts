@@ -134,13 +134,13 @@ function annotationAfter(tokens: Token[], semicolon: number): string | null {
   return c?.kind === 'comment' && c.text.startsWith('//') ? c.text.slice(2).trim() : null
 }
 
-const SOURCE = /\s*(from (?:the )?description|from (?:the )?photos?|guessed)\s*$/i
+const SOURCE = /(?:^|\s)(from (?:the )?description|from (?:the )?photos?|guessed)\s*$/i
 
-/** A bracketed annotation followed by other words keeps only the bracket; "[[1, 2]]" has no gap after the first "]", so it stays whole and unusable. */
+/** A bracketed annotation keeps only the text up to its first "]"; trailing words are ignored. "[[1, 2]]" is cut to the unusable "[[1, 2]" and so still falls back. */
 function cutAtBracket(text: string): string {
   if (!text.startsWith('[')) return text
   const close = text.indexOf(']')
-  return close !== -1 && /^\s/.test(text.slice(close + 1)) ? text.slice(0, close + 1) : text
+  return close !== -1 ? text.slice(0, close + 1) : text
 }
 
 /** Splits "[1:10] guessed" into the annotation and the source; other trailing words after a bracket are dropped. */

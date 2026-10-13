@@ -173,6 +173,16 @@ s = "say \"hi\"\n";`)
     expect(p!.control).toEqual({ kind: 'slider', min: 1, step: 1, max: 10 })
   })
 
+  it('cuts a bracket annotation at its first closing bracket, keeping the fallback for nested ones', () => {
+    expect(parseCustomizer('w = 5; // [1:10]mm')[0]).toMatchObject({ control: { kind: 'slider', min: 1, step: 1, max: 10 }, source: null })
+    expect(parseCustomizer('w = 5; // [[1, 2]] mm')[0]).toMatchObject({ control: { kind: 'number' }, annotated: false, source: null })
+  })
+
+  it('matches a source only as a whole word', () => {
+    expect(parseCustomizer('w = 5; // [1:10] unguessed')[0]!.source).toBeNull()
+    expect(parseCustomizer('x = 5; // overguessed')[0]!.source).toBeNull()
+  })
+
   it('reads a source on an un-annotated number too', () => {
     const [p] = parseCustomizer('depth = 24; // guessed')
     expect(p!.source).toBe('guess')
