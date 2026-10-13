@@ -165,7 +165,15 @@ export function PhotosDialog({ onClose, load = loadImage, objectUrl = (b) => URL
   const alert = loadError ?? saveError
 
   return (
-    <Modal labelledBy="photos-title" onClose={close} className="pc-dialog max-w-[760px] gap-0 p-0">
+    <Modal
+      labelledBy="photos-title"
+      onClose={close}
+      // A photo dropped outside a slot joins as another angle, once the project's photos are shown.
+      onDropFiles={(files) => {
+        if (loaded && loadError === null) onAdd(files, 'other')
+      }}
+      className="pc-dialog max-w-[760px] gap-0 p-0"
+    >
       <form
         onSubmit={(e) => {
           e.preventDefault()

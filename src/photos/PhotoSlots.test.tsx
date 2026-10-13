@@ -63,3 +63,19 @@ it('shows the one photo with its remove button', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Remove photo' }))
   expect(onRemove).toHaveBeenCalledWith('id-photo')
 })
+
+it('keeps a thumbnail from being dragged, so it cannot be dropped back in as a new photo', () => {
+  render(<PhotoSlots layout="angles" photos={[photo('front')]} onAdd={() => {}} onRemove={() => {}} />)
+  expect(screen.getByRole('img', { name: 'Front photo' })).toHaveAttribute('draggable', 'false')
+})
+
+it('keeps a drop on a slot to the slot', () => {
+  const outer = vi.fn()
+  render(
+    <div onDrop={outer}>
+      <PhotoSlots layout="angles" photos={[]} onAdd={() => {}} onRemove={() => {}} />
+    </div>,
+  )
+  fireEvent.drop(screen.getByLabelText('Add side photo').closest('label')!, { dataTransfer: { files: [new File(['x'], 's.jpg', { type: 'image/jpeg' })] } })
+  expect(outer).not.toHaveBeenCalled()
+})

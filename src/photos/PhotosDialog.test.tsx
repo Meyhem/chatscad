@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useAgentStore } from '../agent/agentStore'
 import { useChatStore } from '../chat/chatStore'
 import { db } from '../db/db'
@@ -126,6 +126,26 @@ it('saves the photos and says so when a run starts while they are saved, instead
   expect(refine).not.toHaveBeenCalled()
   expect(useChatStore.getState().messages).toEqual([expect.objectContaining({ role: 'note', text: 'Photos saved. Refine when the current run finishes.' })])
   useChatStore.setState({ busy: false, messages: [] })
+})
+
+it('takes a photo dropped anywhere in the dialog as another angle, and keeps the tab on the app', async () => {
+  render(<PhotosDialog onClose={() => {}} load={async () => new Blob(['f'], { type: 'image/jpeg' })} objectUrl={() => 'blob:a'} prepare={async (b) => ({ blob: b, mediaType: 'image/jpeg' as const, width: 1, height: 1 })} />)
+  await screen.findByRole('img', { name: 'Front photo' })
+  const target = screen.getByLabelText('Description')
+  const drop = createEvent.drop(target, { dataTransfer: { files: [new File(['o'], 'o.jpg', { type: 'image/jpeg' })], types: ['Files'] } })
+  fireEvent(target, drop)
+  expect(drop.defaultPrevented).toBe(true)
+  expect(await screen.findByRole('img', { name: 'Other angle photo' })).toBeInTheDocument()
+  expect(screen.getByText('2 of 5 photos')).toBeInTheDocument()
+})
+
+it('adds a photo dropped on a slot once, with that slot’s angle', async () => {
+  render(<PhotosDialog onClose={() => {}} load={async () => new Blob(['f'], { type: 'image/jpeg' })} objectUrl={() => 'blob:a'} prepare={async (b) => ({ blob: b, mediaType: 'image/jpeg' as const, width: 1, height: 1 })} />)
+  await screen.findByRole('img', { name: 'Front photo' })
+  fireEvent.drop(screen.getByLabelText('Add top photo').closest('label')!, { dataTransfer: { files: [new File(['t'], 't.jpg', { type: 'image/jpeg' })], types: ['Files'] } })
+  expect(await screen.findByRole('img', { name: 'Top photo' })).toBeInTheDocument()
+  await new Promise((r) => setTimeout(r, 10))
+  expect(screen.getByText('2 of 5 photos')).toBeInTheDocument()
 })
 
 it('says when the photos cannot be loaded, and will not save over them', async () => {

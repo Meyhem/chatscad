@@ -122,7 +122,14 @@ export function NewProjectDialog({ onCreate, onClose, vision: visionProp, prepar
   const ready = name.trim() !== '' && (start === 'blank' || (draft.photos.length > 0 && brief.trim() !== ''))
 
   return (
-    <Modal labelledBy="new-project-title" onClose={close} className={`pc-dialog ${start === 'photos' ? 'max-w-[920px]' : 'max-w-[600px]'} gap-0 p-0`}>
+    <Modal
+      labelledBy="new-project-title"
+      onClose={close}
+      // A photo dropped outside a slot goes to the other angle, or to the one-photo slot; starting blank, it is ignored.
+      onDropFiles={(files) => {
+        if (start === 'photos') onAdd(files, layoutNow.current === 'one' ? 'photo' : 'other')
+      }}
+      className={`pc-dialog ${start === 'photos' ? 'max-w-[920px]' : 'max-w-[600px]'} gap-0 p-0`}>
       <form
         onSubmit={async (e) => {
           e.preventDefault()

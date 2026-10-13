@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useRef, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 const FOCUSABLE =
@@ -10,10 +10,17 @@ interface Props {
   /** false for dialogs whose content would be lost by a stray click (the variant picker). */
   closeOnScrim?: boolean
   className?: string
+  /**
+   * Files dropped anywhere on the dialog or its scrim go here instead of opening in the tab, which would lose
+   * what the dialog holds. A drop on a part that takes files itself stops there.
+   */
+  onDropFiles?(files: File[]): void
   children: ReactNode
 }
 
-export function Modal({ labelledBy, onClose, closeOnScrim = true, className = '', children }: Props) {
+const carriesFiles = (e: DragEvent) => [...(e.dataTransfer?.types ?? [])].includes('Files')
+
+export function Modal({ labelledBy, onClose, closeOnScrim = true, className = '', onDropFiles, children }: Props) {
   const dialog = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,6 +55,21 @@ export function Modal({ labelledBy, onClose, closeOnScrim = true, className = ''
       onMouseDown={(e) => {
         if (closeOnScrim && e.target === e.currentTarget) onClose()
       }}
+      onDragOver={
+        onDropFiles &&
+        ((e) => {
+          if (carriesFiles(e)) e.preventDefault()
+        })
+      }
+      onDrop={
+        onDropFiles &&
+        ((e) => {
+          if (!carriesFiles(e)) return
+          e.preventDefault()
+          const files = [...(e.dataTransfer?.files ?? [])]
+          if (files.length > 0) onDropFiles(files)
+        })
+      }
     >
       <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={labelledBy} className={className} onKeyDown={onKeyDown}>
         {children}

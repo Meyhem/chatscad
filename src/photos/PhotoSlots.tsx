@@ -24,6 +24,8 @@ const photoName = (angle: PhotoAngle) => (angle === 'photo' ? 'photo' : `${PHOTO
 function EmptySlot({ angle, onAdd }: { angle: PhotoAngle; onAdd(files: File[], angle: PhotoAngle): void }) {
   const onDrop = (e: DragEvent<HTMLLabelElement>) => {
     e.preventDefault()
+    // The slot takes the drop: the dialog around it must not add the files again.
+    e.stopPropagation()
     const files = [...(e.dataTransfer?.files ?? [])]
     if (files.length > 0) onAdd(files, angle)
   }
@@ -50,7 +52,7 @@ function FilledSlot({ photo, angle, onRemove }: { photo: DraftPhoto; angle: Phot
   const label = PHOTO_LABEL[angle]
   return (
     <div className={`relative ${aspectFor(angle)} overflow-hidden rounded-md border border-line bg-inset`}>
-      <img src={photo.url} alt={angle === 'photo' ? 'Photo' : `${label} photo`} className="absolute inset-0 size-full object-cover" />
+      <img src={photo.url} draggable={false} alt={angle === 'photo' ? 'Photo' : `${label} photo`} className="absolute inset-0 size-full object-cover" />
       <span className="absolute top-1.5 left-1.5 rounded-sm bg-panel px-1.5 text-[11px] leading-5 font-semibold">{label}</span>
       <button type="button" className="pc-btn is-icon is-sm is-ghost absolute top-1 right-1 bg-panel" aria-label={`Remove ${photoName(angle)}`} onClick={() => onRemove(photo.id)}>
         <IconX className="pc-i" aria-hidden="true" />

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { createEvent, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { Modal } from './Modal'
@@ -68,4 +68,43 @@ it('closes on a click on the scrim unless told not to', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Open' }))
   await userEvent.click(screen.getByRole('dialog').parentElement!)
   expect(keep).not.toHaveBeenCalled()
+})
+
+describe('files dropped on a dialog that takes them', () => {
+  const file = new File(['x'], 'a.jpg', { type: 'image/jpeg' })
+  const drag = (type: 'dragOver' | 'drop', el: Element, dataTransfer: object) => {
+    const event = createEvent[type](el, { dataTransfer })
+    fireEvent(el, event)
+    return event
+  }
+
+  it('go to the dialog wherever they land, and never open in the tab', () => {
+    const onDropFiles = vi.fn()
+    render(
+      <Modal labelledBy="t" onClose={() => {}} onDropFiles={onDropFiles}>
+        <h2 id="t">Title</h2>
+        <p>Body</p>
+      </Modal>,
+    )
+    const files = { files: [file], types: ['Files'] }
+    expect(drag('dragOver', screen.getByText('Body'), files).defaultPrevented).toBe(true)
+    expect(drag('drop', screen.getByText('Body'), files).defaultPrevented).toBe(true)
+    const scrim = screen.getByRole('dialog').parentElement!
+    expect(drag('drop', scrim, files).defaultPrevented).toBe(true)
+    expect(onDropFiles).toHaveBeenCalledTimes(2)
+    expect(onDropFiles).toHaveBeenCalledWith([file])
+  })
+
+  it('leave a dragged text alone', () => {
+    const onDropFiles = vi.fn()
+    render(
+      <Modal labelledBy="t" onClose={() => {}} onDropFiles={onDropFiles}>
+        <h2 id="t">Title</h2>
+      </Modal>,
+    )
+    const text = { files: [], types: ['text/plain'] }
+    expect(drag('dragOver', screen.getByText('Title'), text).defaultPrevented).toBe(false)
+    expect(drag('drop', screen.getByText('Title'), text).defaultPrevented).toBe(false)
+    expect(onDropFiles).not.toHaveBeenCalled()
+  })
 })

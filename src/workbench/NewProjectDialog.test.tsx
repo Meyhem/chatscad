@@ -1,5 +1,5 @@
 import { StrictMode } from 'react'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useAppStore } from '../state/store'
 import { NewProjectDialog } from './NewProjectDialog'
 
@@ -250,4 +250,39 @@ it('cannot be closed while creating', async () => {
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
   expect(onClose).toHaveBeenCalledTimes(1)
+})
+
+describe('a photo dropped outside the slots', () => {
+  const prepare = async (b: Blob) => ({ blob: b, mediaType: 'image/jpeg' as const, width: 1, height: 1 })
+  const dropOn = (el: Element, ...names: string[]) => {
+    const drop = createEvent.drop(el, { dataTransfer: { files: names.map((n) => new File(['x'], n, { type: 'image/jpeg' })), types: ['Files'] } })
+    fireEvent(el, drop)
+    return drop
+  }
+
+  it('goes to the other angle in the several-angles layout', async () => {
+    setup({ prepare })
+    fireEvent.click(screen.getByRole('radio', { name: 'Photos' }))
+    expect(dropOn(screen.getByLabelText('Describe it'), 'o.jpg').defaultPrevented).toBe(true)
+    expect(await screen.findByRole('img', { name: 'Other angle photo' })).toBeInTheDocument()
+  })
+
+  it('goes to the single slot in the one-photo layout, and a second is named as left out', async () => {
+    setup({ prepare })
+    fireEvent.click(screen.getByRole('radio', { name: 'Photos' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'One photo' }))
+    expect(dropOn(screen.getByRole('dialog'), 'a.jpg').defaultPrevented).toBe(true)
+    expect(await screen.findByRole('img', { name: 'Photo' })).toBeInTheDocument()
+    dropOn(screen.getByLabelText('Describe it'), 'b.jpg')
+    expect(await screen.findByRole('alert')).toHaveTextContent('One photo only. b.jpg was not added.')
+    expect(screen.getAllByRole('img')).toHaveLength(1)
+  })
+
+  it('is kept from opening in the tab when starting blank, and adds nothing', async () => {
+    setup({ prepare })
+    expect(dropOn(screen.getByLabelText('Name'), 'a.jpg').defaultPrevented).toBe(true)
+    await new Promise((r) => setTimeout(r, 10))
+    fireEvent.click(screen.getByRole('radio', { name: 'Photos' }))
+    expect(screen.queryByRole('img')).toBeNull()
+  })
 })
