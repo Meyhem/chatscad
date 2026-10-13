@@ -7,7 +7,7 @@ Copies of the ChatSCAD design system that the app builds from. The originals liv
 
 | File | What | Changes from the source |
 | --- | --- | --- |
-| `tokens.json` | Colour (dark primary, light peer), type, spacing, radius, shadow and size tokens | None. `npm run tokens` regenerates `src/styles/tokens.css` from it. |
+| `tokens.json` | Colour (dark primary, light peer), type, spacing, radius, shadow and size tokens | Adds the part palette (`part-1` to `part-7`, `part-none`) and `frame-ground` for the agent's review frames; they are not in the design system artifact yet. `npm run tokens` regenerates `src/styles/tokens.css` from it. |
 | `components.css` | The `pc-*` component classes (buttons, inputs, tabs, status pill, console, dims readout, callout, dialog, …) | The Google Fonts `@import` line is removed: the app's CSP forbids font CDNs, so Archivo and JetBrains Mono are self-hosted through fontsource. |
 
 To update: copy the files again from the artifact, keep the one change above, run `npm run tokens`, then `npm test`.
