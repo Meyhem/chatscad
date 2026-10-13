@@ -1,4 +1,5 @@
-import type { RenderResult } from '../render/types'
+import { keepSizesSection, photoSection, type PhotoContext } from '../photos/photoPrompt'
+import type { ParamValue, RenderResult } from '../render/types'
 import { librarySection } from './libraryPrompt'
 import type { ContentPart, LlmMessage } from './types'
 import { scopeInstruction } from './scope'
@@ -8,6 +9,8 @@ export interface PromptContext {
   errors?: string // compiler errors for auto-fix
   libraries?: string[] // M3: enabled libraries
   selection?: { startLine: number; endLine: number; label: string } // M5: scoped edit
+  photos?: PhotoContext // spec P6: the project started from photos; the photos themselves travel as content parts
+  keepParams?: Record<string, ParamValue> // spec P9: parameter overrides the builder must keep
 }
 
 export const SYSTEM_PROMPT = `You are ChatSCAD's modelling assistant. You write OpenSCAD for parts that will be 3D printed.
@@ -33,7 +36,8 @@ replacement lines
 
 function buildBaseSystemPrompt(ctx: PromptContext): string {
   const libraries = librarySection(ctx.libraries ?? []) || 'No external libraries are available: do not use include <…> or use <…>.'
-  return `${SYSTEM_PROMPT}\n\n${libraries}`
+  const photos = ctx.photos ? `\n\n${photoSection(ctx.photos)}` : ''
+  return `${SYSTEM_PROMPT}\n\n${libraries}${photos}`
 }
 
 /** Turns the chat history plus the new user text into provider messages, putting the current code and any errors into the final user message. */
@@ -44,6 +48,8 @@ export function buildMessages(history: LlmMessage[], userText: string | ContentP
     empty ? 'The editor is empty.' : `Current main.scad:\n\`\`\`openscad\n${ctx.code.endsWith('\n') ? ctx.code : `${ctx.code}\n`}\`\`\``,
   ]
   if (ctx.errors && ctx.errors.trim() !== '') parts.push(`OpenSCAD reported these errors:\n\`\`\`text\n${ctx.errors.trim()}\n\`\`\``)
+  const keep = ctx.keepParams ? keepSizesSection(ctx.keepParams) : ''
+  if (keep) parts.push(keep)
   parts.push(
     fullFile
       ? 'Reply with the complete file in one ```openscad block.'

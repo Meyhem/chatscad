@@ -81,3 +81,11 @@ it('mentions only the enabled libraries', () => {
   expect(buildSystemPrompt({ code: '', libraries: ['BOSL2'] })).toContain('include <BOSL2/std.scad>')
   expect(buildSystemPrompt({ code: '' })).not.toContain('BOSL2')
 })
+
+it('adds the photo section to the system prompt and the kept sizes to the request', () => {
+  const system = buildSystemPrompt({ code: '', photos: { angles: ['front'], scale: 'description' } })
+  expect(system).toContain('Reference photos of the real object are attached')
+  expect(buildSystemPrompt({ code: '' })).not.toContain('Reference photos')
+  const [last] = buildMessages([], 'Make it taller', { code: 'h = 1;', keepParams: { h: 2 } }).slice(-1)
+  expect(last!.content).toContain('The user set these sizes; keep them: h = 2.')
+})
