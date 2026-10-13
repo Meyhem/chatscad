@@ -55,8 +55,15 @@ export interface Settings {
   lowQualityPreview: boolean
   /** Model for `POST {baseUrl}/audio/transcriptions` when dictation falls back to recording. */
   transcriptionModel: string
-  /** M5: after a successful AI render, ask a vision model whether the result matches the request. */
-  visualCheck: boolean
+  /** Agent review: the reviewer's profile and model; null uses the active builder model when it takes images. */
+  reviewProfileId: string | null
+  reviewModel: string | null
+  /** Review a model on its own after its first build (the editor was empty when the request was sent). */
+  reviewNewModels: boolean
+  /** Rounds of review and fixing before the agent stops asking or fixing on its own. */
+  reviewRounds: number
+  /** 'ask': the user ticks fixes each round; 'auto': fixes go back to the builder until every check passes. */
+  reviewMode: 'ask' | 'auto'
   /** Desktop panel sizes on this device; null until the person resizes a panel. */
   panelLayout: PanelLayout | null
 }
@@ -76,7 +83,11 @@ export const DEFAULT_SETTINGS: Settings = {
   variantCount: 1,
   lowQualityPreview: false,
   transcriptionModel: 'whisper-1',
-  visualCheck: false,
+  reviewProfileId: null,
+  reviewModel: null,
+  reviewNewModels: true,
+  reviewRounds: 3,
+  reviewMode: 'ask',
   panelLayout: null,
 }
 

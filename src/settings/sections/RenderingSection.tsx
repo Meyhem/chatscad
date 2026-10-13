@@ -2,7 +2,6 @@ import { Fragment, useEffect, useState } from 'react'
 import { LowQualityPreviewSwitch } from '../LowQualityPreviewSwitch'
 import type { Settings } from '../../db/db'
 import { useSettingsStore } from '../settingsStore'
-import { VisualCheckSetting } from '../VisualCheckSetting'
 
 interface FieldSpec {
   id: string
@@ -57,7 +56,6 @@ export function RenderingSection() {
         <Fragment key={f.id}>
           <Field spec={f} settings={settings} />
           {f.id === 'timeout' && <LowQualityPreviewSwitch />}
-          {f.id === 'autofix' && <VisualCheckSetting />}
         </Fragment>
       ))}
     </section>

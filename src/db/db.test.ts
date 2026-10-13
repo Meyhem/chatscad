@@ -76,7 +76,11 @@ it('creates a fresh database at version 2 with M3 settings defaults', () => {
     variantCount: 1,
     lowQualityPreview: false,
     transcriptionModel: 'whisper-1',
-    visualCheck: false,
+    reviewProfileId: null,
+    reviewModel: null,
+    reviewNewModels: true,
+    reviewRounds: 3,
+    reviewMode: 'ask',
     panelLayout: null,
   })
 })
