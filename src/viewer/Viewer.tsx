@@ -24,7 +24,7 @@ import { TriangleWarning } from './TriangleWarning'
 import { computeCameraFit } from './cameraFit'
 import { meshToGeometry } from './geometry'
 import { PickHighlight } from './PickHighlight'
-import { usePoseRequest } from './poseRequest'
+import { PoseApplier } from './PoseApplier'
 import { staleText } from './staleText'
 import { poseFromCamera, setViewerPose } from './viewerCamera'
 import { setThumbnailSource } from './thumbnail'
@@ -118,28 +118,6 @@ function CameraFitter({ bounds, fitToken }: { bounds: Bounds | null; fitToken: n
     invalidate()
   }, [bounds, fitToken, controls, camera, size, invalidate])
 
-  return null
-}
-
-/** Moves the camera to a pose asked for from outside the canvas, such as a reference photo's angle. */
-function PoseApplier() {
-  const camera = useThree((s) => s.camera) as PerspectiveCamera
-  const controls = useThree((s) => s.controls) as unknown as ControlsLike | null
-  const invalidate = useThree((s) => s.invalidate)
-  const pose = usePoseRequest((s) => s.pose)
-  const token = usePoseRequest((s) => s.token)
-  // A viewer that mounts later (another tab, another project) must not replay an old request.
-  const applied = useRef(token)
-  useEffect(() => {
-    if (!pose || !controls || token === applied.current) return
-    applied.current = token
-    camera.up.set(...(pose.up ?? [0, 0, 1]))
-    camera.position.set(...pose.position)
-    controls.target.set(...pose.target)
-    controls.update()
-    camera.updateMatrixWorld()
-    invalidate()
-  }, [pose, token, controls, camera, invalidate])
   return null
 }
 

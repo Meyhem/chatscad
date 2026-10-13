@@ -19,6 +19,13 @@ export function referenceView(angle: PhotoAngle): ReferenceView | null {
   }
 }
 
+/** How far off the Z axis top and bottom sit, as a fraction of the fit distance, so lookAt stays defined with Z up. */
+const POLE_OFFSET = 1e-3
+
+/**
+ * The live viewer keeps camera.up at +Z because OrbitControls assumes it, so top and bottom never set `up`.
+ * They sit a hair toward -Y instead: looking down, +Y points up the screen.
+ */
 export function referencePose(bounds: Bounds, view: ReferenceView, aspect = 1): CameraPose {
   if (view === 'back') {
     const front = presetPose(bounds, 'front', aspect)
@@ -26,11 +33,12 @@ export function referencePose(bounds: Bounds, view: ReferenceView, aspect = 1): 
     const [, ty] = front.target
     return { ...front, position: [px, 2 * ty - py, pz] }
   }
-  if (view === 'bottom') {
+  if (view === 'top' || view === 'bottom') {
     const top = presetPose(bounds, 'top', aspect)
-    const [px, py, pz] = top.position
-    const [, , tz] = top.target
-    return { ...top, position: [px, py, 2 * tz - pz], up: [0, 1, 0] }
+    const [tx, ty, tz] = top.target
+    const distance = top.position[2] - tz
+    const dz = view === 'top' ? distance : -distance
+    return { position: [tx, ty - distance * POLE_OFFSET, tz + dz], target: top.target }
   }
   return presetPose(bounds, view, aspect)
 }

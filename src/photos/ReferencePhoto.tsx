@@ -69,13 +69,15 @@ export function ReferencePhoto({ bounds, load = loadImage, objectUrl = (b) => UR
         {urls[photo.id] && <img src={urls[photo.id]} alt={`Reference photo, ${PHOTO_LABEL[photo.angle].toLowerCase()}`} className="absolute inset-0 size-full object-cover" />}
         <span className="absolute top-1.5 left-1.5 rounded-sm bg-panel px-1.5 text-[11px] leading-5 font-semibold">{PHOTO_LABEL[photo.angle]}</span>
       </div>
-      <div className="pc-tabs pc-seg" role="radiogroup" aria-label="Reference photo">
-        {photos.map((p, i) => (
-          <button key={p.id} type="button" role="radio" className="pc-tab" aria-checked={i === index} onClick={() => pick(i)}>
-            {PHOTO_LABEL[p.angle]}
-          </button>
-        ))}
-        <button type="button" className="pc-tab" aria-label="Hide reference photo" onClick={() => setHidden(true)}>
+      <div className="flex items-center gap-1">
+        <div className="pc-tabs pc-seg" role="radiogroup" aria-label="Reference photo">
+          {photos.map((p, i) => (
+            <button key={p.id} type="button" role="radio" className="pc-tab" aria-checked={i === index} onClick={() => pick(i)}>
+              {PHOTO_LABEL[p.angle]}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="pc-btn is-sm is-icon" aria-label="Hide reference photo" title="Hide reference photo" onClick={() => setHidden(true)}>
           <IconX className="pc-i" aria-hidden="true" />
         </button>
       </div>
