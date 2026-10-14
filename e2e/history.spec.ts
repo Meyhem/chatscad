@@ -1,4 +1,4 @@
-import { waitForAppReady } from './support'
+import { openBlankProject } from './support'
 import { expect, test, type Page } from '@playwright/test'
 
 const RENDER_TIMEOUT = 90_000
@@ -16,8 +16,7 @@ const versionRow = (page: Page, label: string) =>
 
 test('start from a gallery model, tune a slider, restore an older version, and keep it all after a reload', async ({ page }) => {
   const csp = watchCspViolations(page)
-  await page.goto('./')
-  await waitForAppReady(page)
+  await openBlankProject(page)
 
   await page.getByRole('button', { name: 'Untitled project' }).click()
   await page.getByRole('menuitem', { name: 'Examples' }).click()
@@ -56,8 +55,7 @@ test('start from a gallery model, tune a slider, restore an older version, and k
 
 test('a project with BOSL2 enabled renders include <BOSL2/std.scad> through the worker', async ({ page }) => {
   const csp = watchCspViolations(page)
-  await page.goto('./')
-  await waitForAppReady(page)
+  await openBlankProject(page)
   await page.getByRole('tab', { name: 'Settings' }).click()
   await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('button', { name: 'Libraries' }).click()
   await page.getByRole('checkbox', { name: 'BOSL2' }).check({ force: true })

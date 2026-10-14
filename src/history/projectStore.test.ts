@@ -130,7 +130,7 @@ it('awaits the before-leave hook before moving the head', async () => {
   expect(calls).toEqual(['flush at v2', 'flush at v1', 'flush at v2', 'flush at v3', 'flush at v2', 'flush at v2'])
 })
 
-it('deletes the open project and opens the most recent other one, or starts a blank one', async () => {
+it('deletes the open project and opens the most recent other one, or leaves no project open', async () => {
   const a = await store().newProject({ name: 'A', code: 'cube(1);', origin: 'blank' })
   const b = await store().newProject({ name: 'B', code: 'cube(2);', origin: 'blank' })
   await store().deleteProject(b.id)
@@ -139,8 +139,9 @@ it('deletes the open project and opens the most recent other one, or starts a bl
 
   useAppStore.getState().setCode('sphere(9);')
   await store().deleteProject(a.id)
-  expect(store().project).toMatchObject({ name: 'Untitled project', origin: 'blank' })
-  expect(store().head?.code).toBe('sphere(9);')
+  expect(store()).toMatchObject({ project: null, versions: [], head: null, recent: [] })
+  expect(await db.projects.count()).toBe(0)
+  expect(useAppStore.getState().code).toBe('')
 })
 
 it('renames, sets libraries and patches versions', async () => {

@@ -6,6 +6,7 @@ import { useProjectStore } from '../history/projectStore'
 import type { ProjectPhoto } from '../photos/projectPhotos'
 import { useAppStore } from '../state/store'
 import { NewProjectDialog } from './NewProjectDialog'
+import { useNewProjectDialog } from './newProjectDialogStore'
 import { IconChevronDown, IconGallery, IconImport, IconPlus, IconX } from '../ui/icons'
 
 type Mode = 'menu' | 'rename' | 'delete'
@@ -18,7 +19,8 @@ export function ProjectMenu() {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<Mode>('menu')
   const [name, setName] = useState('')
-  const [creating, setCreating] = useState(false)
+  const creating = useNewProjectDialog((s) => s.open)
+  const setCreating = useNewProjectDialog((s) => s.setOpen)
   const [importError, setImportError] = useState<{ file: string; error: string } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -40,9 +42,33 @@ export function ProjectMenu() {
     }
   }, [open])
 
-  if (!project) return null
   const store = () => useProjectStore.getState()
   const toWorkbench = () => useAppStore.getState().setView('workbench')
+
+  const dialog = creating && (
+    <NewProjectDialog
+      onClose={() => setCreating(false)}
+      onCreate={async ({ name, enabledLibraries, photos }) => {
+        // The dialog stays open until the project is saved; it shows the error and keeps the draft if saving fails.
+        // Closing it afterwards releases the thumbnails.
+        if (!photos) {
+          await store().newProject({ name, code: '', origin: 'blank', enabledLibraries })
+          setCreating(false)
+          toWorkbench()
+          return
+        }
+        const saved: ProjectPhoto[] = []
+        for (const p of photos.photos) saved.push({ id: p.id, blobId: await saveImage(p.blob), angle: p.angle, addedAt: Date.now() })
+        await store().newProject({ name, code: '', origin: 'photos', enabledLibraries, photos: saved, brief: photos.brief, scale: photos.scale })
+        setCreating(false)
+        toWorkbench()
+        void useAgentStore.getState().submit(photos.brief, undefined, { mode: 'agent', showPhotos: true })
+      }}
+    />
+  )
+
+  // With no project open the workbench shows the no-project card; only the dialog is left to render here.
+  if (!project) return dialog || null
   const others = recent.filter((p) => p.id !== project.id)
 
   const onFile = async (file: File | undefined) => {
@@ -200,7 +226,11 @@ export function ProjectMenu() {
                   className="pc-btn is-sm is-danger"
                   onClick={() => {
                     close()
-                    void store().deleteProject(project.id)
+                    void store()
+                      .deleteProject(project.id)
+                      .then(() => {
+                        if (!store().project) setCreating(true)
+                      })
                   }}
                 >
                   Delete project
@@ -210,27 +240,7 @@ export function ProjectMenu() {
           )}
         </div>
       )}
-      {creating && (
-        <NewProjectDialog
-          onClose={() => setCreating(false)}
-          onCreate={async ({ name, enabledLibraries, photos }) => {
-            // The dialog stays open until the project is saved; it shows the error and keeps the draft if saving fails.
-            // Closing it afterwards releases the thumbnails.
-            if (!photos) {
-              await store().newProject({ name, code: '', origin: 'blank', enabledLibraries })
-              setCreating(false)
-              toWorkbench()
-              return
-            }
-            const saved: ProjectPhoto[] = []
-            for (const p of photos.photos) saved.push({ id: p.id, blobId: await saveImage(p.blob), angle: p.angle, addedAt: Date.now() })
-            await store().newProject({ name, code: '', origin: 'photos', enabledLibraries, photos: saved, brief: photos.brief, scale: photos.scale })
-            setCreating(false)
-            toWorkbench()
-            void useAgentStore.getState().submit(photos.brief, undefined, { mode: 'agent', showPhotos: true })
-          }}
-        />
-      )}
+      {dialog}
     </div>
   )
 }

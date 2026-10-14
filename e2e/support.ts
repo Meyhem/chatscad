@@ -34,6 +34,18 @@ difference() {
 }
 `
 
+/** A first visit has no projects, so the New project dialog opens; this starts a blank project from it. */
+export async function openBlankProject(page: Page): Promise<void> {
+  await page.goto('./')
+  await createBlankProject(page)
+}
+
+/** Clicks Create project in the New project dialog that opens while no project exists. */
+export async function createBlankProject(page: Page): Promise<void> {
+  await page.getByRole('dialog', { name: 'New project' }).getByRole('button', { name: 'Create project' }).click()
+  await waitForAppReady(page)
+}
+
 export async function replaceCode(page: Page, code: string): Promise<void> {
   await page.locator('.cm-content').click()
   await page.keyboard.press('ControlOrMeta+a')
@@ -43,16 +55,14 @@ export async function replaceCode(page: Page, code: string): Promise<void> {
 
 /** Opens the app and types the starter model, for specs that need something rendered. */
 export async function openWithStarter(page: Page): Promise<void> {
-  await page.goto('./')
-  await waitForAppReady(page)
+  await openBlankProject(page)
   await replaceCode(page, STARTER_CODE)
   await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm', { timeout: RENDER_TIMEOUT })
 }
 
 /** Adds an OpenAI-compatible profile for FAKE_BASE and makes it active, then reloads. */
 export async function seedFakeProvider(page: Page, settings: Record<string, unknown> = {}): Promise<void> {
-  await page.goto('./')
-  await waitForAppReady(page)
+  await openBlankProject(page)
   await page.evaluate(
     async ({ base, patch }) => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -95,8 +105,7 @@ export async function seedFakeProvider(page: Page, settings: Record<string, unkn
 
 /** Adds an OpenAI-compatible profile with vision for FAKE_BASE (model fake-vision), makes it active, then reloads. */
 export async function seedVisionProvider(page: Page): Promise<void> {
-  await page.goto('./')
-  await waitForAppReady(page)
+  await openBlankProject(page)
   await page.evaluate(async (baseUrl) => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const open = indexedDB.open('chatscad')

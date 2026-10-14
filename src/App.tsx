@@ -9,6 +9,7 @@ import { useExportStore } from './export/exportStore'
 import { exportStl } from './export/saveFile'
 import { GalleryView } from './gallery/GalleryView'
 import { HistoryView } from './history/HistoryView'
+import { useProjectStore } from './history/projectStore'
 import { useRenderedVersionLabel } from './history/renderedVersion'
 import { PhoneLayout } from './layout/PhoneLayout'
 import { WorkbenchColumns } from './layout/WorkbenchColumns'
@@ -32,6 +33,7 @@ import { VariantProgressPill } from './variants/VariantProgressPill'
 import { Viewer } from './viewer/Viewer'
 import { CodePane } from './workbench/CodePane'
 import { HistoryControls } from './workbench/HistoryControls'
+import { NoProjectCard } from './workbench/NoProjectCard'
 import { ViewTabs } from './workbench/ViewTabs'
 import { ProjectMenu } from './workbench/ProjectMenu'
 import { RenderedFromCaption } from './workbench/RenderedFromCaption'
@@ -72,6 +74,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
   const staleLabel = useRenderedVersionLabel()
   const isPhone = useIsPhone()
   const insertText = useAppStore((s) => s.insertText)
+  const hasProject = useProjectStore((s) => s.project !== null)
 
   if (view === 'gallery') return <GalleryView />
 
@@ -85,12 +88,14 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
         <div className="flex min-w-0 flex-1">
           <ProjectMenu />
         </div>
-        <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
+        {hasProject && (
+          <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
+        )}
         <button
           type="button"
           className="pc-btn is-icon is-ghost"
           aria-label="Share"
-          disabled={status === 'empty'}
+          disabled={status === 'empty' || !hasProject}
           onClick={() => useExportStore.getState().openAt('link')}
         >
           <IconShare className="pc-i" aria-hidden="true" />
@@ -105,11 +110,11 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
     </>
   )
 
-  if (isPhone && view !== 'workbench') {
+  if (isPhone && (view !== 'workbench' || !hasProject)) {
     return (
       <div className="pc-root flex h-full flex-col bg-bg text-ink">
         {phoneHeader}
-        {view === 'settings' ? <SettingsPage /> : <HistoryView createWorker={createWorker} />}
+        {view === 'settings' ? <SettingsPage /> : view === 'history' ? <HistoryView createWorker={createWorker} /> : <NoProjectCard />}
         <ComposerBridge />
         <GlobalOverlays />
       </div>
@@ -143,7 +148,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
         <ProjectMenu />
         <ViewTabs />
         <span aria-hidden="true" className="h-5 w-px bg-line" />
-        {view === 'workbench' && (
+        {view === 'workbench' && hasProject && (
           <>
             <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
             <VariantProgressPill />
@@ -156,12 +161,12 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
             {stale && <RenderedFromCaption />}
           </>
         )}
-        {view === 'history' && (
+        {view === 'history' && hasProject && (
           <StatusPill status={status} renderMs={renderMs} error={error} diagnostics={diagnostics} onGoToLine={goToLine} loadProgress={loadProgress} />
         )}
         {view === 'settings' && <span className="pc-caption">Applies to every project</span>}
         <span className="flex-1" />
-        {view === 'workbench' && (
+        {view === 'workbench' && hasProject && (
           <>
             <HistoryControls />
             <span aria-hidden="true" className="h-5 w-px bg-line" />
@@ -169,7 +174,7 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
         )}
         <ExportButtons
           canExportStl={canExportStl}
-          canShare={status !== 'empty'}
+          canShare={status !== 'empty' && hasProject}
           disabledReason={exportDisabledReason(canExportStl ? 'ok' : status === 'ok' ? 'rendering' : status)}
           onExportStl={() => {
             const { stl } = useAppStore.getState()
@@ -181,9 +186,10 @@ export function App({ createWorker = createRenderWorker }: { createWorker?: Work
 
       {view === 'settings' && <SettingsPage />}
       {view === 'history' && <HistoryView createWorker={createWorker} />}
+      {view === 'workbench' && !hasProject && <NoProjectCard />}
 
       {/* Stays mounted while settings or history is open, so the editor's undo history and the camera survive. */}
-      <div data-testid="workbench" hidden={view !== 'workbench'} className="flex min-h-0 flex-1 flex-col">
+      <div data-testid="workbench" hidden={view !== 'workbench' || !hasProject} className="flex min-h-0 flex-1 flex-col">
         <WorkbenchColumns
           viewer={<Viewer mesh={displayMesh} stale={stale} thumbnails staleLabel={staleLabel} previewing={previewing} empty={status === 'empty'} refine />}
         />

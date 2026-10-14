@@ -32,7 +32,7 @@ beforeEach(async () => {
   useChatStore.setState(useChatStore.getInitialState(), true)
   useProvidersStore.setState(useProvidersStore.getInitialState(), true)
   useExportStore.setState(useExportStore.getInitialState(), true)
-  useProjectStore.setState(useProjectStore.getInitialState(), true)
+  useProjectStore.setState({ ...useProjectStore.getInitialState(), project: makeProject() }, true)
 })
 afterEach(() => vi.unstubAllGlobals())
 afterEach(() => Reflect.deleteProperty(window, 'matchMedia'))
@@ -305,7 +305,6 @@ it('opens an empty project without rendering anything', async () => {
   await waitFor(() => expect(screen.getByTestId('render-status')).toHaveTextContent('Nothing to render'))
   expect(screen.getByTestId('viewer')).toHaveAttribute('data-empty', 'true')
   expect(screen.getByRole('button', { name: 'Export STL' })).toBeDisabled()
-  expect(screen.getByRole('button', { name: 'Share' })).toBeDisabled()
   await new Promise((r) => setTimeout(r, 50))
   expect(render$).not.toHaveBeenCalled()
 })
@@ -334,6 +333,29 @@ it('saves a resized panel for this device', async () => {
   fireEvent.keyDown(screen.getByRole('separator', { name: 'Resize agent' }), { key: 'ArrowRight' })
   expect(screen.getByRole('separator', { name: 'Resize agent' })).toHaveAttribute('aria-valuenow', '376')
   await waitFor(() => expect(usePrefs.getState().panelLayout.chatWidth).toBe(376))
+})
+
+it('shows the no-project card in place of the workbench while no project is open', async () => {
+  useProjectStore.setState({ project: null })
+  render(<App createWorker={scriptedWorker(() => okResult())} />)
+  expect(screen.getByRole('heading', { name: 'No project open' })).toBeInTheDocument()
+  expect(screen.getByTestId('workbench')).not.toBeVisible()
+  expect(screen.getByRole('button', { name: 'Share' })).toBeDisabled()
+  expect(screen.queryByTestId('render-status')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: 'New project…' }))
+  expect(screen.getByRole('dialog', { name: 'New project' })).toBeInTheDocument()
+})
+
+it('shows the no-project card instead of the panels on a phone while no project is open', () => {
+  mockPhone()
+  useProjectStore.setState({ project: null })
+  render(<App createWorker={scriptedWorker(() => okResult())} />)
+  expect(screen.getByRole('heading', { name: 'No project open' })).toBeInTheDocument()
+  expect(screen.queryByRole('tablist', { name: 'Panels' })).toBeNull()
+  expect(screen.getByRole('tablist', { name: 'Views' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Share' })).toBeDisabled()
+  expect(screen.queryByTestId('render-status')).toBeNull()
 })
 
 it('has no resize dividers on a phone', () => {

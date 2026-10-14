@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { RENDER_TIMEOUT, replaceCode, STARTER_CODE, waitForAppReady, watchCspViolations } from './support'
+import { RENDER_TIMEOUT, replaceCode, STARTER_CODE, createBlankProject, watchCspViolations } from './support'
 
 test.use({ serviceWorkers: 'allow' })
 
@@ -8,7 +8,7 @@ test('registers a service worker that keeps the app and OpenSCAD working offline
   await page.goto('./')
   const scriptURL = await page.evaluate(async () => (await navigator.serviceWorker.ready).active?.scriptURL ?? '')
   expect(new URL(scriptURL).pathname).toBe(`${new URL(page.url()).pathname}sw.js`)
-  await waitForAppReady(page)
+  await createBlankProject(page)
   await replaceCode(page, STARTER_CODE)
   await expect(page.getByTestId('dims')).toHaveText('20 × 20 × 10 mm', { timeout: RENDER_TIMEOUT })
   // The rendered code is saved as a version before going offline.

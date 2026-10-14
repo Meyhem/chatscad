@@ -1,4 +1,4 @@
-import { replaceCode, waitForAppReady } from './support'
+import { openBlankProject, replaceCode, waitForAppReady } from './support'
 import { expect, test, type Page, type Route } from '@playwright/test'
 
 const RENDER_TIMEOUT = 90_000
@@ -87,7 +87,7 @@ async function seedVisionProfile(page: Page) {
 
 test('tap a part, ask for a change, and only that part changes', async ({ page }) => {
   const bodies = await fakeLlm(page, [`Made the peg 6 mm taller.\n\n<<<<<<< SEARCH\n${PEG}\n=======\n${TALLER_PEG}\n>>>>>>> REPLACE\n`])
-  await page.goto('./')
+  await openBlankProject(page)
   await seedVisionProfile(page)
   await replaceCode(page, TWO_PARTS)
   await expect(page.getByTestId('dims')).toHaveText('40 × 40 × 20 mm', { timeout: RENDER_TIMEOUT })
@@ -144,7 +144,7 @@ test('tap a part, ask for a change, and only that part changes', async ({ page }
 
 test('an attached image goes to the model as an image part', async ({ page }) => {
   const bodies = await fakeLlm(page, ['A 30 × 20 × 10 mm block.\n\n```openscad\ncube([30, 20, 10]);\n```\n'])
-  await page.goto('./')
+  await openBlankProject(page)
   await seedVisionProfile(page)
 
   await page.getByRole('button', { name: 'Attach image or sketch' }).click()

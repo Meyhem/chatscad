@@ -239,7 +239,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
       if (!isCurrent) return
       const next = get().recent[0]
       if (next) await get().openProject(next.id)
-      else await get().newProject({ code: useAppStore.getState().code, origin: 'blank' })
+      else useAppStore.getState().setCode('', 'restore')
     },
 
     async setChecks(checks) {

@@ -6,8 +6,8 @@ import { onBeforeLeaveHead, useProjectStore } from '../history/projectStore'
 import { startRecorder } from '../history/recorder'
 import { useSettingsStore } from '../settings/settingsStore'
 import { applyTheme } from '../settings/theme'
-import { useAppStore } from '../state/store'
 import { captureThumbnail } from '../viewer/thumbnail'
+import { useNewProjectDialog } from '../workbench/newProjectDialogStore'
 
 export interface StartedApp {
   stop(): void
@@ -36,8 +36,9 @@ export async function startApp(deps: { capture?(): Promise<Blob | null> } = {}):
     const { lastProjectId } = useSettingsStore.getState().settings
     const last = lastProjectId ? await getProject(lastProjectId) : undefined
     const fallback = last ?? (await listRecentProjects(1))[0]
+    // With no projects yet, the user chooses how the first one starts (blank or from photos).
     if (fallback) await store.openProject(fallback.id)
-    else await store.newProject({ code: useAppStore.getState().code, origin: 'blank' })
+    else useNewProjectDialog.getState().setOpen(true)
   }
   // A #s= link opens as a new project instead of the last one.
   await openSharedOrLast(restoreLastProject)

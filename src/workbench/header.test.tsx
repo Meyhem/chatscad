@@ -10,6 +10,8 @@ import { makeProject, makeVersion } from '../test/fixtures'
 import { HistoryControls } from './HistoryControls'
 import { ProjectMenu } from './ProjectMenu'
 import { RenderedFromCaption } from './RenderedFromCaption'
+import { useNewProjectDialog } from './newProjectDialogStore'
+import { NoProjectCard } from './NoProjectCard'
 import { isEditableTarget, useUndoShortcuts } from './useUndoShortcuts'
 
 vi.mock('../history/projectFile', () => ({
@@ -40,6 +42,7 @@ const v3 = makeVersion({ id: 'v3', label: 'v3', parentId: 'v2', code: 'broken(' 
 beforeEach(() => {
   Object.values(actions).forEach((a) => a.mockClear())
   useAppStore.setState(useAppStore.getInitialState(), true)
+  useNewProjectDialog.setState({ open: false })
   useProjectStore.setState({
     project: makeProject({ id: 'p1', name: '18650 holder' }),
     recent: [makeProject({ id: 'p1', name: '18650 holder' }), makeProject({ id: 'p2', name: 'Cable clip' })],
@@ -47,6 +50,17 @@ beforeEach(() => {
     head: v3,
     redoStack: [],
     ...actions,
+  })
+})
+
+describe('NoProjectCard', () => {
+  it('offers a new project or the examples', () => {
+    render(<NoProjectCard />)
+    expect(screen.getByRole('heading', { name: 'No project open' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'New project…' }))
+    expect(useNewProjectDialog.getState().open).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Browse examples' }))
+    expect(useAppStore.getState().view).toBe('gallery')
   })
 })
 
@@ -146,6 +160,36 @@ describe('ProjectMenu', () => {
     expect(screen.getByText('Delete “18650 holder”?')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Delete project' }))
     await waitFor(() => expect(actions.deleteProject).toHaveBeenCalledWith('p1'))
+    expect(useNewProjectDialog.getState().open).toBe(false)
+  })
+
+  it('opens the new project dialog after deleting the last project', async () => {
+    actions.deleteProject.mockImplementationOnce(async () => useProjectStore.setState({ project: null, recent: [] }))
+    render(<ProjectMenu />)
+    openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete project…' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete project' }))
+    expect(await screen.findByRole('dialog', { name: 'New project' })).toBeInTheDocument()
+  })
+
+  it('with no project open, shows only the new project dialog when asked for, and creates the first project from it', async () => {
+    useProjectStore.setState({ project: null, recent: [] })
+    render(<ProjectMenu />)
+    expect(screen.queryByRole('button')).toBeNull()
+    act(() => useNewProjectDialog.getState().setOpen(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Create project' }))
+    await waitFor(() => expect(actions.newProject).toHaveBeenCalledWith({ name: 'Untitled project', code: '', origin: 'blank', enabledLibraries: ['BOSL2'] }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(useNewProjectDialog.getState().open).toBe(false)
+  })
+
+  it('closes the dialog without creating a project when cancelled', () => {
+    useProjectStore.setState({ project: null, recent: [] })
+    useNewProjectDialog.setState({ open: true })
+    render(<ProjectMenu />)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(actions.newProject).not.toHaveBeenCalled()
   })
 
   it('shows why an import failed, naming the field', async () => {

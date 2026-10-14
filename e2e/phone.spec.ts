@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test'
-import { replaceCode, STARTER_CODE, waitForAppReady, waitForFirstRender } from './support'
+import { replaceCode, STARTER_CODE, openBlankProject, waitForFirstRender } from './support'
 
 test('switches between Agent, Code and 3D, with the symbol key row in Code', async ({ page }) => {
-  await page.goto('./')
-  await waitForAppReady(page)
+  await openBlankProject(page)
   const tabs = page.getByRole('tablist', { name: 'Panels' })
   await expect(tabs).toBeVisible()
   await tabs.getByRole('tab', { name: 'Code' }).click()
