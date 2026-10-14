@@ -33,3 +33,29 @@ it('closes on a click outside, not inside', () => {
   fireEvent.pointerDown(screen.getByRole('button', { name: 'Outside' }))
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
+
+describe('stays inside the window', () => {
+  const rect = (left: number, width: number) => ({ left, right: left + width, width, top: 0, bottom: 100, height: 100, x: left, y: 0, toJSON: () => ({}) })
+  afterEach(() => vi.restoreAllMocks())
+
+  function openAt(left: number, width: number) {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return (this.getAttribute('role') === 'dialog' ? rect(left, width) : rect(0, 0)) as DOMRect
+    })
+    fireEvent.click(setup())
+    return screen.getByRole('dialog')
+  }
+
+  it('shifts right when it would run past the left edge', () => {
+    expect(openAt(-80, 360).style.transform).toBe('translateX(92px)')
+  })
+
+  it('shifts left when it would run past the right edge', () => {
+    expect(openAt(600, 360).style.transform).toBe('translateX(-172px)')
+  })
+
+  it('stays put when it fits', () => {
+    expect(openAt(100, 360).style.transform).toBe('')
+  })
+})

@@ -1,4 +1,7 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+
+/** Space kept between the popover and the window edge. */
+const GUTTER = 12
 
 export interface PopoverTriggerProps {
   'aria-expanded': boolean
@@ -22,6 +25,22 @@ export function Popover({
   const [open, setOpen] = useState(false)
   const id = useId()
   const root = useRef<HTMLDivElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+
+  // Anchored to its button, a wide popover in a narrow column can run past the window edge: slide it back inside.
+  useLayoutEffect(() => {
+    const el = panel.current
+    if (!open || !el) return
+    const fit = () => {
+      el.style.transform = ''
+      const { left, right } = el.getBoundingClientRect()
+      const shift = left < GUTTER ? GUTTER - left : right > window.innerWidth - GUTTER ? window.innerWidth - GUTTER - right : 0
+      if (shift) el.style.transform = `translateX(${shift}px)`
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -42,6 +61,7 @@ export function Popover({
       {trigger({ 'aria-expanded': open, 'aria-haspopup': 'dialog', 'aria-controls': id, onClick: () => setOpen((o) => !o) })}
       {open && (
         <div
+          ref={panel}
           id={id}
           role="dialog"
           aria-label={label}
